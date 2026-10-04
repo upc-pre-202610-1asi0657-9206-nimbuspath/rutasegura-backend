@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "RutaSegura.TripTracking.Domain/1.0.0": {
+        "dependencies": {
+          "RutaSegura.BuildingBlocks.Domain": "1.0.0"
+        },
+        "runtime": {
+          "RutaSegura.TripTracking.Domain.dll": {}
+        }
+      },
+      "RutaSegura.BuildingBlocks.Domain/1.0.0": {
+        "runtime": {
+          "RutaSegura.BuildingBlocks.Domain.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RutaSegura.TripTracking.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "RutaSegura.BuildingBlocks.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

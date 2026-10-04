@@ -1,0 +1,16 @@
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\bin\Debug\net10.0\RutaSegura.BuildingBlocks.Application.deps.json
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\bin\Debug\net10.0\RutaSegura.BuildingBlocks.Application.dll
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\bin\Debug\net10.0\RutaSegura.BuildingBlocks.Application.pdb
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\bin\Debug\net10.0\RutaSegura.BuildingBlocks.Domain.dll
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\bin\Debug\net10.0\RutaSegura.BuildingBlocks.Domain.pdb
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.csproj.AssemblyReference.cache
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.AssemblyInfoInputs.cache
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.AssemblyInfo.cs
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.csproj.CoreCompileInputs.cache
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.sourcelink.json
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegu.0A1EC53B.Up2Date
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.dll
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\refint\RutaSegura.BuildingBlocks.Application.dll
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\RutaSegura.BuildingBlocks.Application.pdb
+C:\Users\ACER\Desktop\RutaSegura\src\BuildingBlocks\RutaSegura.BuildingBlocks.Application\obj\Debug\net10.0\ref\RutaSegura.BuildingBlocks.Application.dll

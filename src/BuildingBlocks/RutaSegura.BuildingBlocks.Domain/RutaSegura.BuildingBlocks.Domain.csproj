@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Supertipos de capa de dominio compartidos por todos los microservicios (5.1.3).
+    Regla hexagonal: este proyecto NO referencia ningún paquete ni framework externo.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RutaSegura.BuildingBlocks.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Núcleo del hexágono: solo depende de BuildingBlocks.Domain. Sin EF, sin ActiveMQ, sin ASP.NET. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>RutaSegura.TripTracking.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\RutaSegura.BuildingBlocks.Domain\RutaSegura.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RutaSegura.TripTracking.Domain.Tests" />
+  </ItemGroup>
+
+</Project>

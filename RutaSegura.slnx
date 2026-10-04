@@ -1,0 +1,26 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/ApiGateway/">
+    <Project Path="src/ApiGateway/RutaSegura.ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/RutaSegura.BuildingBlocks.Domain/RutaSegura.BuildingBlocks.Domain.csproj" />
+    <Project Path="src/BuildingBlocks/RutaSegura.BuildingBlocks.Application/RutaSegura.BuildingBlocks.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/tests/">
+    <Project Path="src/BuildingBlocks/tests/RutaSegura.BuildingBlocks.Application.Tests/RutaSegura.BuildingBlocks.Application.Tests.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/IAM/">
+    <Project Path="src/Services/IAM/RutaSegura.IAM.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Trip-Tracking/">
+    <Project Path="src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Domain/RutaSegura.TripTracking.Domain.csproj" />
+    <Project Path="src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Application/RutaSegura.TripTracking.Application.csproj" />
+    <Project Path="src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Api/RutaSegura.TripTracking.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Trip-Tracking/tests/">
+    <Project Path="src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Domain.Tests/RutaSegura.TripTracking.Domain.Tests.csproj" />
+    <Project Path="src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Application.Tests/RutaSegura.TripTracking.Application.Tests.csproj" />
+  </Folder>
+</Solution>

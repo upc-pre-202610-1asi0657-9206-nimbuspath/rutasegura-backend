@@ -1,0 +1,5 @@
+@TripTracking_HostAddress = http://localhost:5180
+
+GET {{TripTracking_HostAddress}}/health/live
+
+###

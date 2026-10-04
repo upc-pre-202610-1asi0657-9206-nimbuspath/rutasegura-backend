@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "syVUMiqVlDs=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\BuildingBlocks\\RutaSegura.BuildingBlocks.Application\\RutaSegura.BuildingBlocks.Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ACER\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.0\\microsoft.extensions.dependencyinjection.abstractions.10.0.0.nupkg.sha512",
+    "C:\\Users\\ACER\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.0\\microsoft.extensions.logging.abstractions.10.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
