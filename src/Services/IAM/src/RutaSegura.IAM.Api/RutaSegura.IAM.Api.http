@@ -1,6 +1,6 @@
 @RutaSegura.IAM.Api_HostAddress = http://localhost:5234
 
-GET {{RutaSegura.IAM.Api_HostAddress}}/weatherforecast/
+GET {{RutaSegura.IAM.Api_HostAddress}}/health/live
 Accept: application/json
 
 ###

@@ -6,7 +6,7 @@ namespace RutaSegura.TripTracking.Application.Abstractions;
 
 // ───────────── Puertos de salida (driven ports) ─────────────
 // La capa Application solo conoce estas interfaces. Las implementaciones (adaptadores) viven en
-// Infrastructure: EF Core + MySQL para repositorios, ActiveMQ para el canal en tiempo real,
+// Infrastructure: EF Core + MySQL para repositorios, RabbitMQ para el canal en tiempo real,
 // réplicas locales alimentadas por eventos para rutas y vínculos tutor-alumno.
 
 /// <summary>Persistencia del agregado Trip (adaptador: EF Core / MySQL, Etapa 3).</summary>
@@ -30,7 +30,7 @@ public interface ITrackPointRepository
 }
 
 /// <summary>
-/// Canal de movimiento en tiempo real (adaptador: topic ActiveMQ "trip-tracking.live-positions", Etapa 4).
+/// Canal de movimiento en tiempo real (adaptador: canal RabbitMQ "trip-tracking.live-positions", Etapa 4).
 /// Es telemetría efímera: no pasa por el Outbox, si un mensaje se pierde el siguiente ping lo reemplaza.
 /// </summary>
 public interface ILivePositionPublisher

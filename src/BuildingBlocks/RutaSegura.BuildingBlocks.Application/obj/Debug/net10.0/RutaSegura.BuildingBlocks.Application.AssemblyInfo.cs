@@ -10,10 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("RutaSegura.BuildingBlocks.Application")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("RutaSegura - NimbusPath")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(("Componentes técnicos compartidos de RutaSegura; sin reglas de negocio de los boun" +
+    "ded contexts."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ebe8cc708eaa23e922a01f052a2dec148d6c3cf0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+13f1ca73f6d69936bab63dae11ededaf522f5ef4")]
 [assembly: System.Reflection.AssemblyProductAttribute("RutaSegura.BuildingBlocks.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RutaSegura.BuildingBlocks.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

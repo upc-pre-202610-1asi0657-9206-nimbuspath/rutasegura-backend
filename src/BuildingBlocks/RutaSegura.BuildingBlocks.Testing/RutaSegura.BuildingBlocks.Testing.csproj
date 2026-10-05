@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>RutaSegura.BuildingBlocks.Testing</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="../RutaSegura.BuildingBlocks.Application/RutaSegura.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="../RutaSegura.BuildingBlocks.Messaging/RutaSegura.BuildingBlocks.Messaging.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Application" Version="$(BuildingBlocksVersion)" />
+    <PackageReference Include="RutaSegura.BuildingBlocks.Messaging" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+</Project>

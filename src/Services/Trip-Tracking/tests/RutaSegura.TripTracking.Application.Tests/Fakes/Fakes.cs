@@ -5,7 +5,7 @@ using RutaSegura.TripTracking.Domain.Trips;
 
 namespace RutaSegura.TripTracking.Application.Tests.Fakes;
 
-// Test Doubles de los puertos de salida: el hexágono se prueba sin MySQL ni ActiveMQ.
+// Test Doubles de los puertos de salida: el hexágono se prueba sin MySQL ni RabbitMQ.
 
 internal sealed class InMemoryTripRepository : ITripRepository
 {

@@ -2,7 +2,7 @@
 
   <!--
     Casos de uso del hexágono. Define los PUERTOS de salida (repositorios, publicador en tiempo real,
-    directorios de otros contextos) que Infrastructure implementa con MySQL / ActiveMQ.
+    directorios de otros contextos) que Infrastructure implementa con MySQL / RabbitMQ.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -13,11 +13,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RutaSegura.TripTracking.Domain\RutaSegura.TripTracking.Domain.csproj" />
-    <ProjectReference Include="..\..\..\..\BuildingBlocks\RutaSegura.BuildingBlocks.Application\RutaSegura.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\RutaSegura.BuildingBlocks.Application\RutaSegura.BuildingBlocks.Application.csproj" Condition="'$(UseBuildingBlockPackages)' != 'true'" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="RutaSegura.TripTracking.Application.Tests" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Application" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
 </Project>

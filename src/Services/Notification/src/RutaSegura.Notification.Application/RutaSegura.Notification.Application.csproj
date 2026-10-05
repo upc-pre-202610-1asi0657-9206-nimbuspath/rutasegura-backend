@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>RutaSegura.Notification.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../RutaSegura.Notification.Domain/RutaSegura.Notification.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Application/RutaSegura.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Application" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+</Project>

@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RutaSegura.TripTracking.Application\RutaSegura.TripTracking.Application.csproj" />
+    <ProjectReference Include="..\RutaSegura.TripTracking.Infrastructure\RutaSegura.TripTracking.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="../../RutaSegura.BuildingBlocks.Domain/RutaSegura.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="../../RutaSegura.BuildingBlocks.Testing/RutaSegura.BuildingBlocks.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Domain" Version="$(BuildingBlocksVersion)" />
+    <PackageReference Include="RutaSegura.BuildingBlocks.Testing" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+</Project>

@@ -1,7 +1,9 @@
 # RutaSegura – Resumen de avance del backend
 
+> Revisión documental 2026-10-04: RabbitMQ es el broker vigente. El catálogo de historias y la selección del Sprint 1 se encuentran en las secciones 3.2, 3.4 y 5.3.1 del informe AV2 de la raíz. El core existente no acredita endpoints, persistencia ni mensajería implementados. Administration conserva Roster, Route Planning y Subscription; suscripción, interfaces completas y otras capacidades posteriores no se incorporan automáticamente al Sprint 1 por existir código de dominio.
+
 > Última actualización: 2026-10-03 · Responsable: Rommel Hurtado Balcazar
-> Stack (C-01): ASP.NET Core / .NET 10 (C#), MySQL 8.4, ActiveMQ, Docker.
+> Stack (C-01): ASP.NET Core / .NET 10 (C#), MySQL 8.4, RabbitMQ, Docker.
 
 ## 1. Qué hemos hecho
 
@@ -25,7 +27,7 @@ src/
 ```
 
 Arquitectura hexagonal: `Api → Infrastructure → Application → Domain`.
-El dominio y la aplicación no conocen MySQL, ActiveMQ ni ASP.NET.
+El dominio y la aplicación no conocen MySQL, RabbitMQ ni ASP.NET.
 
 ### 1.2 BuildingBlocks (código técnico compartido por los 4 microservicios)
 
@@ -103,12 +105,12 @@ dotnet test src/BuildingBlocks/tests/RutaSegura.BuildingBlocks.Application.Tests
 
 | Etapa | Contenido |
 |---|---|
-| 3 | Infrastructure: EF Core + MySQL 8.4, `TripDbContext` como `IUnitOfWork`, tabla `track_points`, Outbox |
-| 4 | ActiveMQ: eventos en `trip-tracking.events`, posiciones en vivo en `trip-tracking.live-positions`, consumidores idempotentes (rutas, vínculos tutor-alumno) |
+| 3 | Infrastructure: EF Core + MySQL 8.4, `TripDbContext` como `IUnitOfWork`, tabla `track_points`, Outbox y puertos/adaptadores de última posición Redis |
+| 4 | RabbitMQ: eventos en `trip-tracking.events`, posiciones en vivo en `trip-tracking.live-positions`, consumidores idempotentes (rutas, vínculos tutor-alumno) |
 | 5 | API REST + JWT + hub en tiempo real, ProblemDetails, docker-compose y pruebas de integración |
 
 ## 4. Pendientes y notas
 
 - La carpeta `src/Services/Trip-Tracking/_to_delete/` contiene la plantilla vieja del API: se puede borrar.
 - BuildingBlocks vive dentro de la solución; el plan de 5.1.3 (paquete NuGet aparte) queda para cuando esté estable.
-- Por decidir antes de la Etapa 4: cómo reciben los padres el movimiento en tiempo real (hub SignalR alimentado por ActiveMQ, que es lo recomendado, o conexión directa al broker).
+- Por decidir antes de la Etapa 4: cómo reciben los padres el movimiento en tiempo real (hub SignalR alimentado por RabbitMQ, que es lo recomendado, o conexión directa al broker).

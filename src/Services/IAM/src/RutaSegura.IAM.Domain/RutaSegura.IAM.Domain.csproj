@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>RutaSegura.IAM.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Domain/RutaSegura.BuildingBlocks.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Domain" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+</Project>

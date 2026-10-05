@@ -5,7 +5,7 @@ using RutaSegura.TripTracking.Domain.Tracking;
 namespace RutaSegura.TripTracking.Domain.Trips.Events;
 
 // Domain events del agregado Trip. En la Etapa 4 se mapean 1:1 a eventos de integración
-// publicados en ActiveMQ (topic "trip-tracking.events") a través del Outbox.
+// publicados en RabbitMQ (topic "trip-tracking.events") a través del Outbox.
 // Consumidores principales: Notification Service (push a tutores/empresa) y Administration (reportes).
 
 public sealed record TripScheduled(

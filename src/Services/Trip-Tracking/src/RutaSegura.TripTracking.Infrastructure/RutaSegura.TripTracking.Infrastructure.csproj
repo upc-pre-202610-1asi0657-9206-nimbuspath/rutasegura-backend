@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../RutaSegura.TripTracking.Application/RutaSegura.TripTracking.Application.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Messaging/RutaSegura.BuildingBlocks.Messaging.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Messaging" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+</Project>

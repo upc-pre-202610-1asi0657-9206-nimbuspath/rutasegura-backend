@@ -1985,24 +1985,31 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ACER\\.nuget\\packages\\": {}
+    "C:\\Users\\fabio\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\tests\\RutaSegura.TripTracking.Application.Tests\\RutaSegura.TripTracking.Application.Tests.csproj",
+      "projectUniqueName": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\tests\\RutaSegura.TripTracking.Application.Tests\\RutaSegura.TripTracking.Application.Tests.csproj",
       "projectName": "RutaSegura.TripTracking.Application.Tests",
-      "projectPath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\tests\\RutaSegura.TripTracking.Application.Tests\\RutaSegura.TripTracking.Application.Tests.csproj",
-      "packagesPath": "C:\\Users\\ACER\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\tests\\RutaSegura.TripTracking.Application.Tests\\obj\\",
+      "projectPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\tests\\RutaSegura.TripTracking.Application.Tests\\RutaSegura.TripTracking.Application.Tests.csproj",
+      "packagesPath": "C:\\Users\\fabio\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\tests\\RutaSegura.TripTracking.Application.Tests\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\ACER\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\fabio\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -2010,8 +2017,8 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
-            "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj": {
-              "projectPath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj"
+            "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj": {
+              "projectPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj"
             }
           }
         }

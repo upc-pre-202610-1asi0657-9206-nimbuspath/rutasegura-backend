@@ -12,6 +12,7 @@
           "Microsoft.Extensions.Logging": "10.0.0",
           "Microsoft.NET.Test.Sdk": "17.14.1",
           "RutaSegura.BuildingBlocks.Application": "1.0.0",
+          "RutaSegura.BuildingBlocks.Testing": "1.0.0",
           "Shouldly": "4.3.0",
           "xunit.v3": "3.1.0"
         },
@@ -614,6 +615,26 @@
             "fileVersion": "1.0.0.0"
           }
         }
+      },
+      "RutaSegura.BuildingBlocks.Messaging/1.0.0": {
+        "runtime": {
+          "RutaSegura.BuildingBlocks.Messaging.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "RutaSegura.BuildingBlocks.Testing/1.0.0": {
+        "dependencies": {
+          "RutaSegura.BuildingBlocks.Application": "1.0.0",
+          "RutaSegura.BuildingBlocks.Messaging": "1.0.0"
+        },
+        "runtime": {
+          "RutaSegura.BuildingBlocks.Testing.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
       }
     }
   },
@@ -818,6 +839,16 @@
       "sha512": ""
     },
     "RutaSegura.BuildingBlocks.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "RutaSegura.BuildingBlocks.Messaging/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "RutaSegura.BuildingBlocks.Testing/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

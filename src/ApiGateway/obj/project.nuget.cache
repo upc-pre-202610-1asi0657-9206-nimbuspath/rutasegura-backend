@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "ldcXxsJW7Bk=",
+  "dgSpecHash": "M/ebfJIJH44=",
   "success": true,
-  "projectFilePath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\ApiGateway\\RutaSegura.ApiGateway.csproj",
+  "projectFilePath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\ApiGateway\\RutaSegura.ApiGateway.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\ACER\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
-    "C:\\Users\\ACER\\.nuget\\packages\\yarp.reverseproxy\\2.3.0\\yarp.reverseproxy.2.3.0.nupkg.sha512"
+    "C:\\Users\\fabio\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
+    "C:\\Users\\fabio\\.nuget\\packages\\yarp.reverseproxy\\2.3.0\\yarp.reverseproxy.2.3.0.nupkg.sha512"
   ],
   "logs": []
 }

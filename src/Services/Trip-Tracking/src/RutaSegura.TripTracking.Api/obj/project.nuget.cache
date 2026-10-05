@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "gPw+RK+1AFg=",
+  "dgSpecHash": "BuGThTelMuw=",
   "success": true,
-  "projectFilePath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\RutaSegura.TripTracking.Api.csproj",
+  "projectFilePath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\RutaSegura.TripTracking.Api.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\ACER\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.12\\microsoft.aspnetcore.openapi.10.0.12.nupkg.sha512",
-    "C:\\Users\\ACER\\.nuget\\packages\\microsoft.openapi\\2.12.0\\microsoft.openapi.2.12.0.nupkg.sha512"
+    "C:\\Users\\fabio\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.12\\microsoft.aspnetcore.openapi.10.0.12.nupkg.sha512",
+    "C:\\Users\\fabio\\.nuget\\packages\\microsoft.openapi\\2.12.0\\microsoft.openapi.2.12.0.nupkg.sha512"
   ],
   "logs": []
 }

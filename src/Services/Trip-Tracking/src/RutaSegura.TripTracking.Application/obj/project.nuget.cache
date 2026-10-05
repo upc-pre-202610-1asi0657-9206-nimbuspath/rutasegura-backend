@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "zKeXdo47Nsw=",
+  "dgSpecHash": "2stPRxk3uCA=",
   "success": true,
-  "projectFilePath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj",
+  "projectFilePath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\ACER\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.0\\microsoft.extensions.dependencyinjection.abstractions.10.0.0.nupkg.sha512",
-    "C:\\Users\\ACER\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.0\\microsoft.extensions.logging.abstractions.10.0.0.nupkg.sha512"
+    "C:\\Users\\fabio\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.0\\microsoft.extensions.dependencyinjection.abstractions.10.0.0.nupkg.sha512",
+    "C:\\Users\\fabio\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\10.0.0\\microsoft.extensions.logging.abstractions.10.0.0.nupkg.sha512"
   ],
   "logs": []
 }

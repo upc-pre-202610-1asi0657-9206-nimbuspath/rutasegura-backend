@@ -1,11 +1,13 @@
-// Etapa 1-2: el host solo expone health checks.
-// En la Etapa 5 se registran AddTripTrackingApplication() + AddTripTrackingInfrastructure(),
-// los endpoints REST, JWT y el hub de tiempo real.
+using RutaSegura.TripTracking.Infrastructure.DependencyInjection;
+
+// Solo se expone liveness. Los handlers existentes requieren puertos de persistencia,
+// autorización y mensajería todavía pendientes; no se registran adaptadores ficticios.
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddTripTrackingInfrastructure();
 
 var app = builder.Build();
 

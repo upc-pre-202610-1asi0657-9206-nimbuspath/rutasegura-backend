@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <IsPackable>false</IsPackable>
+    <BuildingBlocksVersion>1.0.0</BuildingBlocksVersion>
+    <UseBuildingBlockPackages Condition="'$(UseBuildingBlockPackages)' == ''">false</UseBuildingBlockPackages>
+    <RepositoryRoot>$(MSBuildThisFileDirectory)</RepositoryRoot>
+    <DefaultItemExcludes>$(DefaultItemExcludes);**/bin/**;**/obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <!-- Separate outputs prevent a package check from using stale project-reference binaries. -->
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts/package-consumers/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts/package-consumers/bin/$(MSBuildProjectName)/</BaseOutputPath>
+    <RestorePackagesPath>$(MSBuildThisFileDirectory)artifacts/package-consumers/cache/</RestorePackagesPath>
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)artifacts/packages;$(RestoreAdditionalProjectSources)</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Services/IAM/src/RutaSegura.IAM.Api/RutaSegura.IAM.Api.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/Services/Administration/src/RutaSegura.Administration.Api/RutaSegura.Administration.Api.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Api/RutaSegura.TripTracking.Api.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/Services/Notification/src/RutaSegura.Notification.Api/RutaSegura.Notification.Api.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/ApiGateway/RutaSegura.ApiGateway.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

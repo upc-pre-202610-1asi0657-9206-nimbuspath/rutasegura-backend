@@ -60,6 +60,16 @@
           "bin/placeholder/RutaSegura.BuildingBlocks.Domain.dll": {}
         }
       },
+      "RutaSegura.BuildingBlocks.Messaging/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "compile": {
+          "bin/placeholder/RutaSegura.BuildingBlocks.Messaging.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/RutaSegura.BuildingBlocks.Messaging.dll": {}
+        }
+      },
       "RutaSegura.TripTracking.Application/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
@@ -85,6 +95,20 @@
         },
         "runtime": {
           "bin/placeholder/RutaSegura.TripTracking.Domain.dll": {}
+        }
+      },
+      "RutaSegura.TripTracking.Infrastructure/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "RutaSegura.BuildingBlocks.Messaging": "1.0.0",
+          "RutaSegura.TripTracking.Application": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/RutaSegura.TripTracking.Infrastructure.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/RutaSegura.TripTracking.Infrastructure.dll": {}
         }
       }
     }
@@ -136,6 +160,11 @@
       "path": "../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Domain/RutaSegura.BuildingBlocks.Domain.csproj",
       "msbuildProject": "../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Domain/RutaSegura.BuildingBlocks.Domain.csproj"
     },
+    "RutaSegura.BuildingBlocks.Messaging/1.0.0": {
+      "type": "project",
+      "path": "../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Messaging/RutaSegura.BuildingBlocks.Messaging.csproj",
+      "msbuildProject": "../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Messaging/RutaSegura.BuildingBlocks.Messaging.csproj"
+    },
     "RutaSegura.TripTracking.Application/1.0.0": {
       "type": "project",
       "path": "../RutaSegura.TripTracking.Application/RutaSegura.TripTracking.Application.csproj",
@@ -145,33 +174,46 @@
       "type": "project",
       "path": "../RutaSegura.TripTracking.Domain/RutaSegura.TripTracking.Domain.csproj",
       "msbuildProject": "../RutaSegura.TripTracking.Domain/RutaSegura.TripTracking.Domain.csproj"
+    },
+    "RutaSegura.TripTracking.Infrastructure/1.0.0": {
+      "type": "project",
+      "path": "../RutaSegura.TripTracking.Infrastructure/RutaSegura.TripTracking.Infrastructure.csproj",
+      "msbuildProject": "../RutaSegura.TripTracking.Infrastructure/RutaSegura.TripTracking.Infrastructure.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
       "Microsoft.AspNetCore.OpenApi >= 10.0.12",
-      "RutaSegura.TripTracking.Application >= 1.0.0"
+      "RutaSegura.TripTracking.Application >= 1.0.0",
+      "RutaSegura.TripTracking.Infrastructure >= 1.0.0"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ACER\\.nuget\\packages\\": {}
+    "C:\\Users\\fabio\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\RutaSegura.TripTracking.Api.csproj",
+      "projectUniqueName": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\RutaSegura.TripTracking.Api.csproj",
       "projectName": "RutaSegura.TripTracking.Api",
-      "projectPath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\RutaSegura.TripTracking.Api.csproj",
-      "packagesPath": "C:\\Users\\ACER\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\obj\\",
+      "projectPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\RutaSegura.TripTracking.Api.csproj",
+      "packagesPath": "C:\\Users\\fabio\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Api\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\ACER\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\fabio\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -179,8 +221,11 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
-            "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj": {
-              "projectPath": "C:\\Users\\ACER\\Desktop\\RutaSegura\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj"
+            "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj": {
+              "projectPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Application\\RutaSegura.TripTracking.Application.csproj"
+            },
+            "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Infrastructure\\RutaSegura.TripTracking.Infrastructure.csproj": {
+              "projectPath": "C:\\Users\\fabio\\Documents\\rutasegura-backend\\src\\Services\\Trip-Tracking\\src\\RutaSegura.TripTracking.Infrastructure\\RutaSegura.TripTracking.Infrastructure.csproj"
             }
           }
         }
