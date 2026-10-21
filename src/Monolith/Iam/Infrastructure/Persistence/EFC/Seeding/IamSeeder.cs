@@ -3,7 +3,7 @@ using Monolith.Iam.Application.Internal.OutboundServices;
 using Monolith.Iam.Domain.Model.Aggregates;
 using Monolith.Iam.Domain.Model.ValueObjects;
 using Monolith.Shared.Domain.Model.ValueObjects;
-using Monolith.Shared.Infrastructure.Persistence.EntityFrameworkCore.Configuration;
+using Monolith.Shared.Infrastructure.Persistence.EFC.Configuration;
 
 namespace Monolith.Iam.Infrastructure.Persistence.EFC.Seeding;
 

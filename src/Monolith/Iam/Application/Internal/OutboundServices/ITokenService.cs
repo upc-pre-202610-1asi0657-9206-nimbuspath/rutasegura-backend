@@ -1,4 +1,4 @@
-using Monolith.Shared.Domain.Model.Aggregates;
+using Monolith.Iam.Domain.Model.Aggregates;
 
 namespace Monolith.Iam.Application.Internal.OutboundServices;
 

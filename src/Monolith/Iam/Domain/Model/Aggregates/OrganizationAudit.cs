@@ -1,4 +1,4 @@
-using Monolith.Shared.Domain.Model.ValueObjects;
+using Monolith.Shared.Domain.Model.Entities;
 
 namespace Monolith.Iam.Domain.Model.Aggregates;
 
