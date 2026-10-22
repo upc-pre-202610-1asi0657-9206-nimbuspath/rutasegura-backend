@@ -1,6 +1,6 @@
 namespace Monolith.Resources.Errors;
 
-public static class ErrorMessages
+public class ErrorMessages
 {
     public const string OrganizationNotFound = "Organization not found.";
     public const string UserNotFound = "User not found.";

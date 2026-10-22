@@ -1,4 +1,4 @@
-using Monolith.Iam.Shared.Domain.Model.Entities;
+using Monolith.Shared.Domain.Model.Entities;
 
 namespace Monolith.Iam.Domain.Model.Aggregates;
 

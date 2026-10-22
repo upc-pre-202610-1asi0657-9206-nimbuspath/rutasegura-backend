@@ -32,8 +32,6 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 
         // Per-bounded-context model configuration (declared in each context's Infrastructure layer).
         builder.ApplyIamConfiguration();
-        builder.ApplySharedConfiguration();
-
         // General Naming Convention for the database objects
         builder.UseSnakeCaseNamingConvention();
     }

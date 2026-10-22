@@ -1,6 +1,6 @@
 namespace Monolith.Resources.Shared;
 
-public static class CommonMessages
+public class CommonMessages
 {
     public const string InvalidRequest = "Invalid request.";
     public const string NotFound = "Resource not found.";

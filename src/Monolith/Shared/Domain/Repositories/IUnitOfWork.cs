@@ -2,5 +2,10 @@ namespace Monolith.Shared.Domain.Repositories;
 
 public interface IUnitOfWork
 {
-    Task CommitAsync(CancellationToken cancellationToken = default);
+    /// <summary>
+    ///     Save changes to the repository
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token</param>
+    /// <returns></returns>
+    Task CompleteAsync(CancellationToken cancellationToken = default);
 }
