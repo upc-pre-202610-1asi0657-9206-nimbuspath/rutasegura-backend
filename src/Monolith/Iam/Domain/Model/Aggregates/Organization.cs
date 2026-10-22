@@ -1,15 +1,33 @@
+using Monolith.Iam.Domain.Model.ValueObjects;
+using Monolith.Shared.Domain.Model.ValueObjects;
 namespace Monolith.Iam.Domain.Model.Aggregates;
 
 public partial class Organization
 {
-    public Organization(string name, string description, string? logoUrl)
+    /// <summary>Parameterless constructor required by EF Core materialization.</summary>
+    protected Organization()
     {
-        Name = name;
-        Description = description;
-        LogoUrl = logoUrl;
+        Id = new OrganizationId();
+        Name = new OrganizationName();
+        Status = OrganizationStatus.CreateActive();
     }
+    /// <summary>Creates a new, active organization.</summary>
+    public Organization(OrganizationName name)
+    {
+        Id = OrganizationId.New();
+        Name = name;
+        Status = OrganizationStatus.CreateActive();
+    }
+    public OrganizationId Id { get; private set; }
+    public OrganizationName Name { get; private set; }
+    public OrganizationStatus Status { get; private set; }
+    public void UpdateName(OrganizationName name) => Name = name;
 
-    public string Name { get; private set; }
-    public string Description { get; private set; }
+    public void Suspend() => Status = OrganizationStatus.CreateSuspended();
 
+    public void Activate() => Status = OrganizationStatus.CreateActive();
+
+    public bool IsActive() => Status.IsActive();
+
+    public string GetName() => Name.ToString();
 }
