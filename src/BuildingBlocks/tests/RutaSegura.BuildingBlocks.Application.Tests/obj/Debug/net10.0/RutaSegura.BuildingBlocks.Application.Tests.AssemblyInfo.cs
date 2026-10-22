@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RutaSegura.BuildingBlocks.Application.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+13f1ca73f6d69936bab63dae11ededaf522f5ef4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+36518652798b8b0333bf8cfc8ed128a5e15ba0e5")]
 [assembly: System.Reflection.AssemblyProductAttribute("RutaSegura.BuildingBlocks.Application.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RutaSegura.BuildingBlocks.Application.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
