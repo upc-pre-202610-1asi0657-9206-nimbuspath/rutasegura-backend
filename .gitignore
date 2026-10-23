@@ -1,8 +1,22 @@
+
+# .NET: archivos generados
 **/bin/
 **/obj/
 artifacts/
-TestResults/
+**/TestResults/
+coverage/
+
+# IDEs: archivos locales
+.vs/
+.idea/
 *.user
 *.suo
-.idea/
-.vs/
+*.sln.docstates
+
+# Temporales y logs
+*.log
+*.tmp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
