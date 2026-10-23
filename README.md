@@ -4,7 +4,7 @@ Backend .NET 10 del proyecto refactorizado. El catálogo de historias y el Sprin
 
 ## Sprint 1 — Etapa 1 (T01–T04)
 
-La solución contiene cuatro servicios desplegables y un Gateway. Cada servicio tiene Domain, Application, Infrastructure y Api. Administration agrupa Roster, Route Planning y Subscription en un mismo desplegable.
+La solución contiene cuatro servicios desplegables y un Gateway. Cada servicio tiene Domain, Application, Infrastructure y un host HTTP Api. Notification separa sus contratos y adaptadores REST en una biblioteca Interfaces referenciada por Api. Administration agrupa Roster, Route Planning y Subscription en un mismo desplegable.
 
 ```text
 src/
@@ -19,7 +19,7 @@ src/
     IAM/src/RutaSegura.IAM.{Domain,Application,Infrastructure,Api}/
     Administration/src/RutaSegura.Administration.{Domain,Application,Infrastructure,Api}/
     Trip-Tracking/src/RutaSegura.TripTracking.{Domain,Application,Infrastructure,Api}/
-    Notification/src/RutaSegura.Notification.{Domain,Application,Infrastructure,Api}/
+    Notification/src/RutaSegura.Notification.{Domain,Application,Infrastructure,Interfaces,Api}/
 tests/
   RutaSegura.Architecture.Tests/
   RutaSegura.Backend.Structure.Tests/
@@ -34,7 +34,7 @@ Los tipos `*DomainAssembly` y `*ApplicationAssembly` de los módulos nuevos iden
 
 - Domain solo utiliza su núcleo y BuildingBlocks.Domain.
 - Application utiliza su Domain y BuildingBlocks.Application; no conoce EF Core, ASP.NET, Redis ni RabbitMQ.Client.
-- Infrastructure implementará los puertos de Application y es registrada desde el composition root de Api.
+- Infrastructure implementará los puertos de Application y es registrada desde el composition root de Api. En Notification, Interfaces contiene solo REST y depende de Application; Api compone Application, Infrastructure e Interfaces.
 - Los servicios no referencian entidades ni ensamblados de otros servicios.
 - Roster, Route Planning y Subscription colaboran mediante contratos publicados de Application; no acceden directamente a los detalles internos de otro módulo.
 - BuildingBlocks contiene código técnico, sin entidades de negocio. Testing se utiliza solo en proyectos de pruebas.
@@ -77,6 +77,10 @@ T05–T08: Docker Compose, bases por servicio, RabbitMQ, Redis y CI. Después: c
 
 El diagrama nombra Ocelot, mientras T13 y el proyecto usan YARP. Esta etapa conserva YARP y no configura rutas ni cambia decisiones del informe. Redis corresponde a Tracking; el dibujo completo no amplía las primeras 16 historias del sprint.
 
-Los archivos `bin/obj` ya versionados requieren la limpieza prevista para T07; `.gitignore` previene nuevos artefactos, pero no elimina el trabajo previo del índice.
+Los directorios `bin/obj`, resultados de pruebas y configuraciones locales del IDE no se versionan. Si ya estaban registrados, deben retirarse del índice con `git rm --cached`; añadirlos a `.gitignore` por sí solo no elimina su seguimiento. La limpieza conserva las copias locales.
+
+Después de actualizar el repositorio, comprobar `dotnet --version` desde la raíz y ejecutar `dotnet restore RutaSegura.slnx`. Se requiere el SDK 10.0.401 fijado en `global.json`; tener otro SDK .NET 10 no garantiza que se pueda compilar esta solución. Los archivos de NuGet de `obj/` se regeneran localmente y no deben recuperarse de Git ni compartirse entre equipos.
+
+Si la restauración informa proyectos inexistentes, comprobar las rutas de `RutaSegura.slnx` y los `ProjectReference`: es necesario integrar los proyectos faltantes o corregir las referencias según la estructura acordada. La restauración de NuGet no crea esos proyectos.
 
 Detalle y evidencia: [docs/SPRINT1-ETAPA1.md](docs/SPRINT1-ETAPA1.md).

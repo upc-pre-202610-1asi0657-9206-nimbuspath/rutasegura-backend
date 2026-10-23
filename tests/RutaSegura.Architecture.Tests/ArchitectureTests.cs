@@ -51,6 +51,9 @@ public sealed class ArchitectureTests
             Assert.True(File.Exists(Binary(project)), $"Missing compiled layer: {name}");
         }
         Assert.Single(Projects, p => Path.GetFileNameWithoutExtension(p) == "RutaSegura.ApiGateway");
+        var restProject = Assert.Single(Projects, p => Path.GetFileNameWithoutExtension(p) == "RutaSegura.Notification.Interfaces");
+        Assert.Contains(Path.GetRelativePath(Root, restProject).Replace('\\', '/'), registered);
+        Assert.True(File.Exists(Binary(restProject)), "Missing compiled REST layer: RutaSegura.Notification.Interfaces");
     }
 
     [Fact]
@@ -104,7 +107,10 @@ public sealed class ArchitectureTests
     [InlineData("RutaSegura.IAM.Application", "RabbitMQ.Client")]
     [InlineData("RutaSegura.IAM.Application", "Microsoft.AspNetCore.App")]
     [InlineData("RutaSegura.Administration.Infrastructure", "RutaSegura.IAM.Domain")]
-    [InlineData("RutaSegura.Notification.Api", "RutaSegura.BuildingBlocks.Testing")]
+    [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.BuildingBlocks.Testing")]
+    [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.Notification.Domain")]
+    [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.Notification.Infrastructure")]
+    [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.Notification.Api")]
     [InlineData("RutaSegura.BuildingBlocks.Application", "RutaSegura.TripTracking.Domain")]
     [InlineData("RutaSegura.BuildingBlocks.Messaging", "RabbitMQ.Client")]
     [InlineData("RutaSegura.ApiGateway", "RutaSegura.IAM.Application")]

@@ -59,6 +59,9 @@
   <Folder Name="/src/Services/Notification/src/RutaSegura.Notification.Api/">
     <Project Path="src/Services/Notification/src/RutaSegura.Notification.Api/RutaSegura.Notification.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Services/Notification/src/RutaSegura.Notification.Interfaces/">
+    <Project Path="src/Services/Notification/src/RutaSegura.Notification.Interfaces/RutaSegura.Notification.Interfaces.csproj" />
+  </Folder>
   <Folder Name="/src/Services/Notification/src/RutaSegura.Notification.Application/">
     <Project Path="src/Services/Notification/src/RutaSegura.Notification.Application/RutaSegura.Notification.Application.csproj" />
   </Folder>
@@ -67,6 +70,9 @@
   </Folder>
   <Folder Name="/src/Services/Notification/src/RutaSegura.Notification.Infrastructure/">
     <Project Path="src/Services/Notification/src/RutaSegura.Notification.Infrastructure/RutaSegura.Notification.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Notification/tests/">
+    <Project Path="src/Services/Notification/tests/RutaSegura.Notification.Tests/RutaSegura.Notification.Tests.csproj" />
   </Folder>
   <Folder Name="/src/Services/Trip-Tracking/" />
   <Folder Name="/src/Services/Trip-Tracking/src/" />

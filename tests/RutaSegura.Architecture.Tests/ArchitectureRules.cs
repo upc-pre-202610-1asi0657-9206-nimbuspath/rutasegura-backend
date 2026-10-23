@@ -32,8 +32,12 @@ internal static class ArchitectureRules
         if (source.EndsWith(".Infrastructure", StringComparison.Ordinal) && target.StartsWith("RutaSegura.", StringComparison.Ordinal))
             return target == $"RutaSegura.{owner}.Domain" || target == $"RutaSegura.{owner}.Application" ||
                 target.StartsWith("RutaSegura.BuildingBlocks.", StringComparison.Ordinal);
+        if (source.EndsWith(".Interfaces", StringComparison.Ordinal) && target.StartsWith("RutaSegura.", StringComparison.Ordinal))
+            return target == $"RutaSegura.{owner}.Application" ||
+                target.StartsWith("RutaSegura.BuildingBlocks.", StringComparison.Ordinal);
         if (source.EndsWith(".Api", StringComparison.Ordinal) && target.StartsWith("RutaSegura.", StringComparison.Ordinal))
             return target == $"RutaSegura.{owner}.Application" || target == $"RutaSegura.{owner}.Infrastructure" ||
+                target == $"RutaSegura.{owner}.Interfaces" ||
                 target.StartsWith("RutaSegura.BuildingBlocks.", StringComparison.Ordinal);
         return true;
     }

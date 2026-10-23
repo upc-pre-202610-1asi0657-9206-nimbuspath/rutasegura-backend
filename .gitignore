@@ -1,8 +1,35 @@
-**/bin/
-**/obj/
-artifacts/
-TestResults/
-*.user
-*.suo
+# .NET build and NuGet restore outputs (regenerated on each machine)
+**/[Bb]in/
+**/[Oo]bj/
+/artifacts/
+**/[Tt]est[Rr]esults/
+**/coverage/
+*.coverage
+*.coveragexml
+
+# Visual Studio / Rider local settings
 .idea/
 .vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local configuration and secrets; keep examples and shared appsettings tracked
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+*.local.json
+appsettings.Local.json
+appsettings.*.Local.json
+/secrets/
+*.pfx
+*.p12
+
+# Runtime logs and OS metadata
+**/logs/
+*.log
+.DS_Store
+Thumbs.db
