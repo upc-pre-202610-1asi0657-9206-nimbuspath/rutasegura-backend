@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../RutaSegura.Notification.Domain/RutaSegura.Notification.Domain.csproj" />
+    <InternalsVisibleTo Include="RutaSegura.Notification.Tests" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
     <ProjectReference Include="../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Application/RutaSegura.BuildingBlocks.Application.csproj" />

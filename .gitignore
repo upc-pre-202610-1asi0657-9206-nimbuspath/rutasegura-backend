@@ -1,22 +1,36 @@
-
-# .NET: archivos generados
-**/bin/
-**/obj/
+# Archivos generados por .NET
+**/[Bb]in/
+**/[Oo]bj/
 artifacts/
-**/TestResults/
-coverage/
+**/[Tt]est[Rr]esults/
+**/coverage/
+*.coverage
+*.coveragexml
 
-# IDEs: archivos locales
-.vs/
+# Configuracion local del IDE
 .idea/
+.vs/
 *.user
 *.suo
+*.userosscache
 *.sln.docstates
 
-# Temporales y logs
+# Configuracion local y secretos
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+*.local.json
+appsettings.Local.json
+appsettings.*.Local.json
+/secrets/
+*.pfx
+*.p12
+
+# Logs, temporales y sistema operativo
+**/logs/
 *.log
 *.tmp
-
-# Sistema operativo
 .DS_Store
 Thumbs.db

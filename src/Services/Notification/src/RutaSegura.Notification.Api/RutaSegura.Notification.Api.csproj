@@ -5,6 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="../RutaSegura.Notification.Application/RutaSegura.Notification.Application.csproj" />
     <ProjectReference Include="../RutaSegura.Notification.Infrastructure/RutaSegura.Notification.Infrastructure.csproj" />
+    <ProjectReference Include="../RutaSegura.Notification.Interfaces/RutaSegura.Notification.Interfaces.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
