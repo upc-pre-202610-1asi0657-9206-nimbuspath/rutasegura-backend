@@ -11,7 +11,7 @@ using RutaSegura.Notification.Domain.Model.Aggregates;
 namespace RutaSegura.Notification.Application.Internal.CommandServices.Handlers;
 
 internal sealed class MarkNotificationAsReadHandler(INotificationRepository notifications,
-    INotificationRecipientDirectory directory, INotificationUserContext context, TimeProvider clock)
+    INotificationRecipientDirectory directory, INotificationUserContext context, TimeProvider clock, IAnnouncementRepository announcements)
     : ICommandHandler<MarkNotificationAsReadCommand, NotificationResult>
 {
     public async Task<Result<NotificationResult>> HandleAsync(MarkNotificationAsReadCommand command, CancellationToken cancellationToken)
@@ -20,7 +20,7 @@ internal sealed class MarkNotificationAsReadHandler(INotificationRepository noti
         if (current.IsFailure) return current.FirstError;
         var user = current.Value;
         var notification = await notifications.GetAsync(user.OrganizationId, command.NotificationId, cancellationToken);
-        if (notification is null || !await NotificationAccess.CanReadAsync(user, notification, directory, cancellationToken))
+        if (notification is null || !await NotificationAccess.CanReadAsync(user, notification, directory, announcements, cancellationToken))
             return NotificationAccess.NotFound;
         notification.MarkAsRead(clock.GetUtcNow());
         return NotificationResultFromEntityAssembler.ToResultFromEntity(notification);

@@ -9,6 +9,8 @@ namespace RutaSegura.Notification.Application.Internal.QueryServices;
 /// <summary>Entrada a las consultas. No abre una transaccion de escritura.</summary>
 internal sealed class NotificationQueryService(IDispatcher dispatcher) : INotificationQueryService
 {
+    public Task<Result<IReadOnlyList<PushSubscriptionResult>>> Handle(GetMyPushSubscriptionsQuery query, CancellationToken cancellationToken = default) =>
+        dispatcher.QueryAsync(query, cancellationToken);
     public Task<Result<IReadOnlyList<NotificationResult>>> Handle(GetMyNotificationsQuery query, CancellationToken cancellationToken = default) =>
         dispatcher.QueryAsync(query, cancellationToken);
 

@@ -51,6 +51,7 @@ public abstract class NotificationTestContext : IDisposable
         services.AddSingleton<INotificationRepository>(Store);
         services.AddSingleton<IAnnouncementRepository>(Store);
         services.AddSingleton<IProcessedNotificationEventRepository>(Store);
+        services.AddSingleton<IPushSubscriptionRepository>(Store);
         services.AddSingleton<INotificationDispatchQueue>(Store);
         services.AddSingleton<INotificationRecipientDirectory>(Directory);
         services.AddSingleton<ITripNotificationContext>(Directory);
@@ -105,8 +106,16 @@ internal sealed class UnitOfWorkFake : IUnitOfWork
     }
 }
 
-internal sealed class MemoryStore : INotificationRepository, IAnnouncementRepository, INotificationDispatchQueue, IProcessedNotificationEventRepository
+internal sealed class MemoryStore : INotificationRepository, IAnnouncementRepository, INotificationDispatchQueue, IProcessedNotificationEventRepository, IPushSubscriptionRepository
 {
+    public List<PushSubscription> Subscriptions { get; } = [];
+    Task<PushSubscription?> IPushSubscriptionRepository.GetAsync(Guid organizationId, Guid userId, Guid subscriptionId, CancellationToken ct) =>
+        Task.FromResult(Subscriptions.SingleOrDefault(s => s.OrganizationId == organizationId && s.UserId == userId && s.Id == subscriptionId));
+    public Task<PushSubscription?> FindByInstallationAsync(Guid organizationId, Guid userId, Guid installationId, CancellationToken ct) =>
+        Task.FromResult(Subscriptions.SingleOrDefault(s => s.OrganizationId == organizationId && s.UserId == userId && s.InstallationId == installationId));
+    public Task<IReadOnlyList<PushSubscription>> ListEnabledAsync(Guid organizationId, Guid userId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<PushSubscription>>(Subscriptions.Where(s => s.OrganizationId == organizationId && s.UserId == userId && s.IsEnabled).ToArray());
+    public void Add(PushSubscription subscription) => Subscriptions.Add(subscription);
     public List<NotificationEntity> Notifications { get; } = [];
     public List<Announcement> Announcements { get; } = [];
     public List<Guid> PendingDispatch { get; } = [];

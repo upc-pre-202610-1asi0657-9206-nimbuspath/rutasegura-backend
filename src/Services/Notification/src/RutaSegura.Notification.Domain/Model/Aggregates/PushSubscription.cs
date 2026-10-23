@@ -57,7 +57,7 @@ public sealed class PushSubscription : AggregateRoot<Guid>
 
     private static void ValidateToken(string token, PushPlatform platform)
     {
-        if (string.IsNullOrWhiteSpace(token) || token.Length > MaxTokenLength || token.Any(char.IsWhiteSpace) || !Enum.IsDefined(platform))
+        if (string.IsNullOrWhiteSpace(token) || token.Length > MaxTokenLength || token.Any(c => char.IsWhiteSpace(c) || char.IsControl(c)) || !Enum.IsDefined(platform))
             throw new DomainException("PUSH_INVALID_TOKEN", "Se requiere un token push valido y una plataforma conocida.");
     }
 }

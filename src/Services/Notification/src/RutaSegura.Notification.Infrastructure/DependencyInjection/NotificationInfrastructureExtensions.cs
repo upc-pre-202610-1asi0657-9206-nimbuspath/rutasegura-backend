@@ -10,6 +10,10 @@ using RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore.Rep
 using RutaSegura.Notification.Infrastructure.Security;
 using RutaSegura.Notification.Infrastructure.Integration;
 using RutaSegura.Notification.Infrastructure.Messaging.RabbitMq;
+using RutaSegura.Notification.Infrastructure.Channels;
+using RutaSegura.Notification.Infrastructure.Channels.Fcm;
+using RutaSegura.Notification.Application.Internal.Policies;
+using RutaSegura.Notification.Application.DependencyInjection;
 
 namespace RutaSegura.Notification.Infrastructure.DependencyInjection;
 
@@ -21,15 +25,35 @@ public static class NotificationInfrastructureExtensions
         var connection = configuration?.GetConnectionString("NotificationDatabase");
         if (!string.IsNullOrWhiteSpace(connection))
             services.AddNotificationPersistence(connection, configuration!["NotificationPersistence:PushTokenEncryptionKey"] ?? "");
-        if (configuration?.GetValue<bool>("NotificationRabbitMq:Enabled") == true)
+        var messaging = configuration?.GetValue<bool>("NotificationRabbitMq:Enabled") == true;
+        var api = configuration?.GetValue<bool>("NotificationApi:Enabled") == true;
+        var channels = configuration?.GetValue<bool>("NotificationChannels:Enabled") == true;
+        if (messaging || api || channels)
         {
             if (string.IsNullOrWhiteSpace(connection))
-                throw new InvalidOperationException("RabbitMQ requiere NotificationDatabase y sus migraciones aplicadas.");
-            var dependencies = configuration.GetSection(NotificationDependencyOptions.SectionName).Get<NotificationDependencyOptions>() ?? new();
+                throw new InvalidOperationException("Notification requiere NotificationDatabase y sus migraciones aplicadas.");
+            var dependencies = configuration!.GetSection(NotificationDependencyOptions.SectionName).Get<NotificationDependencyOptions>() ?? new();
             AddClient<INotificationRecipientDirectory, AdministrationRecipientDirectory>(services, dependencies.Administration);
             AddClient<ITripNotificationContext, TripNotificationContextClient>(services, dependencies.TripTracking);
             services.TryAddScoped<INotificationUserContext, BackgroundNotificationUserContext>();
-            services.AddNotificationRabbitMq(configuration.GetSection(NotificationRabbitMqOptions.Section).Get<NotificationRabbitMqOptions>() ?? new());
+            if (messaging) services.AddNotificationRabbitMq(configuration.GetSection(NotificationRabbitMqOptions.Section).Get<NotificationRabbitMqOptions>() ?? new());
+            if (channels)
+            {
+                if (!api) throw new InvalidOperationException("Los canales requieren NotificationApi:Enabled para habilitar el hub autenticado.");
+                var channelOptions = configuration.GetSection("NotificationChannels").Get<NotificationChannelOptions>() ?? new();
+                channelOptions.Validate();
+                var fcmOptions = configuration.GetSection("NotificationFcm").Get<NotificationFcmOptions>() ?? new();
+                if (fcmOptions.Enabled && string.IsNullOrWhiteSpace(fcmOptions.ProjectId))
+                    throw new InvalidOperationException("Configura NotificationFcm:ProjectId antes de habilitar FCM.");
+                services.AddSingleton(channelOptions);
+                services.AddSingleton(fcmOptions);
+                services.AddNotificationChannelApplication(new NotificationChannelPolicy(fcmOptions.Enabled, channelOptions.MaxAttempts));
+                services.AddSingleton<IFcmTransport, FcmSdkTransport>();
+                services.AddSingleton<IPushNotificationSender, FcmPushNotificationSender>();
+                services.AddSingleton(new MySqlDispatchLock(connection!));
+                services.AddSingleton<NotificationChannelWorker>();
+                services.AddHostedService(provider => provider.GetRequiredService<NotificationChannelWorker>());
+            }
         }
         // Sin configuracion, el host solo ofrece liveness. Nunca se registran adaptadores ficticios.
         return services;

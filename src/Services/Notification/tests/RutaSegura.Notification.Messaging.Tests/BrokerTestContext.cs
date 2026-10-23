@@ -155,6 +155,7 @@ public sealed class TestDirectory : INotificationRecipientDirectory, ITripNotifi
     public int FailuresRemaining { get; set; }
     public int Calls { get; private set; }
     public bool Active { get; set; } = true;
+    public bool LinkRevoked { get; set; }
     public NotificationUser? Current => null;
     public Task<IReadOnlyList<NotificationRecipient>> ForStudentsAsync(Guid organizationId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
@@ -166,5 +167,7 @@ public sealed class TestDirectory : INotificationRecipientDirectory, ITripNotifi
         Task.FromResult<IReadOnlyList<NotificationRecipient>>([new(organizationId, MessageSamples.Operator)]);
     public Task<bool> IsActiveAsync(Guid organizationId, Guid tripId, CancellationToken cancellationToken) => Task.FromResult(Active);
     public Task<Result<IReadOnlyList<NotificationRecipient>>> ForAnnouncementAsync(Guid organizationId, Guid? routeId, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<IReadOnlyCollection<Guid>> CurrentStudentLinksAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task<IReadOnlyCollection<Guid>> CurrentStudentLinksAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyCollection<Guid>>(!LinkRevoked && organizationId == MessageSamples.Organization && userId == MessageSamples.Guardian
+            ? [MessageSamples.Student] : []);
 }

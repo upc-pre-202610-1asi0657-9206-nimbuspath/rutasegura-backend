@@ -12,6 +12,13 @@ namespace RutaSegura.Notification.Application.DependencyInjection;
 
 public static class NotificationApplicationExtensions
 {
+    public static IServiceCollection AddNotificationChannelApplication(this IServiceCollection services, NotificationChannelPolicy policy)
+    {
+        services.AddSingleton(policy);
+        services.AddScoped<INotificationChannelService, NotificationChannelService>();
+        return services;
+    }
+
     /// <summary>Activa los casos de uso cuando Infrastructure aporta los puertos reales. Nunca registra fakes.</summary>
     public static IServiceCollection AddNotificationApplication(this IServiceCollection services, bool registerUseCases = true)
     {

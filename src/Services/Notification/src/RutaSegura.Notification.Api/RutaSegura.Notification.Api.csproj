@@ -9,5 +9,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.12" />
+    <!-- Pin del parche de la dependencia transitiva del backplane; no habilitamos el protocolo MessagePack. -->
+    <PackageReference Include="MessagePack" Version="2.5.303" />
   </ItemGroup>
 </Project>

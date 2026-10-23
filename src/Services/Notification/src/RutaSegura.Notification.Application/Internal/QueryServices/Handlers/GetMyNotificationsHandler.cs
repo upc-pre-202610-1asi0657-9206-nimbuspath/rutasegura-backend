@@ -12,7 +12,7 @@ using RutaSegura.Notification.Domain.Model.ValueObjects;
 namespace RutaSegura.Notification.Application.Internal.QueryServices.Handlers;
 
 internal sealed class GetMyNotificationsHandler(INotificationRepository notifications,
-    INotificationRecipientDirectory directory, INotificationUserContext context)
+    INotificationRecipientDirectory directory, INotificationUserContext context, IAnnouncementRepository announcements)
     : IQueryHandler<GetMyNotificationsQuery, IReadOnlyList<NotificationResult>>
 {
     public async Task<Result<IReadOnlyList<NotificationResult>>> HandleAsync(GetMyNotificationsQuery query, CancellationToken cancellationToken)
@@ -26,9 +26,15 @@ internal sealed class GetMyNotificationsHandler(INotificationRepository notifica
         var items = await notifications.ListAsync(new InboxFilter(user.OrganizationId, user.UserId,
             links, query.Offset, query.Limit, query.UnreadOnly), cancellationToken);
         // El repositorio aplica estos filtros antes de paginar; el nucleo tambien impide devolver objetos ajenos.
-        return Result<IReadOnlyList<NotificationResult>>.Success(items.Where(n =>
-            n.OrganizationId == user.OrganizationId && n.RecipientUserId == user.UserId &&
-            (n.StudentId is null || links.Contains(n.StudentId.Value)))
-            .Select(NotificationResultFromEntityAssembler.ToResultFromEntity).ToArray());
+        var authorized = new List<NotificationResult>();
+        foreach (var item in items)
+        {
+            if (item.OrganizationId != user.OrganizationId || item.RecipientUserId != user.UserId ||
+                (item.StudentId is { } student && !links.Contains(student))) continue;
+            // Los comunicados y SOS sin alumno requieren validar su audiencia vigente tambien.
+            if (item.StudentId is null && !await NotificationAccess.CanReadAsync(user, item, directory, announcements, cancellationToken)) continue;
+            authorized.Add(NotificationResultFromEntityAssembler.ToResultFromEntity(item));
+        }
+        return Result<IReadOnlyList<NotificationResult>>.Success(authorized);
     }
 }

@@ -60,10 +60,13 @@ NOTIFICATION_DUPLICATE_KEY en lugar de fingir exito. El consumidor de fase 3 des
 reintentar en uno nuevo y consultar el Inbox antes de hacer ACK. La concurrencia optimista de avisos,
 suscripciones, trabajos y entregas utiliza un contador version; un conflicto produce NOTIFICATION_CONCURRENT_UPDATE.
 
-INotificationDispatchQueue solo persiste un trabajo. El worker futuro creara las entregas por canal y
-marcara el trabajo como expandido en una transaccion; despues procesara los envios fuera de esa transaccion.
+INotificationDispatchQueue solo persiste un trabajo. El worker de fase 4 crea las entregas por canal y
+marca el trabajo como expandido en una transaccion; despues procesa los envios fuera de esa transaccion.
 Versiones e indices impiden que dos expansiones confirmen el mismo trabajo. No se promete push exactamente una vez.
-La fase 3 incorpora el consumidor RabbitMQ (ver README del servicio). FCM, SignalR y el worker de envio siguen pendientes.
+La fase 3 incorpora el consumidor RabbitMQ y la fase 4 agrega FCM, SignalR y el worker (ver README del servicio).
+No hay cambios de esquema en fase 4: se utilizan las seis tablas existentes y locks de sesion MySQL para
+coordinar workers. Aceptacion por el proveedor no significa entrega ni lectura; una caida entre envio y
+commit puede repetir el envio externo. El indice unico mantiene un solo aviso y trabajo logico.
 
 El contexto rechaza agregados con DomainEvents pendientes hasta que exista un Outbox de publicacion durable;
 no los descarta silenciosamente. Los modelos actuales no generan esos eventos de salida.

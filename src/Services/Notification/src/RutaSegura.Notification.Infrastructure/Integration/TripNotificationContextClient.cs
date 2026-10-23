@@ -9,7 +9,9 @@ public sealed class TripNotificationContextClient(HttpClient client) : ITripNoti
     {
         using var response = await client.GetAsync($"internal/v1/trips/{tripId:D}/notification-context?organizationId={organizationId:D}", cancellationToken);
         response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<ContextResponse>(cancellationToken: cancellationToken);
+        ContextResponse? body;
+        try { body = await response.Content.ReadFromJsonAsync<ContextResponse>(cancellationToken: cancellationToken); }
+        catch (System.Text.Json.JsonException) { throw new HttpRequestException("NOTIFICATION_TRIP_CONTEXT_INVALID_RESPONSE"); }
         if (body is null || body.OrganizationId != organizationId || body.TripId != tripId || body.IsActive is null)
             throw new HttpRequestException("NOTIFICATION_TRIP_CONTEXT_INVALID_RESPONSE");
         return body.IsActive.Value;

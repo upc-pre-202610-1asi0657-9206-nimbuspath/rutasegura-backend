@@ -17,5 +17,6 @@
     <ProjectReference Include="../../src/RutaSegura.Notification.Application/RutaSegura.Notification.Application.csproj" />
     <ProjectReference Include="../../src/RutaSegura.Notification.Interfaces/RutaSegura.Notification.Interfaces.csproj" />
     <ProjectReference Include="../../src/RutaSegura.Notification.Api/RutaSegura.Notification.Api.csproj" Aliases="notificationApi" />
+    <ProjectReference Include="../../../../ApiGateway/RutaSegura.ApiGateway.csproj" Aliases="gatewayApi" />
   </ItemGroup>
 </Project>
