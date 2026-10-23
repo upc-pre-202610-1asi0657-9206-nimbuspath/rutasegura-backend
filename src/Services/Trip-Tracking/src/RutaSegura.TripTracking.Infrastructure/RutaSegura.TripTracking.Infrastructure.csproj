@@ -1,12 +1,43 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Adaptadores de salida (driven adapters) del hexágono Trip & Tracking:
+    EF Core + MySQL 8.4 (repositorios, Unit of Work, Outbox/Inbox), RabbitMQ (eventos y canal en vivo),
+    Redis (última posición) y workers (Outbox, consumidores, programación diaria de viajes).
+  -->
+  <PropertyGroup>
+    <RootNamespace>RutaSegura.TripTracking.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.8" />
+    <PackageReference Include="MySql.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.8" />
+    <!-- Solo para "dotnet ef migrations add" (IDesignTimeDbContextFactory); no se copia a otros proyectos. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../RutaSegura.TripTracking.Application/RutaSegura.TripTracking.Application.csproj" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
     <ProjectReference Include="../../../../BuildingBlocks/RutaSegura.BuildingBlocks.Messaging/RutaSegura.BuildingBlocks.Messaging.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
     <PackageReference Include="RutaSegura.BuildingBlocks.Messaging" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RutaSegura.TripTracking.Api" />
+    <InternalsVisibleTo Include="RutaSegura.TripTracking.Integration.Tests" />
   </ItemGroup>
 </Project>

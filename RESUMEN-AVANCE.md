@@ -101,13 +101,15 @@ dotnet test src/BuildingBlocks/tests/RutaSegura.BuildingBlocks.Application.Tests
 | 11 | **Pipeline de casos de uso (BuildingBlocks)** | `DispatcherPipelineTests.SendAsync_ValidCommand_RunsThroughAllDecoratorsAndCommits` | Un comando pasa por Logging → Validation → Transaction y se confirma una vez. |
 | | | `DecoratorTests.TransactionDecorator_FailedCommand_DoesNotCommit` | Si el caso de uso falla, no se guarda nada en la BD. |
 
-## 3. Próximas etapas
+## 3. Etapas 3, 4 y 5 (completadas el 2026-10-23)
 
 | Etapa | Contenido |
 |---|---|
-| 3 | Infrastructure: EF Core + MySQL 8.4, `TripDbContext` como `IUnitOfWork`, tabla `track_points`, Outbox y puertos/adaptadores de última posición Redis |
-| 4 | RabbitMQ: eventos en `trip-tracking.events`, posiciones en vivo en `trip-tracking.live-positions`, consumidores idempotentes (rutas, vínculos tutor-alumno) |
-| 5 | API REST + JWT + hub en tiempo real, ProblemDetails, docker-compose y pruebas de integración |
+| 3 | EF Core 10 + MySQL 8.4: `TripTrackingDbContext`, migración `InitialCreate`, `EfUnitOfWork` (agregado + `track_points` + Outbox en una transacción, concurrencia optimista por agregado → 409 `CONCURRENCY_CONFLICT`) |
+| 4 | RabbitMQ: `OutboxProcessor` (publisher confirms, `FOR UPDATE SKIP LOCKED`, backoff) → `trip-tracking.events`; consumidor idempotente con Inbox y DLQ para rutas y vínculos tutor-alumno; canal en vivo `trip-tracking.live`; Redis `trip:{id}:position`; programador diario de viajes |
+| 5 | API REST `/api/v1` (conductor, tutor, empresa) con JWT de IAM, ProblemDetails, SignalR `/hubs/trip-tracking`, `/health/ready`, OpenAPI + Swagger UI, Dockerfile y docker-compose, 17 pruebas de integración contra MySQL/RabbitMQ reales |
+
+Detalle en `src/Services/Trip-Tracking/README.md`. Pruebas del servicio: 89 dominio + 72 aplicación + 17 integración.
 
 ## 4. Pendientes y notas
 

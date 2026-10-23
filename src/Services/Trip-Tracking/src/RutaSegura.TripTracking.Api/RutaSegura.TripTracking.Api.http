@@ -1,5 +1,132 @@
-@TripTracking_HostAddress = http://localhost:5180
+### Trip & Tracking — recorrido completo de la "Ruta 3" (datos demo: Seed:Demo=true, DevTokens:Enabled=true)
+### Rider / VS / VS Code (REST Client). Ejecutar en orden: cada respuesta alimenta a las siguientes.
 
-GET {{TripTracking_HostAddress}}/health/live
+@host = http://localhost:5180
+
+### Salud
+GET {{host}}/health/live
 
 ###
+GET {{host}}/health/ready
+
+### Tokens de desarrollo (mismo formato que IAM). En producción los emite IAM.
+# @name driverToken
+POST {{host}}/dev/tokens
+Content-Type: application/json
+
+{ "role": "DRIVER" }
+
+###
+# @name parentToken
+POST {{host}}/dev/tokens
+Content-Type: application/json
+
+{ "role": "PARENT" }
+
+###
+# @name adminToken
+POST {{host}}/dev/tokens
+Content-Type: application/json
+
+{ "role": "ADMIN" }
+
+### 1. Agenda del conductor (hoy, hora de Lima)
+# @name agenda
+GET {{host}}/api/v1/drivers/me/trips
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+
+### 2. Iniciar el viaje de recojo (US-10). Reenviar el mismo clientEventId devuelve applied=false.
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/start
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{ "clientEventId": "{{$guid}}" }
+
+### 3. Lote de posiciones GPS (TS-15). Ajusta recordedAt a la hora actual en UTC.
+POST {{host}}/api/v1/tracking/positions
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "tripId": "{{agenda.response.body.$[0].tripId}}",
+  "readings": [
+    { "latitude": -12.1050, "longitude": -77.0, "recordedAt": "{{$datetime iso8601}}", "accuracyMeters": 8, "speedKmh": 22 }
+  ]
+}
+
+### 4. "Subió" Valeria (US-11)
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/boardings
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{ "studentId": "b0000000-0000-0000-0000-000000000001", "clientEventId": "{{$guid}}" }
+
+### 5. "No vino" Mateo
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/absences
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{ "studentId": "b0000000-0000-0000-0000-000000000002", "clientEventId": "{{$guid}}" }
+
+### 6. Incidente (US-12): HEAVY_TRAFFIC / HeavyTraffic, RouteDeviation, VehicleFailure, StudentUnwell, Accident, Other
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/incidents
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{ "clientEventId": "{{$guid}}", "incidentType": "HEAVY_TRAFFIC", "notifyGuardians": true }
+
+### 7. Cola offline (Store-and-Forward): Camila sube sin señal
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/sync
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "events": [
+    { "clientEventId": "{{$guid}}", "type": "Boarding", "occurredAt": "{{$datetime iso8601}}", "studentId": "b0000000-0000-0000-0000-000000000003" }
+  ]
+}
+
+### 8. Vista del tutor (solo su hija y su parada, AC-01)
+GET {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/live
+Authorization: Bearer {{parentToken.response.body.accessToken}}
+
+### 9. Posición rápida (Redis) — respaldo del hub SignalR /hubs/trip-tracking
+GET {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/position
+Authorization: Bearer {{parentToken.response.body.accessToken}}
+
+### 10. Viajes de mis hijos (tutor)
+GET {{host}}/api/v1/guardians/me/trips
+Authorization: Bearer {{parentToken.response.body.accessToken}}
+
+### 11. SOS (US-13) y atención por la empresa
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/sos
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{ "clientEventId": "{{$guid}}" }
+
+###
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/sos/resolve
+Authorization: Bearer {{adminToken.response.body.accessToken}}
+
+### 12. Finalizar (US-14) y resumen
+POST {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/complete
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+Content-Type: application/json
+
+{ "clientEventId": "{{$guid}}" }
+
+###
+GET {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/summary
+Authorization: Bearer {{driverToken.response.body.accessToken}}
+
+### 13. Panel de la empresa
+GET {{host}}/api/v1/trips?status=Completed
+Authorization: Bearer {{adminToken.response.body.accessToken}}
+
+###
+GET {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/track
+Authorization: Bearer {{adminToken.response.body.accessToken}}
+
+### Sin token → 401 / tutor intentando una acción del conductor → 403
+GET {{host}}/api/v1/trips/{{agenda.response.body.$[0].tripId}}/live

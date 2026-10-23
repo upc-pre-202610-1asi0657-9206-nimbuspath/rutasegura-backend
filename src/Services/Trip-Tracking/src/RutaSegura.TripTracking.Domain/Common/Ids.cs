@@ -40,6 +40,13 @@ public readonly record struct GuardianId(Guid Value)
     public override string ToString() => Value.ToString();
 }
 
+/// <summary>Empresa de transporte (claim <c>organizationId</c> del JWT de IAM). Acota lo que ve un administrador.</summary>
+public readonly record struct OrganizationId(Guid Value)
+{
+    public bool IsEmpty => Value == Guid.Empty;
+    public override string ToString() => Value.ToString();
+}
+
 public readonly record struct IncidentId(Guid Value)
 {
     public static IncidentId New() => new(Guid.CreateVersion7());

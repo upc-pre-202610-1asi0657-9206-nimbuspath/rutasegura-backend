@@ -1,20 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- Adaptador de entrada (driving adapter): REST + tiempo real. Se completa en la Etapa 5. -->
+  <!--
+    Adaptador de entrada (driving adapter) del hexágono: REST /api/v1 + hub SignalR /hubs/trip-tracking.
+    Solo conoce IDispatcher (Application) y el composition root de Infrastructure.
+  -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>RutaSegura.TripTracking.Api</RootNamespace>
+    <UserSecretsId>rutasegura-trip-tracking</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RutaSegura.TripTracking.Application\RutaSegura.TripTracking.Application.csproj" />
     <ProjectReference Include="..\RutaSegura.TripTracking.Infrastructure\RutaSegura.TripTracking.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RutaSegura.TripTracking.Integration.Tests" />
   </ItemGroup>
 
 </Project>

@@ -28,6 +28,9 @@ public sealed class Trip : AggregateRoot<TripId>
     private readonly HashSet<ClientEventId> _processedClientEvents = [];
 
     public RouteId RouteId { get; private set; }
+
+    /// <summary>Empresa de transporte dueña de la ruta. Vacío en viajes creados antes de existir el dato.</summary>
+    public OrganizationId OrganizationId { get; private set; }
     public string RouteName { get; private set; } = string.Empty;
     public TripDirection Direction { get; private set; }
     public DriverId DriverId { get; private set; }
@@ -70,7 +73,8 @@ public sealed class Trip : AggregateRoot<TripId>
         DateTimeOffset scheduledStart,
         IReadOnlyCollection<TripStopDefinition> stops,
         IReadOnlyCollection<TripPassengerDefinition> passengers,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        OrganizationId organizationId = default)
     {
         if (string.IsNullOrWhiteSpace(routeName))
             throw Invalid("El viaje debe tener el nombre de la ruta.");
@@ -92,6 +96,7 @@ public sealed class Trip : AggregateRoot<TripId>
         {
             Id = id,
             RouteId = routeId,
+            OrganizationId = organizationId,
             RouteName = routeName.Trim(),
             Direction = direction,
             DriverId = driverId,
@@ -455,6 +460,9 @@ public sealed class Trip : AggregateRoot<TripId>
     // ───────────────────────────── Reglas auxiliares ─────────────────────────────
 
     public bool IsOperatedBy(DriverId driverId) => DriverId == driverId;
+
+    /// <summary>Un viaje sin empresa registrada no se restringe; uno con empresa solo lo ve esa empresa.</summary>
+    public bool BelongsTo(OrganizationId organizationId) => OrganizationId.IsEmpty || OrganizationId == organizationId;
 
     public bool HasPassenger(StudentId studentId) => _passengers.Any(p => p.StudentId == studentId);
 

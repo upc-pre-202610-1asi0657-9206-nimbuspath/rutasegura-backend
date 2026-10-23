@@ -1,0 +1,64 @@
+# Entorno local del Trip & Tracking Service con sus dependencias reales.
+#   docker compose -f src/Services/Trip-Tracking/docker-compose.yml up --build
+# API:        http://localhost:5180/swagger          (Development, con /dev/tokens)
+# RabbitMQ:   http://localhost:15672  (guest / guest)
+# MySQL:      localhost:3307  (rutasegura / rutasegura)
+
+name: rutasegura-trip-tracking
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: rutasegura_trip_tracking
+      MYSQL_USER: rutasegura
+      MYSQL_PASSWORD: rutasegura
+    ports: ["3307:3306"]
+    volumes: [trip-tracking-mysql:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  trip-tracking:
+    build:
+      context: ../../..
+      dockerfile: src/Services/Trip-Tracking/Dockerfile
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports: ["5180:8080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__TripTracking: "server=mysql;port=3306;database=rutasegura_trip_tracking;user=rutasegura;password=rutasegura"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__Secret: "rutasegura-dev-secret-cambiar-en-produccion-0123456789"
+      Persistence__MigrateOnStartup: "true"
+      RabbitMq__Enabled: "true"
+      RabbitMq__HostName: rabbitmq
+      Seed__Demo: "true"
+      DevTokens__Enabled: "true"
+
+volumes:
+  trip-tracking-mysql:

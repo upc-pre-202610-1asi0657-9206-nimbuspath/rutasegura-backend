@@ -14,6 +14,8 @@ namespace RutaSegura.TripTracking.Application.Trips.Queries;
 public sealed record LivePositionDto(
     double Latitude, double Longitude, DateTimeOffset RecordedAt, double? SpeedKmh, double? HeadingDegrees, int AgeSeconds);
 
+public sealed record StopDto(Guid StopId, string Name, int Sequence, double Latitude, double Longitude, DateTimeOffset? ReachedAt);
+
 public sealed record NextStopDto(Guid StopId, string Name, int Sequence, int TotalStops, double? DistanceMeters, int? EtaMinutes);
 
 public sealed record PassengerDto(
@@ -32,7 +34,8 @@ public sealed record TripLiveStatusDto(
     int StudentsOnBoard,
     int TotalStudents,
     bool HasActiveSos,
-    IReadOnlyList<PassengerDto> Passengers);
+    IReadOnlyList<PassengerDto> Passengers,
+    IReadOnlyList<StopDto>? Stops = null);
 
 // ───────────────────────── Viaje en vivo (tutor / conductor / empresa) ─────────────────────────
 
@@ -56,11 +59,10 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
                 visiblePassengers = GuardianAccessPolicy.VisiblePassengers(trip, children);
                 break;
             case RequesterRole.Driver:
-                if (!trip.IsOperatedBy(new DriverId(query.Requester.UserId))) return ApplicationErrors.TripAccessDenied;
-                visiblePassengers = trip.Passengers;
-                break;
             case RequesterRole.Admin:
-                visiblePassengers = trip.Passengers; // TODO Etapa 5: acotar a la empresa del admin (claim company_id)
+                // Conductor: solo su viaje. Admin: solo viajes de su empresa (claim organizationId).
+                if (!query.Requester.CanOperateAsStaff(trip)) return ApplicationErrors.TripAccessDenied;
+                visiblePassengers = trip.Passengers;
                 break;
             default:
                 return ApplicationErrors.TripAccessDenied;
@@ -78,7 +80,26 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
             trip.PassengersOnBoard.Count(),
             trip.Passengers.Count,
             trip.ActiveSos is not null,
-            visiblePassengers.Select(ToDto).ToList());
+            visiblePassengers.Select(ToDto).ToList(),
+            VisibleStops(trip, query.Requester.Role, visiblePassengers));
+    }
+
+    /// <summary>
+    /// El conductor y la empresa ven todas las paradas. El tutor solo la parada de su(s) hijo(s):
+    /// las demás paradas son domicilios de otras familias (AC-01).
+    /// </summary>
+    private static IReadOnlyList<StopDto> VisibleStops(Trip trip, RequesterRole role, IReadOnlyList<TripPassenger> visiblePassengers)
+    {
+        var stops = trip.Stops.AsEnumerable();
+        if (role == RequesterRole.Guardian)
+        {
+            var own = visiblePassengers.Select(p => p.StopId).ToHashSet();
+            stops = stops.Where(s => own.Contains(s.StopId));
+        }
+
+        return stops
+            .Select(s => new StopDto(s.StopId.Value, s.Name, s.Sequence, s.Position.Latitude, s.Position.Longitude, s.ReachedAt))
+            .ToList();
     }
 
     private static LivePositionDto? BuildPosition(Trip trip, DateTimeOffset now)
@@ -100,6 +121,8 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
         int? eta = distance is null ? null : EtaEstimator.EstimateMinutes(distance.Value, trip.LastSpeedKmh);
         return new NextStopDto(next.StopId.Value, next.Name, next.Sequence, trip.Stops.Count, distance, eta);
     }
+
+    internal static LivePositionDto? PositionFor(Trip trip, DateTimeOffset now) => BuildPosition(trip, now);
 
     internal static PassengerDto ToDto(TripPassenger p) => new(
         p.StudentId.Value, p.StopId.Value, p.Status.ToString(), p.BoardedAt, p.AlightedAt,
@@ -125,9 +148,7 @@ internal sealed class GetTripSummaryQueryHandler(ITripRepository trips) : IQuery
         if (loaded.IsFailure) return loaded.FirstError;
         var trip = loaded.Value;
 
-        var allowed = query.Requester.Role == RequesterRole.Admin ||
-                      (query.Requester.Role == RequesterRole.Driver && trip.IsOperatedBy(new DriverId(query.Requester.UserId)));
-        if (!allowed) return ApplicationErrors.TripAccessDenied;
+        if (!query.Requester.CanOperateAsStaff(trip)) return ApplicationErrors.TripAccessDenied;
 
         return new TripSummaryDto(
             trip.Id.Value, trip.RouteName, trip.Direction.ToString(), trip.Status.ToString(),

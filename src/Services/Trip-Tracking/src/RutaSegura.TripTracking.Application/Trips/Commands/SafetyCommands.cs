@@ -65,14 +65,14 @@ internal sealed class RaiseSosCommandHandler(ITripRepository trips, TimeProvider
         p.Latitude is >= -90 and <= 90 && p.Longitude is >= -180 and <= 180 && !(p.Latitude == 0 && p.Longitude == 0);
 }
 
-public sealed record ResolveSosCommand(Guid TripId, Guid OperatorId) : ICommand<Unit>;
+public sealed record ResolveSosCommand(Guid TripId, Guid OperatorId, Guid? OrganizationId = null) : ICommand<Unit>;
 
 internal sealed class ResolveSosCommandHandler(ITripRepository trips, TimeProvider clock)
     : ICommandHandler<ResolveSosCommand, Unit>
 {
     public async Task<Result<Unit>> HandleAsync(ResolveSosCommand command, CancellationToken cancellationToken)
     {
-        var loaded = await trips.LoadAsync(command.TripId, cancellationToken);
+        var loaded = await trips.LoadForOrganizationAsync(command.TripId, command.OrganizationId, cancellationToken);
         if (loaded.IsFailure) return loaded.FirstError;
 
         loaded.Value.ResolveSos(command.OperatorId, clock.GetUtcNow());
