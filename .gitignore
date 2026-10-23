@@ -1,13 +1,13 @@
-# .NET build and NuGet restore outputs (regenerated on each machine)
+# Archivos generados por .NET
 **/[Bb]in/
 **/[Oo]bj/
-/artifacts/
+artifacts/
 **/[Tt]est[Rr]esults/
 **/coverage/
 *.coverage
 *.coveragexml
 
-# Visual Studio / Rider local settings
+# Configuracion local del IDE
 .idea/
 .vs/
 *.user
@@ -15,7 +15,7 @@
 *.userosscache
 *.sln.docstates
 
-# Local configuration and secrets; keep examples and shared appsettings tracked
+# Configuracion local y secretos
 .env
 .env.*
 !.env.example
@@ -28,8 +28,9 @@ appsettings.*.Local.json
 *.pfx
 *.p12
 
-# Runtime logs and OS metadata
+# Logs, temporales y sistema operativo
 **/logs/
 *.log
+*.tmp
 .DS_Store
 Thumbs.db

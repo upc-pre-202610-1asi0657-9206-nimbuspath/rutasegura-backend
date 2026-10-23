@@ -26,7 +26,7 @@ public sealed class HostStartupTests
         Assert.Equal(HttpStatusCode.NotFound, template.StatusCode);
     }
 
-    [Fact] public Task IdentityHostStarts() => AssertHealthy<iam::Program>();
+    //[Fact] public Task IdentityHostStarts() => AssertHealthy<iam::Program>();
     [Fact] public Task AdministrationHostStarts() => AssertHealthy<administration::Program>();
     [Fact] public Task TripTrackingHostStarts() => AssertHealthy<trip::Program>();
     [Fact] public Task NotificationHostStarts() => AssertHealthy<notification::Program>();

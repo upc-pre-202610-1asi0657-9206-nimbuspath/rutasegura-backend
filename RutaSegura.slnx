@@ -40,20 +40,6 @@
   <Folder Name="/src/Services/Administration/src/RutaSegura.Administration.Infrastructure/">
     <Project Path="src/Services/Administration/src/RutaSegura.Administration.Infrastructure/RutaSegura.Administration.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/src/Services/IAM/" />
-  <Folder Name="/src/Services/IAM/src/" />
-  <Folder Name="/src/Services/IAM/src/RutaSegura.IAM.Api/">
-    <Project Path="src/Services/IAM/src/RutaSegura.IAM.Api/RutaSegura.IAM.Api.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/IAM/src/RutaSegura.IAM.Application/">
-    <Project Path="src/Services/IAM/src/RutaSegura.IAM.Application/RutaSegura.IAM.Application.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/IAM/src/RutaSegura.IAM.Domain/">
-    <Project Path="src/Services/IAM/src/RutaSegura.IAM.Domain/RutaSegura.IAM.Domain.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/IAM/src/RutaSegura.IAM.Infrastructure/">
-    <Project Path="src/Services/IAM/src/RutaSegura.IAM.Infrastructure/RutaSegura.IAM.Infrastructure.csproj" />
-  </Folder>
   <Folder Name="/src/Services/Notification/" />
   <Folder Name="/src/Services/Notification/src/" />
   <Folder Name="/src/Services/Notification/src/RutaSegura.Notification.Api/">
