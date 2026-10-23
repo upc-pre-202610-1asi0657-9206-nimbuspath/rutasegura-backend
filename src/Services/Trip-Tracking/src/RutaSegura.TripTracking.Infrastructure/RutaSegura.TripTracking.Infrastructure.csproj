@@ -39,5 +39,6 @@
   <ItemGroup>
     <InternalsVisibleTo Include="RutaSegura.TripTracking.Api" />
     <InternalsVisibleTo Include="RutaSegura.TripTracking.Integration.Tests" />
+    <InternalsVisibleTo Include="RutaSegura.Notification.Messaging.Tests" />
   </ItemGroup>
 </Project>

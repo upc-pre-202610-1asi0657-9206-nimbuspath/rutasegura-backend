@@ -52,7 +52,7 @@ internal sealed class RabbitMqMessagePublisher(RabbitMqConnection connection, IL
         {
             var channel = await GetChannelAsync(cancellationToken);
             await channel.BasicPublishAsync(connection.Options.EventsExchange, routingKey: message.MessageType,
-                mandatory: false, basicProperties: properties, body: body, cancellationToken: cancellationToken);
+                mandatory: true, basicProperties: properties, body: body, cancellationToken: cancellationToken);
         }
         catch
         {

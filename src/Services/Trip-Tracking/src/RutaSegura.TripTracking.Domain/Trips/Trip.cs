@@ -156,6 +156,8 @@ public sealed class Trip : AggregateRoot<TripId>
         if (pending > 0)
             throw new DomainException(TripErrors.HasPendingStudents, $"Faltan registrar {pending} alumno(s).");
 
+        var schoolDeliveredStudents = Direction == TripDirection.Pickup
+            ? PassengersOnBoard.Select(passenger => passenger.StudentId).ToList() : new List<StudentId>();
         if (Direction == TripDirection.Pickup)
         {
             // Recojo: al llegar al colegio todos los que van a bordo quedan entregados.
@@ -178,7 +180,7 @@ public sealed class Trip : AggregateRoot<TripId>
             _passengers.Where(p => p.Status == PassengerStatus.Absent).Select(p => p.StudentId).ToList(),
             _incidents.Count,
             StartedAt!.Value,
-            now));
+            now) { SchoolDeliveredStudents = schoolDeliveredStudents });
 
         MarkProcessed(clientEventId);
         return true;

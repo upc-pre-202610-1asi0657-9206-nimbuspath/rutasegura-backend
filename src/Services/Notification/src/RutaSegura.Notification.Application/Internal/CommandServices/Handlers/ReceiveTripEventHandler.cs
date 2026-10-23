@@ -24,7 +24,7 @@ internal sealed class ReceiveTripEventHandler(INotificationRepository notificati
     public async Task<Result<ReceiveTripEventResult>> HandleAsync(ReceiveTripEventCommand command, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        // La misma validacion protege tambien la entrada del futuro consumidor; no se procesa un contrato desconocido.
+        // La misma validacion protege la entrada del consumidor; no se procesa un contrato desconocido.
         var validation = new ReceiveTripEventValidator().Validate(command).ToArray();
         if (validation.Length > 0) return Result<ReceiveTripEventResult>.Failure(validation);
         var e = command.Event;

@@ -6,8 +6,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
-// Fase 2: persistencia real configurable. Directorios, identidad y canales se incorporan en las siguientes fases.
-builder.Services.AddNotificationApplication(registerUseCases: false);
+// El worker activa casos de uso con puertos HTTP reales. No habilita REST ni canales FCM/SignalR todavia.
+builder.Services.AddNotificationApplication(registerUseCases: builder.Configuration.GetValue<bool>("NotificationRabbitMq:Enabled"));
 builder.Services.AddNotificationInfrastructure(builder.Configuration);
 
 var app = builder.Build();
@@ -15,7 +15,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-// Liveness verifica el proceso. Readiness requiere adaptadores reales en T05–T06.
+// Liveness verifica el proceso. Readiness integral se incorpora con el despliegue de las dependencias.
 app.MapHealthChecks("/health/live");
 app.Run();
 

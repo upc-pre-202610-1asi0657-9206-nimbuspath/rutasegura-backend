@@ -8,6 +8,8 @@ using RutaSegura.Notification.Domain.Repositories;
 using RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore.Configuration;
 using RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore.Repositories;
 using RutaSegura.Notification.Infrastructure.Security;
+using RutaSegura.Notification.Infrastructure.Integration;
+using RutaSegura.Notification.Infrastructure.Messaging.RabbitMq;
 
 namespace RutaSegura.Notification.Infrastructure.DependencyInjection;
 
@@ -19,8 +21,31 @@ public static class NotificationInfrastructureExtensions
         var connection = configuration?.GetConnectionString("NotificationDatabase");
         if (!string.IsNullOrWhiteSpace(connection))
             services.AddNotificationPersistence(connection, configuration!["NotificationPersistence:PushTokenEncryptionKey"] ?? "");
+        if (configuration?.GetValue<bool>("NotificationRabbitMq:Enabled") == true)
+        {
+            if (string.IsNullOrWhiteSpace(connection))
+                throw new InvalidOperationException("RabbitMQ requiere NotificationDatabase y sus migraciones aplicadas.");
+            var dependencies = configuration.GetSection(NotificationDependencyOptions.SectionName).Get<NotificationDependencyOptions>() ?? new();
+            AddClient<INotificationRecipientDirectory, AdministrationRecipientDirectory>(services, dependencies.Administration);
+            AddClient<ITripNotificationContext, TripNotificationContextClient>(services, dependencies.TripTracking);
+            services.TryAddScoped<INotificationUserContext, BackgroundNotificationUserContext>();
+            services.AddNotificationRabbitMq(configuration.GetSection(NotificationRabbitMqOptions.Section).Get<NotificationRabbitMqOptions>() ?? new());
+        }
         // Sin configuracion, el host solo ofrece liveness. Nunca se registran adaptadores ficticios.
         return services;
+    }
+
+    private static void AddClient<TPort, TAdapter>(IServiceCollection services, NotificationDependencyOptions.ServiceEndpoint endpoint)
+        where TPort : class where TAdapter : class, TPort
+    {
+        var uri = endpoint.Validate();
+        services.AddHttpClient<TPort, TAdapter>(client =>
+        {
+            client.BaseAddress = uri;
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.MaxResponseContentBufferSize = 1024 * 1024;
+            client.DefaultRequestHeaders.Add("X-Service-Token", endpoint.ServiceToken);
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
     }
 
     public static IServiceCollection AddNotificationPersistence(this IServiceCollection services, string connectionString, string encryptionKey)

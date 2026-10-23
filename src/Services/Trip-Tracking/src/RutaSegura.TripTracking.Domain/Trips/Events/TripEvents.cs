@@ -49,6 +49,10 @@ public sealed record SosResolved(TripId TripId, Guid ResolvedBy, DateTimeOffset 
 
 public sealed record TripCompleted(
     TripId TripId, RouteId RouteId, IReadOnlyList<StudentId> DeliveredStudents, IReadOnlyList<StudentId> AbsentStudents,
-    int IncidentCount, DateTimeOffset StartedAt, DateTimeOffset OccurredOn) : DomainEvent(OccurredOn);
+    int IncidentCount, DateTimeOffset StartedAt, DateTimeOffset OccurredOn) : DomainEvent(OccurredOn)
+{
+    // Solo entregas nuevas confirmadas por este cierre; no incluye desembarques ya notificados.
+    public IReadOnlyList<StudentId> SchoolDeliveredStudents { get; init; } = [];
+}
 
 public sealed record TripCancelled(TripId TripId, string Reason, DateTimeOffset OccurredOn) : DomainEvent(OccurredOn);

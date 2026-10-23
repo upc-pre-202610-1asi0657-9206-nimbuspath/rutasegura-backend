@@ -88,6 +88,8 @@ public class TripIntegrationEventMapperTests : TripTrackingTestContext
         mapped.Select(m => m.EventId).ShouldBe(trip.DomainEvents.Select(e => e.EventId)); // MessageId = EventId (idempotencia)
 
         var completed = mapped[^1].Payload.ShouldBeOfType<TripCompletedV1>();
+        completed.Direction.ShouldBe("Pickup");
+        completed.SchoolDeliveredStudentIds.ShouldNotBeNull();
         completed.OrganizationId.ShouldBe(SantaRosa);
         completed.DeliveredStudents.ShouldBe([Valeria, Mateo], ignoreOrder: true);
         completed.AbsentStudents.ShouldBe([Camila]);

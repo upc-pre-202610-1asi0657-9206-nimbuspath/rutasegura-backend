@@ -56,14 +56,14 @@ La huella preserva el orden de las colecciones del contrato: los reintentos debe
 los metadatos originales. El productor no debe regenerar messageId, occurredAt o correlationId al reintentar.
 
 Un indice unico resuelve las carreras concurrentes. La unidad de trabajo propaga el codigo
-NOTIFICATION_DUPLICATE_KEY en lugar de fingir exito. El consumidor futuro debe descartar ese scope,
+NOTIFICATION_DUPLICATE_KEY en lugar de fingir exito. El consumidor de fase 3 descarta ese scope para
 reintentar en uno nuevo y consultar el Inbox antes de hacer ACK. La concurrencia optimista de avisos,
 suscripciones, trabajos y entregas utiliza un contador version; un conflicto produce NOTIFICATION_CONCURRENT_UPDATE.
 
 INotificationDispatchQueue solo persiste un trabajo. El worker futuro creara las entregas por canal y
 marcara el trabajo como expandido en una transaccion; despues procesara los envios fuera de esa transaccion.
 Versiones e indices impiden que dos expansiones confirmen el mismo trabajo. No se promete push exactamente una vez.
-No se han implementado consumidores RabbitMQ, workers, FCM ni SignalR en fase 2.
+La fase 3 incorpora el consumidor RabbitMQ (ver README del servicio). FCM, SignalR y el worker de envio siguen pendientes.
 
 El contexto rechaza agregados con DomainEvents pendientes hasta que exista un Outbox de publicacion durable;
 no los descarta silenciosamente. Los modelos actuales no generan esos eventos de salida.
