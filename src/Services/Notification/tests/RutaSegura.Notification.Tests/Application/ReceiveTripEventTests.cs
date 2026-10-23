@@ -32,6 +32,7 @@ public sealed class ReceiveTripEventTests : NotificationTestContext
         Store.Notifications.ShouldAllBe(n => n.Category == category && n.OrganizationId == Organization &&
             n.CorrelationId == "test-correlation" && n.ReadAt == null);
         Store.PendingDispatch.Count.ShouldBe(Store.Notifications.Count);
+        Store.ProcessedEvents.ShouldHaveSingleItem().NotificationCount.ShouldBe(result.Value.Created);
         UnitOfWork.Commits.ShouldBe(1);
     }
 
@@ -46,6 +47,7 @@ public sealed class ReceiveTripEventTests : NotificationTestContext
         second.Value.Duplicates.ShouldBe(1);
         Store.Notifications.ShouldHaveSingleItem();
         Store.PendingDispatch.ShouldHaveSingleItem();
+        Store.ProcessedEvents.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -124,6 +126,7 @@ public sealed class ReceiveTripEventTests : NotificationTestContext
         await Should.ThrowAsync<TimeoutException>(() => Commands.Handle(Event(), Ct));
         UnitOfWork.Commits.ShouldBe(0);
         Store.Notifications.ShouldBeEmpty();
+        Store.ProcessedEvents.ShouldBeEmpty();
     }
 
     [Fact]

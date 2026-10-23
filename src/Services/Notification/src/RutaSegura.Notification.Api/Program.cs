@@ -6,9 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
-// Fase 1: el core se verifica en pruebas; los casos de uso requieren los adaptadores productivos de las fases 2-4.
+// Fase 2: persistencia real configurable. Directorios, identidad y canales se incorporan en las siguientes fases.
 builder.Services.AddNotificationApplication(registerUseCases: false);
-builder.Services.AddNotificationInfrastructure();
+builder.Services.AddNotificationInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 

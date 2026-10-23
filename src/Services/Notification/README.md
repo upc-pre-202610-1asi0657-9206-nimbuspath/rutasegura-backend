@@ -1,4 +1,4 @@
-# Notification Service — fase 1
+# Notification Service — fases 1 y 2
 
 Core de notificaciones de RutaSegura en .NET 10: Domain y Application con dependencias hacia el nucleo. Se reutilizan AggregateRoot, Result, Dispatcher, validadores y los decoradores Logging → Validation → Transaction de BuildingBlocks.
 
@@ -29,7 +29,8 @@ RutaSegura.Notification.Application/
   DependencyInjection/
 RutaSegura.Notification.Infrastructure/
   DependencyInjection/
-  Persistence/EntityFrameworkCore/  # Solo convencion documentada; implementacion en fase 2
+  Persistence/EntityFrameworkCore/  # Contexto propio, configuraciones, repositorios y migraciones MySQL
+  Security/                        # Cifrado de tokens push
 RutaSegura.Notification.Interfaces/
   Rest/
     Controllers/           # Ubicacion reservada; sin endpoints de negocio en fase 1
@@ -45,7 +46,7 @@ Los servicios publicos exponen Handle(command/query, cancellationToken). Sus imp
 
 Commands y Queries permanecen en Application/Model: implementan los contratos CQRS de BuildingBlocks.Application. Ponerlos en Domain como estan hoy introduciria una dependencia de Domain hacia Application. Los Resources son exclusivos de Interfaces; los Results de Application son respuestas de los casos de uso independientes de HTTP. Interfaces transforma esos resultados mediante assemblers y solo referencia Application, no Domain ni Infrastructure. Api referencia Application, Infrastructure e Interfaces y concentra arranque, registro de dependencias, OpenAPI y configuracion de ejecucion. Cuando se implementen los controllers REST, Api registrara su assembly para que ASP.NET Core los descubra; no se agregan endpoints de negocio en esta fase.
 
-Para fase 2 se prefiere NotificationDbContext propio, no el AppDbContext del monolito. Las tablas se configuraran mediante Infrastructure/Persistence/EntityFrameworkCore/Configuration/Extensions/ModelBuilderExtensions.ApplyNotificationConfiguration, llamado desde OnModelCreating. Los repositorios concretos iran en Persistence/EntityFrameworkCore/Repositories. Separar el mapeo del contexto facilita mantener avisos, comunicados y entregas sin mezclar reglas de dominio con EF. No se han creado DbContext, repositorios EF, paquetes de persistencia ni migraciones en esta reorganizacion.
+La fase 2 implementa NotificationDbContext propio, no el AppDbContext del monolito. Las tablas se configuran mediante Infrastructure/Persistence/EntityFrameworkCore/Configuration/Extensions/ModelBuilderExtensions.ApplyNotificationConfiguration, llamado desde OnModelCreating. Los repositorios concretos estan en Persistence/EntityFrameworkCore/Repositories, sin mezclar reglas de dominio con EF. La migracion inicial incluye seis tablas, indices unicos, control de concurrencia y relaciones internas protegidas por organizacion. Configuracion, secretos, provisionamiento y pruebas en el [README de persistencia](src/RutaSegura.Notification.Infrastructure/Persistence/EntityFrameworkCore/README.md).
 
 ## Implementado
 
@@ -55,6 +56,8 @@ Para fase 2 se prefiere NotificationDbContext propio, no el AppDbContext del mon
 - NotificationDelivery separa aceptacion del canal, reintento, fallo y omision de ReadAt. Un destino push es una suscripcion identificada; aceptar un mensaje no acredita su visualizacion ni su lectura.
 - Puertos para persistencia, trabajo de entrega pendiente, Roster, estado activo del viaje, identidad, FCM y SignalR. No hay adaptadores ficticios en produccion.
 - Pruebas de dominio, casos de uso mediante el Dispatcher real, contratos, dependencias y arranque del host.
+- Persistencia MySQL 8.4 propia para avisos, comunicados, suscripciones push cifradas, Inbox de eventos procesados, trabajos pendientes y entregas por canal. Repositorios y unidad de trabajo reales, migraciones y Compose exclusivo de la base.
+- Idempotencia del evento completo: huella del payload y sus metadatos; confirmacion atomica de Inbox + avisos + trabajo pendiente. Restricciones de base de datos para duplicados concurrentes, incluidos avisos sin alumno, y contador de version para actualizaciones concurrentes.
 
 ## Contratos con Trip & Tracking
 
@@ -68,20 +71,20 @@ Correspondencias: StudentBoarded/StudentAlighted → StudentId; VehicleApproachi
 
 El listado actual de contratos no transporta movimiento continuo. Tracking sigue siendo propietario de GPS, geocercas, ETA, historial y Redis. El canal efimero `trip-tracking.live-positions` y su distribucion por SignalR se integraran aparte de estos avisos durables.
 
-## Limites de infraestructura para las fases siguientes
+## Persistencia y limites para las fases siguientes
 
-1. **MySQL 8.4 propio:** NotificationDbContext, migraciones, notificaciones, comunicados, Inbox/ProcessedEvents, trabajo de entrega y suscripciones push. Guardar Inbox + avisos + trabajo pendiente en UNA transaccion, confirmada por la unidad de trabajo. ACK de RabbitMQ solo despues del commit.
-2. **Unicidad:** NotificationKey = OrganizationId + SourceMessageId + SourceMessageType + RecipientUserId + SubjectId. SubjectId usa Guid.Empty para avisos sin alumno: un indice MySQL con StudentId nullable no evita todos los duplicados. Announcement requiere unicidad OrganizationId + RequestId. El Inbox necesita identidad por consumidor y mensaje y proteccion ante payloads conflictivos. La comprobacion del core cubre reintentos secuenciales; la garantia concurrente corresponde a los indices y transacciones de fase 2.
+1. **MySQL 8.4 propio (implementado):** NotificationDbContext, migraciones y seis tablas. Inbox + avisos + trabajo pendiente se confirman mediante un unico SaveChanges transaccional. La integracion RabbitMQ queda para la fase de mensajeria: ACK solo despues de un commit confirmado, nunca al capturar una excepcion de unicidad.
+2. **Unicidad (implementada):** NotificationKey = OrganizationId + SourceMessageId + SourceMessageType + RecipientUserId + SubjectId. SubjectId usa Guid.Empty para avisos sin alumno, con un CHECK de consistencia. Announcement tiene unicidad OrganizationId + RequestId. El Inbox tiene identidad consumer + messageId y una huella para detectar payloads conflictivos. Los indices protegen reintentos concurrentes; ante una carrera se descarta el scope y se reevalua el mensaje en uno nuevo. La comprobacion del core por si sola no sustituye estas restricciones.
 3. **Entrega fuera de la transaccion:** INotificationDispatchQueue solo persiste trabajo; un worker posterior expande destinos y llama a FCM/SignalR. Conservar intentos, proximo reintento y errores estables; suscripciones push invalidas/deshabilitadas no eliminan la bandeja. Revalidar permisos, expiracion y vigencia del viaje antes del envio cuando corresponda. No prometer push exactamente una vez: hay una ventana entre la aceptacion externa y el guardado local; el cliente deduplica por notificationId.
 4. **Directorios seguros:** Roster es propietario de vinculos y pertenencia al transportista. Resolver destinatarios y enlaces vigentes mediante contratos protegidos o proyecciones con politica explicita de revocacion. Si no puede verificarse el permiso, el adaptador falla; no debe devolver datos viejos como si fueran autorizacion vigente. Trip & Tracking provee IsActive sin compartir tablas ni Redis con el dominio de Notification.
 5. **JWT, Gateway y clientes:** mapear sub/NameIdentifier, role/scopes y organizationId emitidos por IAM a NotificationUser. Habilitar /api/v1/notifications/** y el hub por YARP; no exponer broker ni base. Web consume bandeja, SignalR y registra push FCM; el movil del conductor sigue enviando acciones a Tracking.
-6. **Redis:** no es persistencia de avisos. Solo incorporar un backplane si se despliegan varias replicas de SignalR. No reemplaza Inbox ni el trabajo durable de MySQL. Docker, secretos, readiness, reintentos/DLQ y observabilidad son trabajo posterior de infraestructura.
+6. **Redis:** no es persistencia de avisos. Solo incorporar un backplane si se despliegan varias replicas de SignalR. No reemplaza Inbox ni el trabajo durable de MySQL. Esta fase incorpora Compose solo para la base propia y configuracion externa de secretos; despliegue de todos los servicios, readiness, reintentos/DLQ y observabilidad siguen pendientes.
 
 NotificationProcessingPolicy permite configurar caducidad de proximidad y tolerancia de reloj; los valores iniciales del core son 5 minutos y 30 segundos respectivamente. Son decisiones iniciales de implementacion ajustables, no mediciones ni valores exigidos por el reporte. Los avisos historicos de abordaje y entrega conservan el instante real y no se descartan como una proximidad efimera.
 
 ## Registro y verificacion
 
-AddNotificationApplication() registra CommandServices, QueryServices y los handlers de los casos de uso, y requiere implementaciones reales de los puertos e IUnitOfWork. El host Api conserva registerUseCases: false mientras estos adaptadores no existan; solo expone liveness y OpenAPI. En las fases siguientes, activar los casos de uso una vez registrados los adaptadores. Las pruebas registran dobles exclusivamente en su proyecto.
+AddNotificationApplication() registra CommandServices, QueryServices y los handlers de los casos de uso. La fase 2 aporta repositorios e IUnitOfWork reales cuando se configura ConnectionStrings:NotificationDatabase y una clave de tokens externa. Api conserva registerUseCases: false hasta disponer de directorios e identidad productivos; solo expone liveness y OpenAPI. No migra la base automaticamente. Las pruebas registran dobles de directorios exclusivamente en sus proyectos y prueban la persistencia contra MySQL real.
 
 Con el SDK 10.0.401 fijado por el repositorio:
 
@@ -89,6 +92,6 @@ Con el SDK 10.0.401 fijado por el repositorio:
 dotnet test src/Services/Notification/tests/RutaSegura.Notification.Tests/RutaSegura.Notification.Tests.csproj -c Release
 ```
 
-Las pruebas de esta fase no acreditan conexion real con MySQL, RabbitMQ, Firebase ni clientes web. Tampoco solucionan las referencias IAM faltantes en la solucion global. Los adaptadores y las pruebas de integracion se incorporaran en las fases siguientes.
+La suite RutaSegura.Notification.Persistence.Tests verifica migraciones, persistencia, rollback, indices, cifrado, aislamiento y carreras contra MySQL 8.4 real mediante scripts/Test-NotificationPersistence.ps1. Sin NOTIFICATION_TEST_MYSQL, los casos de integracion se omiten explicitamente. Estas pruebas no acreditan RabbitMQ, Firebase ni clientes web, ni validan toda la solucion global.
 
-Verificacion focalizada del 22/10/2026 tras separar Api e Interfaces: 71 pruebas aprobadas, sin fallos ni omisiones, en Release. Las 63 existentes pasan por CommandServices/QueryServices; las nuevas verifican assemblers, fronteras, convenciones DDD, referencias de Api/Interfaces en la solucion y separacion del codigo REST frente al host y su configuracion. Incluye arranque del host y comprobacion de que no registra adaptadores falsos. Se ejecuto el proyecto de pruebas por ruta absoluta desde E:\ con el SDK 10.0.300 instalado. La verificacion con el SDK fijado 10.0.401 y la solucion completa sigue pendiente hasta disponer de ese SDK y reconciliar las referencias IAM. No se modifico global.json para realizar esta verificacion.
+Verificacion focalizada del 22/10/2026 tras fase 2: 109 pruebas aprobadas en Release, sin fallos ni omisiones: 78 de dominio/aplicacion/contratos/host y 31 de persistencia, modelo, cifrado y registro. De estas ultimas, 20 se ejecutan contra MySQL 8.4 real y verifican migraciones, atomicidad, unicidad, aislamiento y concurrencia; las otras 11 no requieren un servidor. Los contenedores temporales de prueba se retiraron al terminar, sin tocar bases o volumenes existentes. La base permanente de Compose queda preparada para configurarla con secretos propios; no se han almacenado credenciales reales en el repositorio. Se verifico con el SDK 10.0.300 instalado, ejecutando los proyectos por ruta absoluta desde E:\. La verificacion con el SDK fijado 10.0.401 y la solucion completa sigue pendiente hasta disponer de ese SDK y reconciliar las referencias IAM de los proyectos globales de pruebas. No se modifico global.json ni se ejecutaron comandos Git.

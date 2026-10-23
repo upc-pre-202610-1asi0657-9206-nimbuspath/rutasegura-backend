@@ -69,6 +69,8 @@ dotnet run --project src/ApiGateway
 
 Cada host expone `/health/live`. Los servicios publican OpenAPI en Development. Readiness, persistencia, autorización y comunicación real con RabbitMQ se completan en sus tareas posteriores; no se registran repositorios o unidades de trabajo ficticias en producción.
 
+Notification ya implementa su fase 2 de persistencia propia: NotificationDbContext, repositorios EF Core, migraciones, Inbox, trabajos de entrega y suscripciones push cifradas. La base MySQL 8.4 se configura de forma externa y cuenta con Compose aislado y pruebas de integracion reales; ver [Notification Service](src/Services/Notification/README.md). El host no migra automaticamente ni activa todavia los casos de uso que requieren directorios e identidad productivos. Las herramientas EF 10.0.12 se restauran con `dotnet tool restore` desde el manifiesto local.
+
 Trip & Tracking conserva el dominio, aplicación y sus 127 pruebas previas. Sus handlers todavía no se activan desde el host porque requieren adaptadores productivos y funcionalidades fuera de esta etapa. Las otras tres aplicaciones registran el dispatcher compartido y sus fronteras de módulos sin añadir endpoints de negocio.
 
 ## Alcance siguiente

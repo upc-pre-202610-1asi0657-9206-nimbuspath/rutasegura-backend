@@ -15,6 +15,7 @@ public sealed class Notification : AggregateRoot<Guid>
     public string CorrelationId { get; private set; } = string.Empty;
     public Guid? TripId { get; private set; }
     public Guid? StudentId { get; private set; }
+    public Guid SubjectId { get; private set; }
     public Guid? AnnouncementId { get; private set; }
     public NotificationCategory Category { get; private set; }
     public NotificationPriority Priority => Category switch
@@ -29,7 +30,7 @@ public sealed class Notification : AggregateRoot<Guid>
     public DateTimeOffset? ReadAt { get; private set; }
     public DateTimeOffset? ExpiresAt { get; private set; }
     // SubjectId no nulo evita que MySQL admita duplicados en indices UNIQUE con columnas NULL.
-    public NotificationKey Key => new(OrganizationId, SourceMessageId, SourceMessageType, RecipientUserId, StudentId ?? Guid.Empty);
+    public NotificationKey Key => new(OrganizationId, SourceMessageId, SourceMessageType, RecipientUserId, SubjectId);
 
     public static Notification Create(Guid organizationId, Guid recipientUserId, Guid sourceMessageId,
         string sourceMessageType, string correlationId, NotificationCategory category, NotificationContent content,
@@ -50,7 +51,8 @@ public sealed class Notification : AggregateRoot<Guid>
             SourceMessageId = sourceMessageId, SourceMessageType = sourceMessageType, Category = category,
             CorrelationId = correlationId,
             Content = content, OccurredAt = occurredAt.ToUniversalTime(), CreatedAt = createdAt.ToUniversalTime(),
-            TripId = tripId, StudentId = studentId, AnnouncementId = announcementId, ExpiresAt = expiresAt?.ToUniversalTime()
+            TripId = tripId, StudentId = studentId, SubjectId = studentId ?? Guid.Empty,
+            AnnouncementId = announcementId, ExpiresAt = expiresAt?.ToUniversalTime()
         };
     }
 

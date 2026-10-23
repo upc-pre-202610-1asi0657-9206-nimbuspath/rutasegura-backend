@@ -12,6 +12,7 @@ using RutaSegura.Notification.Application.Contracts.V1;
 using RutaSegura.Notification.Application.Model.Commands;
 using RutaSegura.Notification.Domain.Model.Aggregates;
 using NotificationEntity = RutaSegura.Notification.Domain.Model.Aggregates.Notification;
+using RutaSegura.Notification.Domain.Model.Entities;
 
 namespace RutaSegura.Notification.Tests.Fakes;
 
@@ -49,6 +50,7 @@ public abstract class NotificationTestContext : IDisposable
         services.AddSingleton<TimeProvider>(Clock);
         services.AddSingleton<INotificationRepository>(Store);
         services.AddSingleton<IAnnouncementRepository>(Store);
+        services.AddSingleton<IProcessedNotificationEventRepository>(Store);
         services.AddSingleton<INotificationDispatchQueue>(Store);
         services.AddSingleton<INotificationRecipientDirectory>(Directory);
         services.AddSingleton<ITripNotificationContext>(Directory);
@@ -103,11 +105,15 @@ internal sealed class UnitOfWorkFake : IUnitOfWork
     }
 }
 
-internal sealed class MemoryStore : INotificationRepository, IAnnouncementRepository, INotificationDispatchQueue
+internal sealed class MemoryStore : INotificationRepository, IAnnouncementRepository, INotificationDispatchQueue, IProcessedNotificationEventRepository
 {
     public List<NotificationEntity> Notifications { get; } = [];
     public List<Announcement> Announcements { get; } = [];
     public List<Guid> PendingDispatch { get; } = [];
+    public List<ProcessedNotificationEvent> ProcessedEvents { get; } = [];
+    public Task<ProcessedNotificationEvent?> FindAsync(string consumer, Guid messageId, CancellationToken cancellationToken) =>
+        Task.FromResult(ProcessedEvents.SingleOrDefault(e => e.Consumer == consumer && e.MessageId == messageId));
+    public void Add(ProcessedNotificationEvent processedEvent) => ProcessedEvents.Add(processedEvent);
     public Task<NotificationEntity?> GetAsync(Guid organizationId, Guid notificationId, CancellationToken cancellationToken) =>
         Task.FromResult(Notifications.SingleOrDefault(n => n.OrganizationId == organizationId && n.Id == notificationId));
     public Task<NotificationEntity?> FindByKeyAsync(NotificationKey key, CancellationToken cancellationToken) =>

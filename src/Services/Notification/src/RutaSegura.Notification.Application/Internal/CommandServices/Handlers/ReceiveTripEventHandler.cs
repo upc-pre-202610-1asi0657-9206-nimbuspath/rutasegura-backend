@@ -10,12 +10,15 @@ using RutaSegura.Notification.Domain.Repositories;
 using RutaSegura.Notification.Domain.Model.Aggregates;
 using RutaSegura.Notification.Domain.Model.ValueObjects;
 using NotificationEntity = RutaSegura.Notification.Domain.Model.Aggregates.Notification;
+using RutaSegura.Notification.Domain.Model.Entities;
+using RutaSegura.Notification.Application.Internal.Transform;
 
 namespace RutaSegura.Notification.Application.Internal.CommandServices.Handlers;
 
 internal sealed class ReceiveTripEventHandler(INotificationRepository notifications,
     INotificationRecipientDirectory recipients, ITripNotificationContext tripContext,
-    INotificationDispatchQueue dispatchQueue, TimeProvider clock, NotificationProcessingPolicy policy)
+    INotificationDispatchQueue dispatchQueue, IProcessedNotificationEventRepository processedEvents,
+    TimeProvider clock, NotificationProcessingPolicy policy)
     : ICommandHandler<ReceiveTripEventCommand, ReceiveTripEventResult>
 {
     public async Task<Result<ReceiveTripEventResult>> HandleAsync(ReceiveTripEventCommand command, CancellationToken cancellationToken)
@@ -26,18 +29,35 @@ internal sealed class ReceiveTripEventHandler(INotificationRepository notificati
         if (validation.Length > 0) return Result<ReceiveTripEventResult>.Failure(validation);
         var e = command.Event;
         var now = clock.GetUtcNow();
+        var fingerprint = NotificationEventFingerprint.Create(command);
+        var processed = await processedEvents.FindAsync(TripNotificationContracts.ConsumerQueue,
+            command.Metadata.MessageId, cancellationToken);
+        if (processed is not null)
+        {
+            if (processed.OrganizationId != e.OrganizationId || processed.PayloadHash != fingerprint)
+                return Error.Conflict("NOTIFICATION_SOURCE_CONFLICT", "La identidad del evento ya corresponde a otro contenido.");
+            return new ReceiveTripEventResult(0, processed.NotificationCount, processed.SkippedReason);
+        }
+
+        ReceiveTripEventResult Complete(ReceiveTripEventResult result)
+        {
+            processedEvents.Add(ProcessedNotificationEvent.Record(TripNotificationContracts.ConsumerQueue,
+                command.Metadata.MessageId, e.OrganizationId, command.Metadata.MessageType, fingerprint,
+                command.Metadata.OccurredAt, now, result.Created + result.Duplicates, result.SkippedReason));
+            return result;
+        }
         if (command.Metadata.OccurredAt > now + policy.MaxFutureClockSkew)
             return Error.Validation("NOTIFICATION_EVENT_IN_FUTURE", "El instante del hecho no puede estar en el futuro.");
         if (e is IncidentReportedV1 { NotifyGuardians: false })
-            return new ReceiveTripEventResult(0, 0, "GUARDIAN_NOTICE_NOT_REQUESTED");
+            return Complete(new ReceiveTripEventResult(0, 0, "GUARDIAN_NOTICE_NOT_REQUESTED"));
         if (e is TripCompletedV1 { Direction: TripDirectionV1.Return })
-            return new ReceiveTripEventResult(0, 0, "RETURN_DELIVERY_REPORTED_BY_ALIGHTING");
+            return Complete(new ReceiveTripEventResult(0, 0, "RETURN_DELIVERY_REPORTED_BY_ALIGHTING"));
         if (e is VehicleApproachingStopV1)
         {
             if (now >= command.Metadata.OccurredAt + policy.ProximityLifetime)
-                return new ReceiveTripEventResult(0, 0, "PROXIMITY_EXPIRED");
+                return Complete(new ReceiveTripEventResult(0, 0, "PROXIMITY_EXPIRED"));
             if (!await tripContext.IsActiveAsync(e.OrganizationId, e.TripId, cancellationToken))
-                return new ReceiveTripEventResult(0, 0, "TRIP_NOT_ACTIVE");
+                return Complete(new ReceiveTripEventResult(0, 0, "TRIP_NOT_ACTIVE"));
         }
 
         Guid[] students = e switch
@@ -87,7 +107,7 @@ internal sealed class ReceiveTripEventHandler(INotificationRepository notificati
             notifications.Add(notification);
             dispatchQueue.Enqueue(notification);
         }
-        return new ReceiveTripEventResult(additions.Count, duplicates);
+        return Complete(new ReceiveTripEventResult(additions.Count, duplicates));
     }
 
     private static readonly Error InvalidAudience = Error.Forbidden("NOTIFICATION_INVALID_AUDIENCE",
