@@ -127,9 +127,9 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1",
         new OpenApiInfo
         {
-            Title = "Powertech-Platform",
+            Title = "Monolith RutaSegura API",
             Version = "v1",
-            Description = "Powertech Platform API",
+            Description = "Monolith API",
             License = new OpenApiLicense
             {
                 Name = "Apache 2.0",
