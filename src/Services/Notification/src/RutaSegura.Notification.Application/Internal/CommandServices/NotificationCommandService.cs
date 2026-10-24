@@ -9,6 +9,11 @@ namespace RutaSegura.Notification.Application.Internal.CommandServices;
 /// <summary>Entrada a los comandos. Conserva Logging, Validation y Transaction del Dispatcher compartido.</summary>
 internal sealed class NotificationCommandService(IDispatcher dispatcher) : INotificationCommandService
 {
+    public Task<Result<PushSubscriptionResult>> Handle(RegisterPushSubscriptionCommand command, CancellationToken cancellationToken = default) =>
+        dispatcher.SendAsync(command, cancellationToken);
+    public Task<Result<PushSubscriptionResult>> Handle(DisablePushSubscriptionCommand command, CancellationToken cancellationToken = default) =>
+        dispatcher.SendAsync(command, cancellationToken);
+
     public Task<Result<ReceiveTripEventResult>> Handle(ReceiveTripEventCommand command, CancellationToken cancellationToken = default) =>
         dispatcher.SendAsync(command, cancellationToken);
 

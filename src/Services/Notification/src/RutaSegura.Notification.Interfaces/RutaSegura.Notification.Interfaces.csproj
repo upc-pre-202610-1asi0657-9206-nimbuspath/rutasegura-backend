@@ -3,6 +3,7 @@
     <RootNamespace>RutaSegura.Notification.Interfaces</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../RutaSegura.Notification.Application/RutaSegura.Notification.Application.csproj" />
   </ItemGroup>
 </Project>

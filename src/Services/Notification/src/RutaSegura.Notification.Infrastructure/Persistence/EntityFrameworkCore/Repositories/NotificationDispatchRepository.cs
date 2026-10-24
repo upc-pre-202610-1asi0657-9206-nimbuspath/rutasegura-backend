@@ -10,6 +10,10 @@ namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore
 
 public sealed class NotificationDispatchRepository(NotificationDbContext context) : INotificationDispatchQueue, INotificationDispatchRepository
 {
+    public Task<NotificationDispatchJob?> GetJobAsync(Guid organizationId, Guid jobId, CancellationToken cancellationToken) =>
+        context.DispatchJobs.SingleOrDefaultAsync(j => j.OrganizationId == organizationId && j.Id == jobId, cancellationToken);
+    public Task<NotificationDelivery?> GetDeliveryAsync(Guid organizationId, Guid deliveryId, CancellationToken cancellationToken) =>
+        context.Deliveries.SingleOrDefaultAsync(d => d.OrganizationId == organizationId && d.Id == deliveryId, cancellationToken);
     public void Enqueue(NotificationEntity notification)
     {
         if (!context.DispatchJobs.Local.Any(j => j.OrganizationId == notification.OrganizationId && j.NotificationId == notification.Id))
@@ -19,14 +23,20 @@ public sealed class NotificationDispatchRepository(NotificationDbContext context
     {
         ValidateLimit(limit);
         return await context.DispatchJobs.Where(j => j.ExpandedAt == null)
-            .OrderBy(j => j.CreatedAt).ThenBy(j => j.Id).Take(limit).ToArrayAsync(cancellationToken);
+            .Join(context.Notifications, j => new { j.OrganizationId, Id = j.NotificationId }, n => new { n.OrganizationId, n.Id },
+                (job, notice) => new { Job = job, notice.Category })
+            .OrderBy(x => x.Category == NotificationCategory.Sos ? 0 : x.Category == NotificationCategory.Incident ? 1 : 2)
+            .ThenBy(x => x.Job.CreatedAt).ThenBy(x => x.Job.Id).Select(x => x.Job).Take(limit).ToArrayAsync(cancellationToken);
     }
     public async Task<IReadOnlyList<NotificationDelivery>> ListDueDeliveriesAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken)
     {
         ValidateLimit(limit);
         return await context.Deliveries.Where(d => d.Status == DeliveryStatus.Pending ||
                 (d.Status == DeliveryStatus.RetryScheduled && d.NextAttemptAt <= now))
-            .OrderBy(d => d.CreatedAt).ThenBy(d => d.Id).Take(limit).ToArrayAsync(cancellationToken);
+            .Join(context.Notifications, d => new { d.OrganizationId, Id = d.NotificationId }, n => new { n.OrganizationId, n.Id },
+                (delivery, notice) => new { Delivery = delivery, notice.Category })
+            .OrderBy(x => x.Category == NotificationCategory.Sos ? 0 : x.Category == NotificationCategory.Incident ? 1 : 2)
+            .ThenBy(x => x.Delivery.CreatedAt).ThenBy(x => x.Delivery.Id).Select(x => x.Delivery).Take(limit).ToArrayAsync(cancellationToken);
     }
     public void Add(NotificationDelivery delivery) => context.Deliveries.Add(delivery);
     private static void ValidateLimit(int limit)

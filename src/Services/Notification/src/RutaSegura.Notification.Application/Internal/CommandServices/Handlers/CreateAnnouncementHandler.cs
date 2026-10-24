@@ -24,6 +24,9 @@ internal sealed class CreateAnnouncementHandler(IAnnouncementRepository announce
         var user = current.Value;
         if (!user.CanPublishAnnouncements)
             return Error.Forbidden("ANNOUNCEMENT_ACCESS_DENIED", "No tienes permisos para publicar comunicados.");
+        if (!(await directory.OperatorsAsync(user.OrganizationId, cancellationToken))
+            .Any(r => r.OrganizationId == user.OrganizationId && r.UserId == user.UserId && r.StudentId is null))
+            return Error.Forbidden("ANNOUNCEMENT_ACCESS_REVOKED", "No tienes una vinculacion operativa vigente con este transportista.");
         var errors = new CreateAnnouncementValidator().Validate(command).ToArray();
         if (errors.Length > 0) return Result<CreateAnnouncementResult>.Failure(errors);
         var content = NotificationContent.Create(command.Title, command.Body);

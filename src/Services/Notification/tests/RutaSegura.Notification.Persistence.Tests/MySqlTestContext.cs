@@ -122,6 +122,8 @@ public abstract class MySqlTestContext : IAsyncLifetime
 public sealed class RecipientDirectory(Guid organization, Guid guardian, Guid student) : INotificationRecipientDirectory, ITripNotificationContext
 {
     public bool Unavailable { get; set; }
+    public bool LinkRevoked { get; set; }
+    public bool TripActive { get; set; } = true;
     public Task<IReadOnlyList<NotificationRecipient>> ForStudentsAsync(Guid organizationId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken)
     {
         if (Unavailable) throw new TimeoutException("Directorio de prueba no disponible.");
@@ -129,10 +131,11 @@ public sealed class RecipientDirectory(Guid organization, Guid guardian, Guid st
             ? [new(organization, guardian, student)] : []);
     }
     public Task<IReadOnlyList<NotificationRecipient>> OperatorsAsync(Guid organizationId, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<NotificationRecipient>>([]);
+        Task.FromResult<IReadOnlyList<NotificationRecipient>>(organizationId == organization ? [new(organization, guardian)] : []);
     public Task<Result<IReadOnlyList<NotificationRecipient>>> ForAnnouncementAsync(Guid organizationId, Guid? routeId, CancellationToken cancellationToken) =>
         Task.FromResult(Result<IReadOnlyList<NotificationRecipient>>.Success([new(organization, guardian)]));
     public Task<IReadOnlyCollection<Guid>> CurrentStudentLinksAsync(Guid organizationId, Guid userId, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyCollection<Guid>>(organizationId == organization && userId == guardian ? [student] : []);
-    public Task<bool> IsActiveAsync(Guid organizationId, Guid tripId, CancellationToken cancellationToken) => Task.FromResult(true);
+        Unavailable ? throw new HttpRequestException("Directorio no disponible (prueba).") :
+        Task.FromResult<IReadOnlyCollection<Guid>>(!LinkRevoked && organizationId == organization && userId == guardian ? [student] : []);
+    public Task<bool> IsActiveAsync(Guid organizationId, Guid tripId, CancellationToken cancellationToken) => Task.FromResult(TripActive);
 }

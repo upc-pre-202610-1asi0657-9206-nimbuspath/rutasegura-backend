@@ -62,7 +62,8 @@ public sealed record SosResolvedV1(Guid TripId, Guid RouteId, Guid? Organization
 
 public sealed record TripCompletedV1(Guid TripId, Guid RouteId, Guid? OrganizationId, string RouteName,
     IReadOnlyList<Guid> DeliveredStudents, IReadOnlyList<Guid> AbsentStudents, int IncidentCount,
-    DateTimeOffset StartedAt, DateTimeOffset CompletedAt);
+    DateTimeOffset StartedAt, DateTimeOffset CompletedAt,
+    string? Direction = null, IReadOnlyList<Guid>? SchoolDeliveredStudentIds = null);
 
 public sealed record TripCancelledV1(Guid TripId, Guid RouteId, Guid? OrganizationId, string Reason, DateTimeOffset OccurredAt);
 
@@ -132,7 +133,8 @@ public static class TripIntegrationEventMapper
                 e.DriverId.Value, e.VehicleId.Value, GeoPointV1.From(e.Position), Ids(e.StudentsOnBoard), e.OccurredOn)),
             SosResolved e => (Types.SosResolved, new SosResolvedV1(tripId, routeId, org, e.ResolvedBy, e.OccurredOn)),
             TripCompleted e => (Types.TripCompleted, new TripCompletedV1(tripId, routeId, org, route,
-                Ids(e.DeliveredStudents), Ids(e.AbsentStudents), e.IncidentCount, e.StartedAt, e.OccurredOn)),
+                Ids(e.DeliveredStudents), Ids(e.AbsentStudents), e.IncidentCount, e.StartedAt, e.OccurredOn,
+                trip.Direction.ToString(), Ids(e.SchoolDeliveredStudents))),
             TripCancelled e => (Types.TripCancelled, new TripCancelledV1(tripId, routeId, org, e.Reason, e.OccurredOn)),
             _ => throw new InvalidOperationException($"No hay contrato de integración para {domainEvent.GetType().Name}.")
         };

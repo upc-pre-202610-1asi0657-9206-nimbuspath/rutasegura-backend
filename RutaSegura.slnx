@@ -46,6 +46,7 @@
   <Folder Name="/src/Services/Notification/tests/">
     <Project Path="src/Services/Notification/tests/RutaSegura.Notification.Tests/RutaSegura.Notification.Tests.csproj" />
     <Project Path="src/Services/Notification/tests/RutaSegura.Notification.Persistence.Tests/RutaSegura.Notification.Persistence.Tests.csproj" />
+    <Project Path="src/Services/Notification/tests/RutaSegura.Notification.Messaging.Tests/RutaSegura.Notification.Messaging.Tests.csproj" />
   </Folder>
   <Folder Name="/src/Services/Trip-Tracking/" />
   <Folder Name="/src/Services/Trip-Tracking/src/" />
