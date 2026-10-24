@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json.Serialization;
 using Cortex.Mediator.Commands;
 using Cortex.Mediator.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -7,13 +8,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Monolith.Administration.Infrastructure.Configuration;
+using Monolith.Iam.Application.ACL;
 using Monolith.Iam.Application.Internal.CommandServices;
 using Monolith.Iam.Application.CommandServices;
 using Monolith.Iam.Application.Internal.OutboundServices;
 using Monolith.Iam.Application.Internal.QueryServices;
 using Monolith.Iam.Application.QueryServices;
 using Monolith.Iam.Domain.Repositories;
+using Monolith.Iam.Infrastructure.Authorization;
 using Monolith.Iam.Infrastructure.Hashing.BCrypt.Services;
+using Monolith.Iam.Interfaces.ACL;
 using Monolith.Iam.Infrastructure.Persistence.EFC.Repositories;
 using Monolith.Iam.Infrastructure.Persistence.EFC.Seeding;
 using Monolith.Iam.Infrastructure.Tokens.Jwt.Configuration;
@@ -34,6 +39,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ---------------------------------------------------------------------------
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddControllers(options => options.Conventions.Add(new KebabCaseRouteNamingConvention()))
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
     .AddDataAnnotationsLocalization();
 
 builder.Services.AddProblemDetails();
@@ -85,28 +91,10 @@ builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 });
 
 // ---------------------------------------------------------------------------
-// Authentication (JWT Bearer) — issued by the Iam bounded context
+// Security provided by the Iam bounded context: JWT bearer validation of the tokens Iam issues,
+// role/organization policies (IamPolicies) used by every context, and RFC 7807 bodies for 401/403.
 // ---------------------------------------------------------------------------
-builder.Services.Configure<TokenSettings>(builder.Configuration.GetSection("TokenSettings"));
-
-var tokenSecret = builder.Configuration["TokenSettings:Secret"];
-if (string.IsNullOrWhiteSpace(tokenSecret))
-    throw new InvalidOperationException("TokenSettings:Secret is not set in the configuration.");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSecret)),
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-builder.Services.AddAuthorization();
+builder.Services.AddIamSecurity(builder.Configuration);
 
 // ---------------------------------------------------------------------------
 // Localization
@@ -148,6 +136,8 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
         { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] });
     options.EnableAnnotations();
+    // X-Provisioning-Key field for organization provisioning (POST /api/v1/organizations).
+    options.OperationFilter<ProvisioningKeyHeaderOperationFilter>();
     options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
 });
 
@@ -166,6 +156,12 @@ builder.Services.AddScoped<IIamCommandService, IamCommandService>();
 builder.Services.AddScoped<IIamQueryService, IamQueryService>();
 builder.Services.AddScoped<IHashingService, HashingService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+// Facade (ACL) other bounded contexts use to ask Iam about accounts and organizations.
+builder.Services.AddScoped<IIamContextFacade, IamContextFacade>();
+
+// Administration bounded context (Roster + Route Planning): repositories, application services,
+// plan limits, Iam ACL, outbox and — when Administration:Messaging:Enabled — RabbitMQ workers.
+builder.Services.AddAdministrationBoundedContext(builder.Configuration);
 
 
 // ---------------------------------------------------------------------------
@@ -180,28 +176,47 @@ var app = builder.Build();
 // Wrapped so a database connectivity/credential problem does not prevent the API (and Swagger)
 // from starting: the app boots, surfaces a clear log entry, and database-backed endpoints fail
 // individually until the connection is fixed.
-using (var scope = app.Services.CreateScope())
+// Database:MigrateOnStartup=false skips it (integration tests create their own schema).
+if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
 {
-    var services = scope.ServiceProvider;
-    var startupLogger = services.GetRequiredService<ILogger<Program>>();
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
-        startupLogger.LogInformation("Database migrations applied successfully.");
+        var services = scope.ServiceProvider;
+        var startupLogger = services.GetRequiredService<ILogger<Program>>();
+        try
+        {
+            var context = services.GetRequiredService<AppDbContext>();
+            // The database may still be starting (e.g. docker compose): retry before giving up.
+            var maxAttempts = app.Configuration.GetValue("Database:MigrationAttempts", 20);
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    await context.Database.MigrateAsync();
+                    break;
+                }
+                catch (Exception ex) when (attempt < maxAttempts && ex is System.Data.Common.DbException)
+                {
+                    startupLogger.LogWarning("Database not available yet (attempt {Attempt}/{Max}): {Message}",
+                        attempt, maxAttempts, ex.Message);
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                }
+            }
+            startupLogger.LogInformation("Database migrations applied successfully.");
 
-        // Seed demo data on an empty database, in dependency order across bounded contexts:
-        // identity/org first, then stakeholders, then plans/subscription, routes, trips and
-        // finally notifications that reference the seeded parent and trip.
-        var hashingService = services.GetRequiredService<IHashingService>();
-        await IamSeeder.SeedAsync(context, hashingService);
-        startupLogger.LogInformation("Seed data ensured.");
-    }
-    catch (Exception ex)
-    {
-        startupLogger.LogError(ex,
-            "Database migration failed at startup. The API will still start, but database-backed " +
-            "endpoints will fail until the connection string in appsettings is corrected.");
+            // Seed demo data on an empty database, in dependency order across bounded contexts:
+            // identity/org first, then stakeholders, then plans/subscription, routes, trips and
+            // finally notifications that reference the seeded parent and trip.
+            var hashingService = services.GetRequiredService<IHashingService>();
+            await IamSeeder.SeedAsync(context, hashingService);
+            startupLogger.LogInformation("Seed data ensured.");
+        }
+        catch (Exception ex)
+        {
+            startupLogger.LogError(ex,
+                "Database migration failed at startup. The API will still start, but database-backed " +
+                "endpoints will fail until the connection string in appsettings is corrected.");
+        }
     }
 }
 
@@ -237,3 +252,6 @@ app.MapHealthChecks("/health");
 app.MapControllers();
 
 app.Run();
+
+// Makes the entry point visible to WebApplicationFactory in the integration tests.
+public partial class Program;

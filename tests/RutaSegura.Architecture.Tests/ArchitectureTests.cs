@@ -1,12 +1,11 @@
 using System.Xml.Linq;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
 
 namespace RutaSegura.Architecture.Tests;
 
 public sealed class ArchitectureTests
 {
-    private static readonly string[] Services = ["IAM", "Administration", "TripTracking", "Notification"];
+    private static readonly string[] Services = ["TripTracking", "Notification"];
     private static readonly string[] Layers = ["Domain", "Application", "Infrastructure", "Api"];
 
     private static string Root
@@ -87,78 +86,23 @@ public sealed class ArchitectureTests
         }
     }
 
-    [Fact]
-    public void AdministrationModulesArePresentAndDoNotReferenceEachOthersInternals()
-    {
-        foreach (var layer in Layers)
-        {
-            var project = Assert.Single(Projects, p => Path.GetFileNameWithoutExtension(p) == $"RutaSegura.Administration.{layer}");
-            using var assembly = AssemblyDefinition.ReadAssembly(Binary(project));
-            Assert.Empty(ArchitectureRules.ModuleViolations(assembly));
-            if (layer is "Domain" or "Application")
-                foreach (var module in new[] { "Roster", "RoutePlanning", "Subscription" })
-                    Assert.Contains(assembly.MainModule.Types, t => t.Namespace == $"RutaSegura.Administration.{layer}.{module}");
-        }
-    }
-
     [Theory]
-    [InlineData("RutaSegura.IAM.Domain", "Microsoft.EntityFrameworkCore")]
-    [InlineData("RutaSegura.IAM.Domain", "RutaSegura.IAM.Infrastructure")]
-    [InlineData("RutaSegura.IAM.Application", "RabbitMQ.Client")]
-    [InlineData("RutaSegura.IAM.Application", "Microsoft.AspNetCore.App")]
-    [InlineData("RutaSegura.Administration.Infrastructure", "RutaSegura.IAM.Domain")]
+    [InlineData("RutaSegura.TripTracking.Domain", "Microsoft.EntityFrameworkCore")]
+    [InlineData("RutaSegura.TripTracking.Domain", "RutaSegura.TripTracking.Infrastructure")]
+    [InlineData("RutaSegura.TripTracking.Application", "RabbitMQ.Client")]
+    [InlineData("RutaSegura.Notification.Application", "Microsoft.AspNetCore.App")]
+    [InlineData("RutaSegura.Notification.Infrastructure", "RutaSegura.TripTracking.Domain")]
     [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.BuildingBlocks.Testing")]
     [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.Notification.Domain")]
     [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.Notification.Infrastructure")]
     [InlineData("RutaSegura.Notification.Interfaces", "RutaSegura.Notification.Api")]
     [InlineData("RutaSegura.BuildingBlocks.Application", "RutaSegura.TripTracking.Domain")]
     [InlineData("RutaSegura.BuildingBlocks.Messaging", "RabbitMQ.Client")]
-    [InlineData("RutaSegura.ApiGateway", "RutaSegura.IAM.Application")]
+    [InlineData("RutaSegura.ApiGateway", "RutaSegura.TripTracking.Application")]
     public void GuardRejectsForbiddenCompiledAssemblyReference(string source, string target)
     {
         using var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition(source, new Version(1, 0)), source, ModuleKind.Dll);
         assembly.MainModule.AssemblyReferences.Add(new AssemblyNameReference(target, new Version(1, 0)));
         Assert.Single(ArchitectureRules.AssemblyViolations(assembly));
-    }
-
-    [Theory]
-    [InlineData("Domain", "RoutePlanning")]
-    [InlineData("Application", "Subscription")]
-    [InlineData("Infrastructure", "Roster")]
-    public void GuardRejectsForbiddenModuleDependencyInMethodBody(string layer, string targetModule)
-    {
-        using var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition("Fixture", new Version(1, 0)), "Fixture", ModuleKind.Dll);
-        var sourceModule = targetModule == "Roster" ? "RoutePlanning" : "Roster";
-        var source = new TypeDefinition($"RutaSegura.Administration.{layer}.{sourceModule}", "Caller",
-            TypeAttributes.Public, assembly.MainModule.TypeSystem.Object);
-        var target = new TypeDefinition($"RutaSegura.Administration.Domain.{targetModule}", "PrivateEntity",
-            TypeAttributes.Public, assembly.MainModule.TypeSystem.Object);
-        assembly.MainModule.Types.Add(source);
-        assembly.MainModule.Types.Add(target);
-        var method = new MethodDefinition("UseOtherModule", MethodAttributes.Public | MethodAttributes.Static,
-            assembly.MainModule.TypeSystem.Void);
-        source.Methods.Add(method);
-        method.Body.Instructions.Add(Instruction.Create(OpCodes.Ldtoken, target));
-        method.Body.Instructions.Add(Instruction.Create(OpCodes.Pop));
-        method.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-        Assert.Single(ArchitectureRules.ModuleViolations(assembly));
-    }
-
-    [Fact]
-    public void GuardPermitsPublishedApplicationContractButRejectsGenericEntityLeak()
-    {
-        using var assembly = AssemblyDefinition.CreateAssembly(new AssemblyNameDefinition("Fixture", new Version(1, 0)), "Fixture", ModuleKind.Dll);
-        var caller = new TypeDefinition("RutaSegura.Administration.Application.Roster", "Caller", TypeAttributes.Public,
-            assembly.MainModule.TypeSystem.Object);
-        var contract = new TypeReference("RutaSegura.Administration.Application.Subscription.Contracts", "IPlanLimits",
-            assembly.MainModule, assembly.MainModule);
-        assembly.MainModule.Types.Add(caller);
-        caller.Fields.Add(new FieldDefinition("Contract", FieldAttributes.Public, contract));
-        Assert.Empty(ArchitectureRules.ModuleViolations(assembly));
-        var list = new GenericInstanceType(assembly.MainModule.ImportReference(typeof(List<>)));
-        list.GenericArguments.Add(new TypeReference("RutaSegura.Administration.Domain.Subscription", "Plan",
-            assembly.MainModule, assembly.MainModule));
-        caller.Fields.Add(new FieldDefinition("LeakedEntities", FieldAttributes.Public, list));
-        Assert.Single(ArchitectureRules.ModuleViolations(assembly));
     }
 }

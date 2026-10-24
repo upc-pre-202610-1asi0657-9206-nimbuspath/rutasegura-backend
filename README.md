@@ -2,6 +2,10 @@
 
 Backend .NET 10 del proyecto refactorizado. El catálogo de historias y el Sprint Backlog se mantienen en el informe AV2 de la raíz. Este README describe el código ejecutable; `RESUMEN-AVANCE.md` y el README de Trip-Tracking conservan el avance previo.
 
+## Monolito: IAM y Administration
+
+IAM y Administration ya no son microservicios: viven como bounded contexts dentro de `src/Monolith` (carpetas `Iam/` y `Administration/`, cada una con Domain, Application, Infrastructure e Interfaces). El microservicio `src/Services/Administration` se eliminó. Administration (Roster + Route Planning) tiene implementadas sus cuatro capas, con la seguridad de Iam integrada; ver [src/Monolith/Administration/README.md](src/Monolith/Administration/README.md). Sus pruebas están en `tests/RutaSegura.Monolith.Administration.Tests`, `.IntegrationTests` y `.ContractTests`.
+
 ## Sprint 1 — Etapa 1 (T01–T04)
 
 La solución contiene cuatro servicios desplegables y un Gateway. Cada servicio tiene Domain, Application, Infrastructure y un host HTTP Api. Notification separa sus contratos y adaptadores REST en una biblioteca Interfaces referenciada por Api. Administration agrupa Roster, Route Planning y Subscription en un mismo desplegable.
@@ -41,6 +45,42 @@ Los tipos `*DomainAssembly` y `*ApplicationAssembly` de los módulos nuevos iden
 
 Las pruebas inspeccionan referencias de proyectos/paquetes y binarios compilados. También construyen fixtures con referencias prohibidas y accesos a otro módulo dentro de métodos para comprobar que el detector realmente los rechaza. La inspección de IL usa [Mono.Cecil](https://github.com/jbevain/cecil).
 
+## Probar todo en Docker (Monolito + Trip-Tracking)
+
+Requisitos: Docker Desktop encendido. `docker-compose.yml` (raíz) levanta MySQL, RabbitMQ, Redis, el monolito y Trip-Tracking, todos con el mismo secreto JWT, issuer y audience.
+
+```powershell
+docker compose up -d --build --wait                 # construye y espera a que todo esté sano
+docker compose --profile smoke run --rm smoke       # prueba de punta a punta (42 comprobaciones)
+docker compose logs -f monolith trip-tracking       # ver logs
+docker compose down                                 # apagar (agrega -v para borrar los datos)
+```
+
+| Servicio | URL |
+| :--- | :--- |
+| Monolito (Iam + Administration) | http://localhost:5000/swagger |
+| Trip-Tracking | http://localhost:5180/swagger |
+| RabbitMQ (guest/guest) | http://localhost:15672 |
+| MySQL (rutasegura/rutasegura, root/root) | localhost:3307 |
+
+La prueba de humo (`scripts/smoke/e2e.sh`) corre en un contenedor y no necesita nada instalado. Hace este recorrido:
+1. Verifica las colas y bindings de RabbitMQ.
+2. **Iam:** alta de la organización con su ADMIN, registro de un padre, rechazos 401/403/400 y creación del conductor por el ADMIN.
+3. **Administration:** conductor, vehículo, ruta, paradas, alumno, asignación y activación.
+4. **Evento `administration.route-published` hacia Trip-Tracking:** este programa el viaje.
+5. **Trip-Tracking:** el conductor (con token de Iam) inicia el viaje, reporta un incidente, lanza un SOS que el ADMIN resuelve, marca la ausencia del alumno y finaliza.
+6. **Eventos de vuelta a Administration:** `incident-reported`, `sos-raised`, `sos-resolved` y `trip-completed` se convierten en alertas y en el registro del viaje.
+7. Desactiva la ruta y comprueba que las colas DLQ estén vacías.
+
+**Si un arranque falla a medias:** ejecuta `docker compose down -v` antes de reintentar, porque MySQL solo crea usuarios y bases con el volumen vacío.
+
+**Pruebas de integración de Trip-Tracking contra este Docker:** sin estas variables se omiten.
+```powershell
+$env:TRIPTRACKING_IT_MYSQL="server=localhost;port=3307;user=root;password=root"
+$env:TRIPTRACKING_IT_RABBITMQ="localhost"
+dotnet test src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Integration.Tests
+```
+
 ## Verificación reproducible
 
 Desde la raíz, con el SDK 10.0.401 fijado en `global.json`:
@@ -61,7 +101,6 @@ El último comando arranca simultáneamente los cuatro servicios y Gateway en pr
 
 ```powershell
 dotnet run --project src/Services/IAM/src/RutaSegura.IAM.Api
-dotnet run --project src/Services/Administration/src/RutaSegura.Administration.Api
 dotnet run --project src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Api
 dotnet run --project src/Services/Notification/src/RutaSegura.Notification.Api
 dotnet run --project src/ApiGateway

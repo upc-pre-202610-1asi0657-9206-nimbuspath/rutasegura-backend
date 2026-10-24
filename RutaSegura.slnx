@@ -26,20 +26,6 @@
     <Project Path="src/BuildingBlocks/tests/RutaSegura.BuildingBlocks.Foundation.Tests/RutaSegura.BuildingBlocks.Foundation.Tests.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
-  <Folder Name="/src/Services/Administration/" />
-  <Folder Name="/src/Services/Administration/src/" />
-  <Folder Name="/src/Services/Administration/src/RutaSegura.Administration.Api/">
-    <Project Path="src/Services/Administration/src/RutaSegura.Administration.Api/RutaSegura.Administration.Api.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/Administration/src/RutaSegura.Administration.Application/">
-    <Project Path="src/Services/Administration/src/RutaSegura.Administration.Application/RutaSegura.Administration.Application.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/Administration/src/RutaSegura.Administration.Domain/">
-    <Project Path="src/Services/Administration/src/RutaSegura.Administration.Domain/RutaSegura.Administration.Domain.csproj" />
-  </Folder>
-  <Folder Name="/src/Services/Administration/src/RutaSegura.Administration.Infrastructure/">
-    <Project Path="src/Services/Administration/src/RutaSegura.Administration.Infrastructure/RutaSegura.Administration.Infrastructure.csproj" />
-  </Folder>
   <Folder Name="/src/Services/Notification/" />
   <Folder Name="/src/Services/Notification/src/" />
   <Folder Name="/src/Services/Notification/src/RutaSegura.Notification.Api/">
@@ -88,6 +74,15 @@
   <Folder Name="/tests/" />
   <Folder Name="/tests/RutaSegura.Architecture.Tests/">
     <Project Path="tests/RutaSegura.Architecture.Tests/RutaSegura.Architecture.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/RutaSegura.Monolith.Administration.Tests/">
+    <Project Path="tests/RutaSegura.Monolith.Administration.Tests/RutaSegura.Monolith.Administration.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/RutaSegura.Monolith.Administration.IntegrationTests/">
+    <Project Path="tests/RutaSegura.Monolith.Administration.IntegrationTests/RutaSegura.Monolith.Administration.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/RutaSegura.Monolith.Administration.ContractTests/">
+    <Project Path="tests/RutaSegura.Monolith.Administration.ContractTests/RutaSegura.Monolith.Administration.ContractTests.csproj" />
   </Folder>
   <Folder Name="/tests/RutaSegura.Backend.Structure.Tests/">
     <Project Path="tests/RutaSegura.Backend.Structure.Tests/RutaSegura.Backend.Structure.Tests.csproj" />

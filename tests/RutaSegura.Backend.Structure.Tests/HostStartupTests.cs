@@ -1,5 +1,3 @@
-extern alias iam;
-extern alias administration;
 extern alias trip;
 extern alias notification;
 extern alias gateway;
@@ -30,8 +28,6 @@ public sealed class HostStartupTests
         Assert.Equal(HttpStatusCode.NotFound, template.StatusCode);
     }
 
-    //[Fact] public Task IdentityHostStarts() => AssertHealthy<iam::Program>();
-    [Fact] public Task AdministrationHostStarts() => AssertHealthy<administration::Program>();
     [Fact] public Task TripTrackingHostStarts() => AssertHealthy<trip::Program>(readinessMapped: true);
     [Fact] public Task NotificationHostStarts() => AssertHealthy<notification::Program>();
     [Fact] public Task GatewayHostStarts() => AssertHealthy<gateway::Program>();

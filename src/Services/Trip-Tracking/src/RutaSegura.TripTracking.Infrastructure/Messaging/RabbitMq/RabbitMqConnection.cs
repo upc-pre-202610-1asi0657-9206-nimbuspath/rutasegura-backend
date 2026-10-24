@@ -116,9 +116,9 @@ internal static class RabbitMqTopology
 
         foreach (var binding in o.InboundBindings)
         {
-            // El exchange de origen pertenece a otro servicio; declararlo (topic, durable) es idempotente
-            // y permite arrancar en cualquier orden.
-            await channel.ExchangeDeclareAsync(binding.Exchange, ExchangeType.Topic, durable: true, autoDelete: false, cancellationToken: ct);
+            // El exchange de origen pertenece a otro servicio: se declara con los mismos argumentos que usa su dueño
+            // (topic + alternate-exchange); si no, el servicio que arranque segundo recibe PRECONDITION_FAILED.
+            await DeclareEventsExchangeAsync(channel, binding.Exchange, ct);
             await channel.QueueBindAsync(o.InboundQueue, binding.Exchange, binding.RoutingKey, cancellationToken: ct);
         }
     }

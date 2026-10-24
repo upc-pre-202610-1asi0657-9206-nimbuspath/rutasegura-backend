@@ -9,8 +9,6 @@ $evidenceFolder = Join-Path $repoRoot 'artifacts/host-startup'
 New-Item -ItemType Directory -Force -Path $evidenceFolder | Out-Null
 $dotnetPath = (Get-Command dotnet).Source
 $services = @(
-    @{ Name = 'IAM'; Folder = 'src/Services/IAM/src/RutaSegura.IAM.Api'; Assembly = 'RutaSegura.IAM.Api' },
-    @{ Name = 'Administration'; Folder = 'src/Services/Administration/src/RutaSegura.Administration.Api'; Assembly = 'RutaSegura.Administration.Api' },
     @{ Name = 'TripTracking'; Folder = 'src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Api'; Assembly = 'RutaSegura.TripTracking.Api' },
     @{ Name = 'Notification'; Folder = 'src/Services/Notification/src/RutaSegura.Notification.Api'; Assembly = 'RutaSegura.Notification.Api' },
     @{ Name = 'Gateway'; Folder = 'src/ApiGateway'; Assembly = 'RutaSegura.ApiGateway' }

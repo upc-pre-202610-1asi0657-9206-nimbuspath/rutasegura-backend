@@ -11,8 +11,6 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/Services/IAM/src/RutaSegura.IAM.Api/RutaSegura.IAM.Api.csproj" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="../../src/Services/Administration/src/RutaSegura.Administration.Api/RutaSegura.Administration.Api.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Api/RutaSegura.TripTracking.Api.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/Services/Notification/src/RutaSegura.Notification.Api/RutaSegura.Notification.Api.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/ApiGateway/RutaSegura.ApiGateway.csproj" ReferenceOutputAssembly="false" />

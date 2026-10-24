@@ -15,6 +15,16 @@ public enum IamError
     InvalidCredentials,
     OrganizationNotFound,
     InvalidIamData,
+
+    /// <summary>The password does not meet the password policy.</summary>
+    WeakPassword,
+
+    /// <summary>Only parents can create their own account; administrators and drivers are created for them.</summary>
+    SelfRegistrationNotAllowed,
+
+    /// <summary>The organization of the account is suspended.</summary>
+    OrganizationNotActive,
+
     OperationCancelled,
     DatabaseError,
     InternalServerError

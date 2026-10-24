@@ -31,7 +31,7 @@ try {
         "-p:RestorePackagesPath=$consumerCache", '--no-build', '--no-restore', '--nologo', '--logger', 'trx', '--results-directory', $resultsFolder)
 
     $consumers = @()
-    foreach ($service in @('IAM', 'Administration', 'TripTracking', 'Notification')) {
+    foreach ($service in @('TripTracking', 'Notification')) {
         $projectName = "RutaSegura.$service.Api"
         $assetsPath = Join-Path $repoRoot "artifacts/package-consumers/obj/$projectName/project.assets.json"
         $assets = Get-Content -LiteralPath $assetsPath -Raw | ConvertFrom-Json

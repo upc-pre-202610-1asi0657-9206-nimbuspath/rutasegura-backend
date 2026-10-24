@@ -30,7 +30,9 @@ public class TokenService(IOptions<TokenSettings> tokenSettings) : ITokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(_tokenSettings.ExpirationDays),
+            Expires = DateTime.UtcNow.AddHours(_tokenSettings.ExpirationHours),
+            Issuer = string.IsNullOrWhiteSpace(_tokenSettings.Issuer) ? null : _tokenSettings.Issuer,
+            Audience = string.IsNullOrWhiteSpace(_tokenSettings.Audience) ? null : _tokenSettings.Audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
                 SecurityAlgorithms.HmacSha256Signature)
         };

@@ -45,6 +45,8 @@ public class ProblemDetailsFactory
         problemDetails.Title = title;
         problemDetails.Detail = detail;
         problemDetails.Instance = controller.HttpContext.Request.Path;
+        // Stable, language-independent code for clients (e.g. "PlanRouteLimitReached").
+        if (errorEnum is not null) problemDetails.Extensions["code"] = errorEnum.ToString();
 
         return controller.StatusCode(statusCode, problemDetails);
     }

@@ -47,6 +47,10 @@ public class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : 
     // inheritedDoc
     public void Update(TEntity entity)
     {
+        // Aggregates loaded in this context are already tracked: DetectChanges finds what changed, including new
+        // child entities (tracked as Added). Calling DbSet.Update on them would mark new children as Modified and
+        // turn their INSERT into an UPDATE of a row that does not exist.
+        if (Context.Entry(entity).State != EntityState.Detached) return;
         Context.Set<TEntity>().Update(entity);
     }
 

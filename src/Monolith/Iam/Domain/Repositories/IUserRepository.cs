@@ -11,4 +11,7 @@ public interface IUserRepository : IBaseRepository<User>
     Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken);
 
     Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken);
+
+    Task<IEnumerable<User>> FindAllByOrganizationIdAsync(OrganizationId organizationId,
+        CancellationToken cancellationToken);
 }

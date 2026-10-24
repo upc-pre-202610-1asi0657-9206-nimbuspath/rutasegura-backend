@@ -1,0 +1,120 @@
+# Entorno local completo: Monolito (Iam + Administration) + Trip & Tracking + MySQL + RabbitMQ + Redis.
+#
+#   docker compose up -d --build                  levanta todo
+#   docker compose --profile smoke run --rm smoke prueba rutas, comandos y eventos de punta a punta
+#   docker compose down -v                        apaga y borra los datos
+#
+# Monolito:      http://localhost:5000/swagger
+# Trip-Tracking: http://localhost:5180/swagger
+# RabbitMQ:      http://localhost:15672   (guest / guest)
+# MySQL:         localhost:3307           (rutasegura / rutasegura · root / root)
+#
+# Los secretos de abajo son SOLO para este entorno local.
+
+name: rutasegura
+
+x-jwt: &jwt
+  secret: &jwt-secret "local-docker-jwt-secret-0123456789abcdef0123456789"
+  issuer: &jwt-issuer rutasegura-iam
+  audience: &jwt-audience rutasegura-api
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: rutasegura_monolith
+      MYSQL_USER: rutasegura
+      MYSQL_PASSWORD: rutasegura
+    ports: ["3307:3306"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Por TCP y con el usuario de la app: durante la inicialización MySQL levanta un servidor temporal
+      # solo por socket, y un ping por socket lo daría por "sano" antes de tiempo.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-urutasegura", "-prutasegura"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  monolith:
+    build:
+      context: .
+      dockerfile: src/Monolith/Dockerfile
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["5000:8080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      Swagger__Enabled: "true"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=rutasegura_monolith;Uid=rutasegura;Pwd=rutasegura;"
+      Database__MigrateOnStartup: "true"
+      TokenSettings__Secret: *jwt-secret
+      TokenSettings__Issuer: *jwt-issuer
+      TokenSettings__Audience: *jwt-audience
+      Iam__Provisioning__ApiKey: "local-docker-provisioning-key-0123456789abcdef"
+      Administration__Messaging__Enabled: "true"
+      Administration__Messaging__HostName: rabbitmq
+
+  trip-tracking:
+    build:
+      context: .
+      dockerfile: src/Services/Trip-Tracking/Dockerfile
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports: ["5180:8080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__TripTracking: "server=mysql;port=3306;database=rutasegura_trip_tracking;user=rutasegura;password=rutasegura"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__Secret: *jwt-secret
+      Jwt__Issuer: *jwt-issuer
+      Jwt__Audience: *jwt-audience
+      Persistence__MigrateOnStartup: "true"
+      RabbitMq__Enabled: "true"
+      RabbitMq__HostName: rabbitmq
+      # Programa viajes cada 10 s para que la prueba de humo no espere 30 min.
+      Scheduling__Interval: "00:00:10"
+      Seed__Demo: "false"
+      DevTokens__Enabled: "false"
+
+  # Prueba de punta a punta (solo con --profile smoke). No necesita nada instalado en tu PC.
+  smoke:
+    profiles: ["smoke"]
+    image: alpine:3.20
+    depends_on:
+      monolith: { condition: service_healthy }
+      trip-tracking: { condition: service_healthy }
+    volumes:
+      - ./scripts/smoke:/smoke:ro
+    environment:
+      MONOLITH_URL: http://monolith:8080
+      TRIP_TRACKING_URL: http://trip-tracking:8080
+      RABBITMQ_API: http://rabbitmq:15672/api
+      PROVISIONING_KEY: "local-docker-provisioning-key-0123456789abcdef"
+    entrypoint: ["sh", "-c", "apk add --no-cache -q curl jq tzdata >/dev/null && sh /smoke/e2e.sh"]
+
+volumes:
+  mysql-data:

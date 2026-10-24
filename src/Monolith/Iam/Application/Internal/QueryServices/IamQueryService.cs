@@ -12,8 +12,8 @@ public class IamQueryService(IUserRepository userRepository, IOrganizationReposi
     public Task<User?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken) =>
         userRepository.FindByUserIdAsync(new UserId(query.UserId), cancellationToken);
 
-    public async Task<IEnumerable<User>> Handle(GetAllUsersQuery query, CancellationToken cancellationToken) =>
-        await userRepository.ListAsync(cancellationToken);
+    public Task<IEnumerable<User>> Handle(GetUsersByOrganizationQuery query, CancellationToken cancellationToken) =>
+        userRepository.FindAllByOrganizationIdAsync(new OrganizationId(query.OrganizationId), cancellationToken);
 
     public Task<Organization?> Handle(GetOrganizationByIdQuery query, CancellationToken cancellationToken) =>
         organizationRepository.FindByOrganizationIdAsync(new OrganizationId(query.OrganizationId),

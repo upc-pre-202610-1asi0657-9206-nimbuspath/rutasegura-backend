@@ -7,7 +7,7 @@ public interface IIamQueryService
 {
     Task<User?> Handle(GetUserByIdQuery query, CancellationToken cancellationToken);
 
-    Task<IEnumerable<User>> Handle(GetAllUsersQuery query, CancellationToken cancellationToken);
+    Task<IEnumerable<User>> Handle(GetUsersByOrganizationQuery query, CancellationToken cancellationToken);
 
     Task<Organization?> Handle(GetOrganizationByIdQuery query, CancellationToken cancellationToken);
 }
