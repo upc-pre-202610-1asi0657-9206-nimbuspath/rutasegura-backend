@@ -84,6 +84,7 @@ services:
       mysql: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       redis: { condition: service_healthy }
+      monolith: { condition: service_started }
     ports: ["5180:8080"]
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -92,6 +93,9 @@ services:
       Jwt__Secret: *jwt-secret
       Jwt__Issuer: *jwt-issuer
       Jwt__Audience: *jwt-audience
+      # Seguridad de Iam: Trip-Tracking confirma en Iam que la cuenta del token sigue vigente (GET /api/v1/users/me).
+      Iam__BaseUrl: http://monolith:8080
+      Iam__AccountValidation__Enabled: "true"
       Persistence__MigrateOnStartup: "true"
       RabbitMq__Enabled: "true"
       RabbitMq__HostName: rabbitmq

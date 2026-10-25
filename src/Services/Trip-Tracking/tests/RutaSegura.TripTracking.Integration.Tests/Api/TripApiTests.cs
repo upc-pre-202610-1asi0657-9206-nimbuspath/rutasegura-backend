@@ -28,7 +28,7 @@ public sealed class TripApiTests(TripTrackingApiFactory factory) : IClassFixture
         factory.RequireMySql();
         factory.Clock.SetUtcNow(At(6, 40));
         var seeded = await factory.SeedTripAsync();
-        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId);
+        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId, seeded.OrganizationId);
         var trip = $"/api/v1/trips/{seeded.TripId}";
 
         (await driver.PostAsJsonAsync($"{trip}/start", Action(), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -81,7 +81,7 @@ public sealed class TripApiTests(TripTrackingApiFactory factory) : IClassFixture
         factory.RequireMySql();
         factory.Clock.SetUtcNow(At(6, 40));
         var seeded = await factory.SeedTripAsync();
-        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId);
+        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId, seeded.OrganizationId);
         var trip = $"/api/v1/trips/{seeded.TripId}";
         await driver.PostAsJsonAsync($"{trip}/start", Action(), Ct);
 
@@ -104,7 +104,7 @@ public sealed class TripApiTests(TripTrackingApiFactory factory) : IClassFixture
         factory.RequireMySql();
         factory.Clock.SetUtcNow(At(6, 40));
         var seeded = await factory.SeedTripAsync();
-        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId);
+        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId, seeded.OrganizationId);
         await driver.PostAsJsonAsync($"/api/v1/trips/{seeded.TripId}/start", Action(), Ct);
 
         var response = await driver.PostAsJsonAsync($"/api/v1/trips/{seeded.TripId}/complete", Action(), Ct);
@@ -128,7 +128,7 @@ public sealed class TripApiTests(TripTrackingApiFactory factory) : IClassFixture
         var guardian = factory.CreateClientAs("PARENT", seeded.GuardianId);
         (await guardian.PostAsJsonAsync($"/api/v1/trips/{seeded.TripId}/start", Action(), Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
-        var otherDriver = factory.CreateClientAs("DRIVER", Guid.NewGuid());
+        var otherDriver = factory.CreateClientAs("DRIVER", Guid.NewGuid(), seeded.OrganizationId);
         var mismatch = await otherDriver.PostAsJsonAsync($"/api/v1/trips/{seeded.TripId}/start", Action(), Ct);
         mismatch.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await mismatch.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("code").GetString().ShouldBe("TRIP_DRIVER_MISMATCH");
@@ -157,7 +157,7 @@ public sealed class TripApiTests(TripTrackingApiFactory factory) : IClassFixture
         before.GetProperty("position").ValueKind.ShouldBe(JsonValueKind.Null);
         before.GetProperty("passengers").GetArrayLength().ShouldBe(1);
 
-        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId);
+        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId, seeded.OrganizationId);
         await driver.PostAsJsonAsync($"/api/v1/trips/{seeded.TripId}/start", Action(), Ct);
         await driver.PostAsJsonAsync("/api/v1/tracking/positions", new
         {
@@ -180,7 +180,7 @@ public sealed class TripApiTests(TripTrackingApiFactory factory) : IClassFixture
         factory.RequireMySql();
         factory.Clock.SetUtcNow(At(6, 40));
         var seeded = await factory.SeedTripAsync();
-        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId);
+        var driver = factory.CreateClientAs("DRIVER", seeded.DriverId, seeded.OrganizationId);
         await driver.PostAsJsonAsync($"/api/v1/trips/{seeded.TripId}/start", Action(), Ct);
         factory.Clock.SetUtcNow(At(7, 0));
 

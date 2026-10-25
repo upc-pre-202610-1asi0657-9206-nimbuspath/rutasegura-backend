@@ -28,6 +28,8 @@ builder.Services.AddExceptionHandler<TripTrackingExceptionHandler>();
 builder.Services.AddOpenApi(o => o.AddDocumentTransformer<BearerSecurityTransformer>());
 builder.Services.AddSignalR().AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// Seguridad que provee Iam: JWT de Iam (mismo secreto, emisor y audiencia), políticas por rol/organización y
+// verificación en Iam de que la cuenta sigue vigente (GET /api/v1/users/me, con caché).
 builder.Services.AddTripTrackingSecurity(builder.Configuration);
 builder.Services.AddRateLimiter(options =>
 {
@@ -62,7 +64,13 @@ if (app.Environment.IsDevelopment())
         o.RoutePrefix = "swagger";
     });
     if (app.Configuration.GetValue<bool>("DevTokens:Enabled"))
+    {
         app.MapDevTokens();
+        // Los tokens de /dev/tokens son de usuarios demo que Iam no conoce: Iam los rechazaría.
+        if (app.Configuration.GetValue($"{IamOptions.Section}:AccountValidation:Enabled", true))
+            app.Logger.LogWarning("DevTokens:Enabled=true con Iam:AccountValidation:Enabled=true: Iam rechazará " +
+                                  "los tokens de /dev/tokens. Usa el perfil http-demo-sin-iam o inicia sesión en Iam.");
+    }
 }
 
 app.UseAuthentication();

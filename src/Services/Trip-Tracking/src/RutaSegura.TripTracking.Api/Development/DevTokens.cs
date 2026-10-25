@@ -11,7 +11,8 @@ namespace RutaSegura.TripTracking.Api.Development;
 /// <summary>
 /// SOLO DESARROLLO (<c>DevTokens:Enabled=true</c> y entorno Development): emite tokens con el mismo formato que IAM
 /// (<c>TokenService</c> del monolito) para probar con Postman / .http mientras IAM no está desplegado.
-/// Nunca se registra en producción.
+/// Nunca se registra en producción. Como Iam no conoce a esos usuarios demo, requiere
+/// <c>Iam:AccountValidation:Enabled=false</c> (perfil <c>http-demo-sin-iam</c> o el docker-compose del servicio).
 /// </summary>
 internal static class DevTokens
 {

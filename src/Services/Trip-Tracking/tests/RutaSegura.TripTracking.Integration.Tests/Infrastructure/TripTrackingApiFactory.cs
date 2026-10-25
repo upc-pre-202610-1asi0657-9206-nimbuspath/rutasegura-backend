@@ -25,6 +25,8 @@ namespace RutaSegura.TripTracking.Integration.Tests.Infrastructure;
 public sealed class TripTrackingApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string JwtSecret = "integration-tests-secret-0123456789-abcdefghij";
+    public const string JwtIssuer = "rutasegura-iam";
+    public const string JwtAudience = "rutasegura-api";
     public static readonly TimeSpan Lima = TimeSpan.FromHours(-5);
     public static readonly DateTimeOffset Monday0640 = new(2026, 10, 5, 6, 40, 0, Lima);
 
@@ -80,6 +82,10 @@ public sealed class TripTrackingApiFactory : WebApplicationFactory<Program>, IAs
         builder.UseSetting("ConnectionStrings:TripTracking", ConnectionString);
         builder.UseSetting("ConnectionStrings:Redis", "");
         builder.UseSetting("Jwt:Secret", JwtSecret);
+        builder.UseSetting("Jwt:Issuer", JwtIssuer);
+        builder.UseSetting("Jwt:Audience", JwtAudience);
+        // Estas pruebas cubren el flujo del viaje; la verificación de cuentas en Iam se prueba en Security/.
+        builder.UseSetting("Iam:AccountValidation:Enabled", "false");
         builder.UseSetting("Persistence:MigrateOnStartup", "true");
         builder.UseSetting("RabbitMq:Enabled", "false");
         builder.UseSetting("Scheduling:Enabled", "false");
@@ -103,7 +109,7 @@ public sealed class TripTrackingApiFactory : WebApplicationFactory<Program>, IAs
         return client;
     }
 
-    /// <summary>Mismo formato que el TokenService de IAM: nameidentifier, role (ADMIN/DRIVER/PARENT), organizationId.</summary>
+    /// <summary>Mismo formato que el TokenService de Iam: nameidentifier, role (ADMIN/DRIVER/PARENT), organizationId, iss y aud.</summary>
     public static string Token(string role, Guid userId, Guid? organizationId = null)
     {
         var claims = new List<Claim>
@@ -117,6 +123,8 @@ public sealed class TripTrackingApiFactory : WebApplicationFactory<Program>, IAs
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddHours(1),
+            Issuer = JwtIssuer,
+            Audience = JwtAudience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret)),
                 SecurityAlgorithms.HmacSha256Signature)
         });

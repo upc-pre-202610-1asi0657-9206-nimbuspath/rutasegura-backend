@@ -85,6 +85,9 @@
   <Folder Name="/tests/RutaSegura.Monolith.Administration.ContractTests/">
     <Project Path="tests/RutaSegura.Monolith.Administration.ContractTests/RutaSegura.Monolith.Administration.ContractTests.csproj" />
   </Folder>
+  <Folder Name="/tests/RutaSegura.TripTracking.IamIntegration.Tests/">
+    <Project Path="tests/RutaSegura.TripTracking.IamIntegration.Tests/RutaSegura.TripTracking.IamIntegration.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/RutaSegura.Backend.Structure.Tests/">
     <Project Path="tests/RutaSegura.Backend.Structure.Tests/RutaSegura.Backend.Structure.Tests.csproj" />
   </Folder>

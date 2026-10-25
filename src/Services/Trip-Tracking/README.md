@@ -90,9 +90,28 @@ docker compose -f src/Services/Trip-Tracking/docker-compose.yml up --build
 dotnet run --project src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Api -- --migrate
 ```
 
-Configuración: `ConnectionStrings:TripTracking` (MySQL), `ConnectionStrings:Redis` (opcional), `Jwt:Secret`
-(**el mismo** `TokenSettings:Secret` de IAM), `RabbitMq:*`, `Outbox:*`, `Scheduling:*`, `Seed:Demo`, `DevTokens:Enabled`
-(solo Development). Nueva migración: `dotnet ef migrations add <Nombre> -p src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Infrastructure -o Persistence/Migrations`.
+Configuración: `ConnectionStrings:TripTracking` (MySQL), `ConnectionStrings:Redis` (opcional), `Jwt:Secret`,
+`Jwt:Issuer`, `Jwt:Audience` (**los mismos** `TokenSettings:*` de Iam), `Iam:BaseUrl` y `Iam:AccountValidation:*`,
+`RabbitMq:*`, `Outbox:*`, `Scheduling:*`, `Seed:Demo`, `DevTokens:Enabled` (solo Development). Nueva migración: `dotnet ef migrations add <Nombre> -p src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Infrastructure -o Persistence/Migrations`.
+
+## Seguridad (provista por Iam)
+
+Trip & Tracking es un *resource server* de Iam: no tiene usuarios propios.
+
+1. **Token de Iam.** Solo acepta JWT firmados con el secreto de Iam, con su emisor y audiencia y sin vencer
+   (`Security/Security.cs`). Los claims se leen como los escribe el `TokenService` de Iam.
+2. **Políticas equivalentes a `IamPolicies`.** `driver` y `admin` exigen `organizationId`; `guardian` es `PARENT`;
+   `trip-viewer` cualquiera de los tres roles. La identidad (conductor, tutor, empresa) sale siempre del token.
+3. **Cuenta vigente en Iam.** `ActiveIamAccountRequirement` reenvía el token a `GET /api/v1/users/me` del monolito,
+   donde Iam aplica su `ActiveIamAccountHandler`; la respuesta se guarda 60 s por token
+   (`Security/IamAccountValidation.cs`). Una organización suspendida o una cuenta eliminada pierde el acceso.
+4. **Si Iam se cae**, por defecto basta el JWT ya validado (`WhenUnavailable=Allow`), para que un SOS o el envío de
+   posiciones no dependan del monolito; con `Deny` responde 503.
+
+Local con Iam real: levanta el monolito (`http://localhost:5000`), inicia sesión en `POST /api/v1/users/sign-in`
+(`driver@saferoute.pe` / `driver123`, `parent@saferoute.pe` / `parent123`, `admin@saferoute.pe` / `admin123`) y usa ese
+token aquí. `appsettings.Development.json` ya comparte el secreto de desarrollo del monolito.
+Sin Iam (datos demo "Ruta 3" y `/dev/tokens`): perfil `http-demo-sin-iam` o el `docker-compose.yml` de este servicio.
 
 ## Pruebas
 
@@ -101,6 +120,10 @@ dotnet test src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Domain.Test
 dotnet test src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Application.Tests
 # Integración: MySQL en localhost:3306 (usuario rutasegura) o TRIPTRACKING_IT_MYSQL / TRIPTRACKING_IT_RABBITMQ
 dotnet test src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Integration.Tests
+# Solo seguridad (sin MySQL): tokens falsos, roles, cuenta revocada, Iam caído, caché, hub
+dotnet test src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Integration.Tests --filter "Category=Security"
+# Iam real (monolito en memoria con SQLite) + Trip & Tracking: sign-in, organización suspendida, contrato de claims
+dotnet test tests/RutaSegura.TripTracking.IamIntegration.Tests
 ```
 
 ## Reglas de negocio cubiertas (core)

@@ -24,16 +24,31 @@
  IAM ──────────── iam.events ────────────┴─► trip-tracking.inbound (rutas, vínculos tutor-alumno)
 ```
 
-## 1. Autenticación (contrato con IAM)
+## 1. Autenticación y autorización (seguridad provista por Iam)
 
 | Elemento | Valor |
 |---|---|
 | Esquema | `Authorization: Bearer <JWT>` (SignalR: `?access_token=<JWT>`) |
-| Firma | HMAC-SHA256 con el secreto compartido: `Jwt:Secret` (Trip & Tracking) = `TokenSettings:Secret` (IAM) |
-| Claim de usuario | `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` (o `sub`) = Guid del usuario |
-| Claim de rol | `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` (o `role`): `DRIVER`, `PARENT`, `ADMIN` |
-| Claim de empresa | `organizationId` = Guid de la empresa de transporte (obligatorio para `ADMIN`) |
-| Issuer / Audience | Se validan solo si se configuran `Jwt:Issuer` / `Jwt:Audience` |
+| Emisor del token | Solo Iam (`POST /api/v1/users/sign-in` del monolito). Trip & Tracking no emite tokens (salvo `/dev/tokens` en desarrollo sin Iam) |
+| Firma | HMAC-SHA256 (`HS256`) con el secreto compartido: `Jwt:Secret` (Trip & Tracking) = `TokenSettings:Secret` (Iam), mínimo 32 bytes |
+| Issuer / Audience | **Obligatorios**: `Jwt:Issuer` = `TokenSettings:Issuer` (`rutasegura-iam`), `Jwt:Audience` = `TokenSettings:Audience` (`rutasegura-api`) |
+| Vigencia | `exp` obligatorio, sin tolerancia de reloj (igual que Iam); Iam emite tokens de 8 h |
+| Claim de usuario | `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` = Guid del usuario en Iam (ya no se acepta `sub`) |
+| Claim de rol | `http://schemas.microsoft.com/ws/2008/06/identity/claims/role`: `DRIVER`, `PARENT`, `ADMIN` (ya no se acepta `role`) |
+| Claim de empresa | `organizationId`; obligatorio para `DRIVER` y `ADMIN` (como `IamPolicies.OrganizationDriver/OrganizationAdministrator`) |
+| Cuenta vigente | En cada request Trip & Tracking reenvía el token a Iam (`GET {Iam:BaseUrl}/api/v1/users/me`). Iam responde 200 solo si la cuenta existe, tiene el mismo rol y organización y la organización está `ACTIVE`; además se compara id/rol/organización con el token. Caché por token: `Iam:AccountValidation:CacheDuration` (60 s) |
+| Si Iam no responde | `Iam:AccountValidation:WhenUnavailable`: `Allow` (por defecto, basta el JWT validado: un SOS no depende del monolito) o `Deny` (503 `IAM_UNAVAILABLE`) |
+
+Respuestas de seguridad (ProblemDetails con `code`):
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Sin token |
+| 401 | `INVALID_TOKEN` | Firma, emisor, audiencia, algoritmo o formato que no son de Iam |
+| 401 | `TOKEN_EXPIRED` | Token vencido: volver a iniciar sesión en Iam |
+| 403 | `FORBIDDEN` | El rol o la organización del token no permiten la operación |
+| 403 | `IAM_ACCOUNT_REJECTED` | Iam ya no reconoce la cuenta (eliminada, rol/organización cambiados, organización suspendida) |
+| 503 | `IAM_UNAVAILABLE` | Iam caído y `WhenUnavailable=Deny` (cabecera `Retry-After`) |
 
 **Correspondencia de identidades:** el `DriverId` de las rutas = Id de usuario `DRIVER` en IAM; el `GuardianId` de los
 vínculos = Id de usuario `PARENT`; el `organizationId` del token = `OrganizationId` de las rutas.

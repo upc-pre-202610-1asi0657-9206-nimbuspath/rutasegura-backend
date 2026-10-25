@@ -1,4 +1,6 @@
-### Trip & Tracking — recorrido completo de la "Ruta 3" (datos demo: Seed:Demo=true, DevTokens:Enabled=true)
+### Trip & Tracking — recorrido completo de la "Ruta 3" SIN Iam (perfil http-demo-sin-iam:
+### Seed:Demo=true, DevTokens:Enabled=true, Iam:AccountValidation:Enabled=false).
+### Con Iam real, obtén el token en el monolito: POST http://localhost:5000/api/v1/users/sign-in
 ### Rider / VS / VS Code (REST Client). Ejecutar en orden: cada respuesta alimenta a las siguientes.
 
 @host = http://localhost:5180

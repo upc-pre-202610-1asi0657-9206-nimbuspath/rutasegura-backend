@@ -58,6 +58,8 @@ internal static class Problems
         404 => "No encontrado",
         409 => "Conflicto",
         422 => "Regla de negocio incumplida",
+        429 => "Demasiadas solicitudes",
+        503 => "Servicio no disponible",
         _ => "Error interno"
     };
 }

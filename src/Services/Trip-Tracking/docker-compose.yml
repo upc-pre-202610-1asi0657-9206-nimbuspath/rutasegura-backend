@@ -54,11 +54,16 @@ services:
       ConnectionStrings__TripTracking: "server=mysql;port=3306;database=rutasegura_trip_tracking;user=rutasegura;password=rutasegura"
       ConnectionStrings__Redis: "redis:6379"
       Jwt__Secret: "rutasegura-dev-secret-cambiar-en-produccion-0123456789"
+      Jwt__Issuer: rutasegura-iam
+      Jwt__Audience: rutasegura-api
       Persistence__MigrateOnStartup: "true"
       RabbitMq__Enabled: "true"
       RabbitMq__HostName: rabbitmq
       Seed__Demo: "true"
+      # Sin el monolito: tokens de /dev/tokens para usuarios demo que Iam no conoce.
+      # Para probar con Iam real usa el docker-compose.yml de la raíz.
       DevTokens__Enabled: "true"
+      Iam__AccountValidation__Enabled: "false"
 
 volumes:
   trip-tracking-mysql:

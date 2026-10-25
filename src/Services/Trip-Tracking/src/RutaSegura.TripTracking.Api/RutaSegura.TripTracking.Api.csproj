@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="RutaSegura.TripTracking.Integration.Tests" />
+    <InternalsVisibleTo Include="RutaSegura.TripTracking.IamIntegration.Tests" />
   </ItemGroup>
 
 </Project>
