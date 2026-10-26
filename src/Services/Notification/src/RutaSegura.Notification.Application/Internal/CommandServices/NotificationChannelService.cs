@@ -8,6 +8,7 @@ using RutaSegura.Notification.Application.Model.Results;
 using RutaSegura.Notification.Domain.Model.Entities;
 using RutaSegura.Notification.Domain.Model.ValueObjects;
 using RutaSegura.Notification.Domain.Repositories;
+using RutaSegura.Notification.Application.Internal.Diagnostics;
 
 namespace RutaSegura.Notification.Application.Internal.CommandServices;
 
@@ -52,7 +53,12 @@ internal sealed class NotificationChannelService(INotificationDispatchRepository
                 {
                     var subscription = await subscriptions.GetAsync(organizationId, notice.RecipientUserId, delivery.DestinationId, cancellationToken);
                     if (!policy.PushEnabled || subscription is null || !subscription.IsEnabled)
-                    { delivery.Skip("PUSH_SUBSCRIPTION_DISABLED"); await unitOfWork.SaveChangesAsync(cancellationToken); return; }
+                    {
+                        delivery.Skip("PUSH_SUBSCRIPTION_DISABLED");
+                        await unitOfWork.SaveChangesAsync(cancellationToken);
+                        NotificationDiagnostics.DeliveryRecorded(delivery.Channel, delivery.Status, notice.OccurredAt, notice.CreatedAt, clock.GetUtcNow());
+                        return;
+                    }
                     sent = await push.SendAsync(NotificationResultFromEntityAssembler.ToResultFromEntity(notice), subscription.Token, cancellationToken);
                     if (sent.ErrorCode is "FCM_UNREGISTERED" or "FCM_SENDER_ID_MISMATCH") subscription.Disable(clock.GetUtcNow());
                 }
@@ -71,6 +77,7 @@ internal sealed class NotificationChannelService(INotificationDispatchRepository
         }
         // I/O del canal ya termino; esta confirmacion NO acredita lectura ni recepcion por el dispositivo.
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        NotificationDiagnostics.DeliveryRecorded(delivery.Channel, delivery.Status, notice.OccurredAt, notice.CreatedAt, clock.GetUtcNow());
     }
 
     private void RecordFailure(NotificationDelivery delivery, string code, bool retryable, DateTimeOffset now)

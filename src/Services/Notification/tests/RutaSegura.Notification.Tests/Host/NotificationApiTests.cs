@@ -30,7 +30,7 @@ public sealed class NotificationApiTests
                 new(System.Security.Claims.ClaimTypes.NameIdentifier, factory.Guardian.ToString()),
                 new(System.Security.Claims.ClaimTypes.Role, "PARENT"), new("organizationId", factory.Organization.ToString())]),
             Expires = DateTime.UtcNow.AddMinutes(5),
-            SigningCredentials = new(new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(NotificationApiFactory.Secret)), "HS256")
+            SigningCredentials = new(new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(NotificationApiFactory.Secret)), Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256Signature)
         };
         client.DefaultRequestHeaders.Authorization = new("Bearer", new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().CreateToken(descriptor));
         (await client.GetAsync("/api/v1/notifications", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);

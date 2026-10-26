@@ -28,12 +28,18 @@ public sealed class NotificationReadinessCheck(IServiceScopeFactory scopes, ICon
             _ = await db.ProcessedEvents.AnyAsync(cancellationToken);
             _ = await db.DispatchJobs.AnyAsync(cancellationToken);
             _ = await db.Deliveries.AnyAsync(cancellationToken);
+            if (configuration.GetValue<bool>("NotificationApi:Enabled") && configuration.GetValue("Iam:AccountValidation:Enabled", true))
+            {
+                var client = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(Security.NotificationIamAccountVerifier.ClientName);
+                using var response = await client.GetAsync("/health", cancellationToken);
+                if (!response.IsSuccessStatusCode) return HealthCheckResult.Unhealthy("IAM no disponible.");
+            }
             return HealthCheckResult.Healthy();
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
             // Ni excepciones ni cadenas de conexion se exponen por salud o logs de HealthChecks.
-            return HealthCheckResult.Unhealthy("Persistencia no disponible.");
+            return HealthCheckResult.Unhealthy("Persistencia o dependencia no disponible.");
         }
     }
 }

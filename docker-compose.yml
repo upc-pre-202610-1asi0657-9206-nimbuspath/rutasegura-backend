@@ -1,21 +1,24 @@
-# Entorno local completo: API Gateway + Monolito (Iam + Administration) + Trip & Tracking + MySQL + RabbitMQ + Redis.
+# Entorno local completo: Gateway + Monolito + Trip & Tracking + Notifications + MySQL + RabbitMQ + Redis.
 #
-#   docker compose up -d --build                  levanta todo
-#   docker compose --profile smoke run --rm smoke prueba rutas, comandos y eventos de punta a punta
-#   docker compose down -v                        apaga y borra los datos
+#   ./scripts/Initialize-NotificationLocal.ps1     genera secretos locales una sola vez
+#   docker compose --env-file .local/notification/compose.env up -d --build --wait
+#   docker compose --env-file .local/notification/compose.env --profile smoke run --rm smoke
+#   docker compose --env-file .local/notification/compose.env down  apaga sin borrar datos
 #
 # API Gateway:   http://localhost:8000          (URL única para las apps; emulador Android: http://10.0.2.2:8000)
 # Monolito:      http://localhost:5000/swagger   (en macOS el 5000 lo usa AirPlay: crea un .env con MONOLITH_PORT=5001)
 # Trip-Tracking: http://localhost:5180/swagger
-# RabbitMQ:      http://localhost:15672   (guest / guest)
+# Notifications: http://localhost:5182 (OpenAPI y metricas requieren X-Metrics-Token)
+# RabbitMQ:      http://localhost:15672   (rutasegura / secreto local generado)
 # MySQL:         localhost:3307           (rutasegura / rutasegura · root / root)
 #
-# Los secretos de abajo son SOLO para este entorno local.
+# Secretos generados en .local/notification, sin versionar; Notification los monta desde /run/secrets.
+# Los valores fijos de MySQL compartido/provisioning se conservan SOLO para este entorno local.
 
 name: rutasegura
 
 x-jwt: &jwt
-  secret: &jwt-secret "local-docker-jwt-secret-0123456789abcdef0123456789"
+  secret: &jwt-secret "${RUTASEGURA_JWT_SECRET:?Ejecuta Initialize-NotificationLocal.ps1}"
   issuer: &jwt-issuer rutasegura-iam
   audience: &jwt-audience rutasegura-api
 
@@ -27,7 +30,7 @@ services:
       MYSQL_DATABASE: rutasegura_monolith
       MYSQL_USER: rutasegura
       MYSQL_PASSWORD: rutasegura
-    ports: ["3307:3306"]
+    ports: ["127.0.0.1:3307:3306"]
     volumes:
       - mysql-data-arm64:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
@@ -41,7 +44,12 @@ services:
 
   rabbitmq:
     image: rabbitmq:4-management
-    ports: ["5672:5672", "15672:15672"]
+    hostname: rabbitmq
+    volumes: [notification-rabbit-data:/var/lib/rabbitmq]
+    environment:
+      RABBITMQ_DEFAULT_USER: rutasegura
+      RABBITMQ_DEFAULT_PASS: ${RUTASEGURA_RABBIT_PASSWORD:?Ejecuta Initialize-NotificationLocal.ps1}
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -50,7 +58,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -76,6 +84,8 @@ services:
       Iam__Provisioning__ApiKey: "local-docker-provisioning-key-0123456789abcdef"
       Administration__Messaging__Enabled: "true"
       Administration__Messaging__HostName: rabbitmq
+      Administration__Messaging__UserName: rutasegura
+      Administration__Messaging__Password: ${RUTASEGURA_RABBIT_PASSWORD:?Ejecuta Initialize-NotificationLocal.ps1}
 
   trip-tracking:
     build:
@@ -100,12 +110,98 @@ services:
       Persistence__MigrateOnStartup: "true"
       RabbitMq__Enabled: "true"
       RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: rutasegura
+      RabbitMq__Password: ${RUTASEGURA_RABBIT_PASSWORD:?Ejecuta Initialize-NotificationLocal.ps1}
+      InternalServices__NotificationToken: ${NOTIFICATION_SERVICE_TOKEN:?Ejecuta Initialize-NotificationLocal.ps1}
       # Programa viajes cada 10 s para que la prueba de humo no espere 30 min.
       Scheduling__Interval: "00:00:10"
       Seed__Demo: "false"
       DevTokens__Enabled: "false"
 
-  # Punto de entrada único de las apps: enruta a Iam/Administration (monolito) y a Trip & Tracking (incluido SignalR).
+  notification-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: rutasegura_notification
+      MYSQL_USER: notification_app
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql-password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql-root-password
+    secrets:
+      - source: notification_mysql_password
+        target: mysql-password
+      - source: notification_mysql_root_password
+        target: mysql-root-password
+    volumes: [notification-mysql-data:/var/lib/mysql]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_bin"]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$(cat /run/secrets/mysql-password) mysql -h127.0.0.1 -unotification_app -D rutasegura_notification -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  notification-migrate:
+    image: rutasegura/notification:local
+    build:
+      context: .
+      dockerfile: src/Services/Notification/Dockerfile
+    command: ["--migrate"]
+    healthcheck: { disable: true }
+    depends_on:
+      notification-mysql: { condition: service_healthy }
+    secrets:
+      - source: notification_database
+        target: ConnectionStrings__NotificationDatabase
+      - source: notification_encryption
+        target: NotificationPersistence__PushTokenEncryptionKey
+
+  notification:
+    image: rutasegura/notification:local
+    build:
+      context: .
+      dockerfile: src/Services/Notification/Dockerfile
+    depends_on:
+      notification-migrate: { condition: service_completed_successfully }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      monolith: { condition: service_started }
+    ports: ["127.0.0.1:${NOTIFICATION_PORT:-5182}:8080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      NotificationApi__Enabled: "true"
+      NotificationChannels__Enabled: "true"
+      NotificationRabbitMq__Enabled: "true"
+      NotificationRabbitMq__HostName: rabbitmq
+      NotificationRabbitMq__UserName: rutasegura
+      NotificationRealtime__RedisConnection: redis:6379,abortConnect=false
+      NotificationMonitoring__Enabled: "true"
+      NotificationOpenApi__Enabled: "true"
+      NotificationFcm__Enabled: "false"
+      Jwt__Issuer: rutasegura-iam
+      Jwt__Audience: rutasegura-api
+      Iam__BaseUrl: http://monolith:8080
+      Iam__AllowInsecureHttp: "true"
+      Iam__AccountValidation__Enabled: "true"
+      NotificationDependencies__Administration__BaseUrl: http://monolith:8080
+      NotificationDependencies__Administration__AllowInsecureHttp: "true"
+      NotificationDependencies__TripTracking__BaseUrl: http://trip-tracking:8080
+      NotificationDependencies__TripTracking__AllowInsecureHttp: "true"
+      Cors__AllowedOrigins__0: http://localhost:4200
+    secrets:
+      - source: notification_database
+        target: ConnectionStrings__NotificationDatabase
+      - source: notification_encryption
+        target: NotificationPersistence__PushTokenEncryptionKey
+      - source: notification_jwt
+        target: Jwt__Secret
+      - source: notification_rabbit_password
+        target: NotificationRabbitMq__Password
+      - source: notification_service_token
+        target: NotificationDependencies__Administration__ServiceToken
+      - source: notification_service_token
+        target: NotificationDependencies__TripTracking__ServiceToken
+      - source: notification_metrics_token
+        target: NotificationMonitoring__Token
+
+  # Punto de entrada unico: Monolito, Trip & Tracking y Notifications (REST y SignalR).
   gateway:
     build:
       context: .
@@ -113,12 +209,17 @@ services:
     depends_on:
       monolith: { condition: service_started }
       trip-tracking: { condition: service_started }
+      notification: { condition: service_healthy }
     ports: ["8000:8080"]
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
       ReverseProxy__Clusters__monolith__Destinations__primary__Address: http://monolith:8080/
       ReverseProxy__Clusters__trip-tracking__Destinations__primary__Address: http://trip-tracking:8080/
-      NotificationProxy__Enabled: "false"
+      ReverseProxy__Clusters__notification__Destinations__primary__Address: http://notification:8080/
+      NotificationProxy__Enabled: "true"
+      Jwt__Secret: *jwt-secret
+      Jwt__Issuer: *jwt-issuer
+      Jwt__Audience: *jwt-audience
       Cors__AllowedOrigins__0: http://localhost:4200
 
   # Prueba de punta a punta (solo con --profile smoke). No necesita nada instalado en tu PC.
@@ -136,8 +237,30 @@ services:
       TRIP_TRACKING_URL: http://trip-tracking:8080
       GATEWAY_URL: http://gateway:8080
       RABBITMQ_API: http://rabbitmq:15672/api
+      RABBITMQ_USER: rutasegura
+      RABBITMQ_PASSWORD: ${RUTASEGURA_RABBIT_PASSWORD:?Ejecuta Initialize-NotificationLocal.ps1}
       PROVISIONING_KEY: "local-docker-provisioning-key-0123456789abcdef"
     entrypoint: ["sh", "-c", "apk add --no-cache -q curl jq tzdata >/dev/null && sh /smoke/e2e.sh"]
 
 volumes:
   mysql-data-arm64:
+  notification-mysql-data:
+  notification-rabbit-data:
+
+secrets:
+  notification_mysql_password:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/mysql-password
+  notification_mysql_root_password:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/mysql-root-password
+  notification_database:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/ConnectionStrings__NotificationDatabase
+  notification_encryption:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/NotificationPersistence__PushTokenEncryptionKey
+  notification_jwt:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/Jwt__Secret
+  notification_rabbit_password:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/NotificationRabbitMq__Password
+  notification_service_token:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/service-token
+  notification_metrics_token:
+    file: ${NOTIFICATION_SECRETS_DIR:-./.local/notification}/NotificationMonitoring__Token

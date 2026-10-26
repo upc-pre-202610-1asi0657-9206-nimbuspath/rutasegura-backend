@@ -170,6 +170,37 @@ public sealed class ChannelPersistenceTests : MySqlTestContext
     }
 
     [MySqlFact]
+    public async Task FcmOutageSurvivesAWorkerRestart_AndRetriesOnlyPushWithoutDuplicatingRealtime()
+    {
+        await Seed();
+        var unavailable = new Sender { PushResult = new(false, true, null, "FCM_UNAVAILABLE") };
+        await using (var first = Provider(new(Organization, Guardian, Student), unavailable))
+            await first.GetRequiredService<NotificationChannelWorker>().ProcessBatchAsync(Ct);
+        unavailable.Realtime.Count.ShouldBe(1);
+        await using (var db = OpenContext())
+        {
+            var push = await db.Deliveries.SingleAsync(d => d.Channel == NotificationChannel.Push, Ct);
+            push.Status.ShouldBe(DeliveryStatus.RetryScheduled);
+            push.AttemptCount.ShouldBe(1);
+            (await db.Notifications.CountAsync(Ct)).ShouldBe(1);
+        }
+        // Nuevos servicios y contextos contra la misma base simulan un proceso reiniciado, sin estado en memoria.
+        var recovered = new Sender();
+        await using (var second = Provider(new(Organization, Guardian, Student), recovered))
+        {
+            _clock.Now = Now.AddSeconds(5);
+            await second.GetRequiredService<NotificationChannelWorker>().ProcessBatchAsync(Ct);
+            await second.GetRequiredService<NotificationChannelWorker>().ProcessBatchAsync(Ct);
+        }
+        recovered.Push.Count.ShouldBe(1);
+        recovered.Realtime.ShouldBeEmpty();
+        await using var verify = OpenContext();
+        (await verify.Deliveries.CountAsync(d => d.Status == DeliveryStatus.ProviderAccepted, Ct)).ShouldBe(2);
+        (await verify.Deliveries.SingleAsync(d => d.Channel == NotificationChannel.Push, Ct)).AttemptCount.ShouldBe(2);
+        (await verify.Notifications.SingleAsync(Ct)).ReadAt.ShouldBeNull();
+    }
+
+    [MySqlFact]
     public async Task ExpiredProximityIsNotSentAfterADelayedRestart()
     {
         await Seed(proximity: true);

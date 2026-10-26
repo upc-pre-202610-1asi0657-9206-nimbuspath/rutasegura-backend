@@ -54,7 +54,8 @@ public static class NotificationSecurity
             options.TokenValidationParameters = new()
             {
                 ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-                ValidAlgorithms = [SecurityAlgorithms.HmacSha256], ValidateLifetime = true, RequireExpirationTime = true,
+                // JsonWebTokenHandler de IAM conserva el alias URI de HMAC-SHA256; ambos nombres son el mismo algoritmo.
+                ValidAlgorithms = [SecurityAlgorithms.HmacSha256, SecurityAlgorithms.HmacSha256Signature], ValidateLifetime = true, RequireExpirationTime = true,
                 ClockSkew = TimeSpan.FromSeconds(30),
                 ValidateIssuer = !string.IsNullOrWhiteSpace(configuration["Jwt:Issuer"]), ValidIssuer = configuration["Jwt:Issuer"],
                 ValidateAudience = !string.IsNullOrWhiteSpace(configuration["Jwt:Audience"]), ValidAudience = configuration["Jwt:Audience"],

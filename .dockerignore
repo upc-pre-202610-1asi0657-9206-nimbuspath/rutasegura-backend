@@ -8,3 +8,14 @@ artifacts/
 tests/
 docs/
 .git
+.local/
+secrets/
+**/.env
+**/.env.*
+**/*service-account*.json
+**/*firebase-adminsdk*.json
+**/*.pfx
+**/*.p12
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+**/*.local.json

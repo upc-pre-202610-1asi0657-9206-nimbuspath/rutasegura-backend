@@ -1,0 +1,16 @@
+# Solo para Test-NotificationDeployment.ps1, con nombre de proyecto aleatorio y volumenes propios.
+services:
+  mysql:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  monolith:
+    ports: !override ["127.0.0.1::8080"]
+  trip-tracking:
+    ports: !reset []
+  gateway:
+    ports: !override ["127.0.0.1::8080"]
+  notification:
+    ports: !override ["127.0.0.1::8080"]

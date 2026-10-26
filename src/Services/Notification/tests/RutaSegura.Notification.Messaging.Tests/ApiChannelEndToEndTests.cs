@@ -21,11 +21,94 @@ using RutaSegura.Notification.Application.Internal.OutboundServices;
 using RutaSegura.Notification.Domain.Model.Aggregates;
 using RutaSegura.Notification.Domain.Model.ValueObjects;
 using RutaSegura.Notification.Infrastructure.Channels.Fcm;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
+using RutaSegura.TripTracking.Application.Abstractions;
+using RutaSegura.TripTracking.Domain.Common;
+using RutaSegura.TripTracking.Domain.Trips;
+using RutaSegura.TripTracking.Domain.Tracking;
+using RutaSegura.TripTracking.Infrastructure.LiveUpdates;
+using RutaSegura.TripTracking.Infrastructure.Messaging.Outbox;
+using RutaSegura.TripTracking.Infrastructure.Messaging.RabbitMq;
+using RutaSegura.TripTracking.Infrastructure.Persistence;
+using RutaSegura.TripTracking.Infrastructure.Options;
 
 namespace RutaSegura.Notification.Messaging.Tests;
 
 public sealed class ApiChannelEndToEndTests : BrokerTestContext
 {
+    [BrokerFact]
+    public async Task BoardingDomainCommitAndOutboxReachARealWebSocket_WithRecordedLatencySamples()
+    {
+        await using var factory = new ApiFactory(NotificationConnection, EncryptionKey, Directory, new CapturingFcmTransport(), monitoring: true);
+        factory.UseKestrel(0);
+        using var client = factory.CreateClient();
+        using var socket = new ClientWebSocket();
+        await socket.ConnectAsync(new UriBuilder(client.BaseAddress!) { Scheme="ws", Path="/hubs/notifications", Query="access_token=" + AccessToken() }.Uri, Ct);
+        await Send(socket, "{\"protocol\":\"json\",\"version\":1}\u001e"); await Receive(socket);
+        await Send(socket, "{\"type\":1,\"invocationId\":\"ready\",\"target\":\"BarrierMissing\",\"arguments\":[]}\u001e"); await Receive(socket);
+        var registrations = new ServiceCollection();
+        registrations.AddDbContext<TripTrackingDbContext>(o => o.UseMySQL(TripConnection));
+        await using var scopes = registrations.BuildServiceProvider();
+        await using var connection = new RabbitMqConnection(Microsoft.Extensions.Options.Options.Create(new RabbitMqOptions
+        {
+            HostName=Options.HostName, Port=Options.Port, UserName=Options.UserName, Password=Options.Password, EventsExchange=Options.EventsExchange
+        }), NullLogger<RabbitMqConnection>.Instance);
+        await using var publisher = new RabbitMqMessagePublisher(connection, NullLogger<RabbitMqMessagePublisher>.Instance);
+        using var relay = new OutboxProcessor(scopes.GetRequiredService<IServiceScopeFactory>(), publisher,
+            Microsoft.Extensions.Options.Options.Create(new OutboxOptions()), TimeProvider.System, NullLogger<OutboxProcessor>.Instance);
+        var samples = new List<double>();
+        for (var index=0; index<30; index++)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var driver = new DriverId(Guid.NewGuid());
+            var trip = Trip.Schedule(new TripId(Guid.NewGuid()), new RouteId(MessageSamples.Route), "Prueba sintetica", TripDirection.Pickup,
+                driver, new VehicleId(Guid.NewGuid()), now, [new(new StopId(MessageSamples.Stop), 1, "Parada", GeoPosition.Create(-12.1, -77))],
+                [new(new StudentId(MessageSamples.Student), new StopId(MessageSamples.Stop))], now, new OrganizationId(MessageSamples.Organization));
+            trip.Start(driver, ClientEventId.New(), now);
+            trip.ClearDomainEvents();
+            var watch = Stopwatch.StartNew();
+            trip.RecordBoarding(driver, new StudentId(MessageSamples.Student), ClientEventId.New(), now, null, now);
+            await using (var db = OpenTrip())
+            {
+                db.Trips.Add(trip);
+                var ephemeral = new NoLivePositions();
+                var uow = new EfUnitOfWork(db, new PostCommitActions(NullLogger<PostCommitActions>.Instance), ephemeral, ephemeral,
+                    TimeProvider.System, NullLogger<EfUnitOfWork>.Instance);
+                await uow.SaveChangesAsync(Ct);
+            }
+            (await relay.ProcessBatchAsync(Ct)).ShouldBe(1);
+            (await Receive(socket)).GetProperty("target").GetString().ShouldBe("NotificationAvailable");
+            samples.Add(watch.Elapsed.TotalMilliseconds);
+        }
+        await Eventually(async () => { await using var db=OpenNotification(); return await db.Deliveries.CountAsync(d => d.Status==DeliveryStatus.ProviderAccepted, Ct)==30; });
+        await using (var db=OpenNotification()) (await db.Notifications.CountAsync(Ct)).ShouldBe(30);
+        client.DefaultRequestHeaders.Add("X-Metrics-Token", MonitoringToken);
+        (await client.GetStringAsync("/metrics", Ct)).ShouldContain("notification_event_to_acceptance");
+        samples.Sort();
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName,"RutaSegura.slnx"))) root=root.Parent;
+        var output = Path.Combine(root!.FullName, "artifacts/test-results/notification-messaging");
+        System.IO.Directory.CreateDirectory(output);
+        await File.WriteAllTextAsync(Path.Combine(output,"boarding-latency.json"), JsonSerializer.Serialize(new
+        {
+            measuredAtUtc=DateTimeOffset.UtcNow, count=samples.Count, unit="milliseconds", concurrency=1,
+            p50=samples[(int)Math.Ceiling(samples.Count*0.50)-1], p95=samples[(int)Math.Ceiling(samples.Count*0.95)-1], maximum=samples.Max(), average=samples.Average(),
+            scope="Trip.RecordBoarding -> EF/MySQL + Outbox -> relay real -> RabbitMQ -> Inbox/MySQL -> worker -> WebSocket recibido",
+            limitations="Muestra sintetica local, incluye primer uso; relay invocado sin espera de polling. Directorio e identidad remota aislados; sin app movil, HTTP de Tracking, red externa ni Firebase. No acredita SLO productivo.",
+            samples
+        }, new JsonSerializerOptions { WriteIndented=true }), Ct);
+    }
+
+    private sealed class NoLivePositions : ILastPositionCache, ILiveUpdateBroadcaster
+    {
+        public Task<LivePositionUpdate?> GetAsync(TripId id,CancellationToken ct)=>Task.FromResult<LivePositionUpdate?>(null);
+        public Task SetAsync(LivePositionUpdate update,CancellationToken ct)=>Task.CompletedTask;
+        public Task RemoveAsync(TripId id,CancellationToken ct)=>Task.CompletedTask;
+        public Task BroadcastPositionAsync(LivePositionUpdate update,CancellationToken ct)=>Task.CompletedTask;
+        public Task BroadcastStatusAsync(LiveTripStatusUpdate update,CancellationToken ct)=>Task.CompletedTask;
+    }
+
     [BrokerFact]
     public async Task ReadinessChecksMigratedTablesAndDetectsMissingSchema_WithoutAffectingLiveness()
     {
@@ -121,7 +204,8 @@ public sealed class ApiChannelEndToEndTests : BrokerTestContext
         }
     }
 
-    private sealed class ApiFactory(string connection, string encryptionKey, TestDirectory directory, IFcmTransport transport, bool channels = true)
+    private const string MonitoringToken = "notification-monitoring-e2e-tests-only-0123456789";
+    private sealed class ApiFactory(string connection, string encryptionKey, TestDirectory directory, IFcmTransport transport, bool channels = true, bool monitoring = false)
         : WebApplicationFactory<notificationApi::Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -143,6 +227,7 @@ public sealed class ApiChannelEndToEndTests : BrokerTestContext
             {
                 ["NotificationApi:Enabled"] = "true", ["NotificationChannels:Enabled"] = channels.ToString(), ["NotificationRabbitMq:Enabled"] = "false",
                 ["Iam:AccountValidation:Enabled"] = "false", // Directorios e identidad remota se aislan en este E2E de canales.
+                ["NotificationMonitoring:Enabled"] = monitoring.ToString(), ["NotificationMonitoring:Token"] = MonitoringToken,
                 ["NotificationChannels:PollingInterval"] = "00:00:00.100", ["NotificationFcm:Enabled"] = "true", ["NotificationFcm:ProjectId"] = "test",
                 ["ConnectionStrings:NotificationDatabase"] = connection, ["NotificationPersistence:PushTokenEncryptionKey"] = encryptionKey,
                 ["Jwt:Secret"] = Secret

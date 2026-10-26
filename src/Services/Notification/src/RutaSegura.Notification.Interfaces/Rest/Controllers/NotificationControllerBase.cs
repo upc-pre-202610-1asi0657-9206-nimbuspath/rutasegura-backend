@@ -3,6 +3,12 @@ using RutaSegura.BuildingBlocks.Application.Results;
 
 namespace RutaSegura.Notification.Interfaces.Rest.Controllers;
 
+[ProducesResponseType<ProblemDetails>(400)]
+[ProducesResponseType(401)]
+[ProducesResponseType<ProblemDetails>(403)]
+[ProducesResponseType<ProblemDetails>(409)]
+[ProducesResponseType<ProblemDetails>(500)]
+[ProducesResponseType<ProblemDetails>(503)]
 public abstract class NotificationControllerBase : ControllerBase
 {
     protected IActionResult Failure(Error error)

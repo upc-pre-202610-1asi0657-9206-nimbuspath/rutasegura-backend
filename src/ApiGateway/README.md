@@ -44,10 +44,12 @@ Cada respuesta trae `X-Correlation-Id` (se crea si la app no lo envía) para ras
   tablas/migraciones propias disponibles y consumidor suscrito cuando RabbitMQ esta habilitado. Su liveness no sustituye readiness.
 
 ## Ejecutar
-```bash
-docker compose up -d --build                     # Gateway en http://localhost:8000 (emulador Android: http://10.0.2.2:8000)
+```powershell
+./scripts/Initialize-NotificationLocal.ps1
+docker compose --env-file .local/notification/compose.env up -d --build  # Compose principal, incluye Notifications
 dotnet run --project src/ApiGateway              # local: http://localhost:8000 → monolito :5000 y Trip & Tracking :5180
 dotnet test tests/RutaSegura.ApiGateway.Tests    # enrutamiento + punta a punta con Iam y Trip & Tracking reales
 ```
+Gateway queda en http://localhost:8000 (emulador Android: http://10.0.2.2:8000). Los comandos Docker se ejecutan desde la raiz del repositorio; `--env-file` carga los secretos locales generados, sin usar un segundo Compose de Notifications.
 Las direcciones de los servicios se cambian con `ReverseProxy:Clusters:<cluster>:Destinations:primary:Address`
 (en docker-compose: `ReverseProxy__Clusters__monolith__Destinations__primary__Address`).

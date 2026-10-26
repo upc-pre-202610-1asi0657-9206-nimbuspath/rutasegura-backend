@@ -122,10 +122,12 @@ public sealed class IamAccountIntegrationTests
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, factory.Guardian.ToString()), new(ClaimTypes.Role, "PARENT") };
         if (invalid != "no-tenant") claims.Add(new("organizationId", factory.Organization.ToString()));
         if (invalid == "multiple-roles") claims.Add(new(ClaimTypes.Role, "ADMIN"));
-        return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
-            issuer: invalid == "foreign-issuer" ? "foreign" : Issuer, audience: invalid == "foreign-audience" ? "foreign" : Audience,
-            claims: claims, expires: DateTime.UtcNow.AddMinutes(5),
-            signingCredentials: new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(NotificationApiFactory.Secret)), SecurityAlgorithms.HmacSha256)));
+        return new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = invalid == "foreign-issuer" ? "foreign" : Issuer, Audience = invalid == "foreign-audience" ? "foreign" : Audience,
+            Subject = new ClaimsIdentity(claims), Expires = DateTime.UtcNow.AddMinutes(5),
+            SigningCredentials = new(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(NotificationApiFactory.Secret)), SecurityAlgorithms.HmacSha256Signature)
+        });
     }
 
     private sealed class IamHandler : HttpMessageHandler
