@@ -8,7 +8,7 @@ name: rutasegura-trip-tracking
 
 services:
   mysql:
-    image: mysql:8.4
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: rutasegura_trip_tracking
@@ -23,7 +23,7 @@ services:
       retries: 30
 
   rabbitmq:
-    image: rabbitmq:3.13-management
+    image: rabbitmq:4-management
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]

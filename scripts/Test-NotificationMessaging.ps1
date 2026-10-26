@@ -29,7 +29,7 @@ try {
         '--env', "MYSQL_ROOT_PASSWORD=$taskPassword", '--env', 'MYSQL_ROOT_HOST=%',
         '--health-cmd', 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -h127.0.0.1 -uroot -e "SELECT 1" >/dev/null 2>&1',
         '--health-interval', '2s', '--health-timeout', '3s', '--health-retries', '60',
-        'mysql:8.4', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_bin')
+        'mysql:8.0', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_bin')
     $taskContainers += $taskMySql
     $taskRabbit = Start-TestContainer @('run', '--detach', '--rm', '--name', "notification-rabbit-test-$taskSuffix",
         '--label', 'rutasegura.purpose=notification-messaging-tests', '--publish', '127.0.0.1::5672',

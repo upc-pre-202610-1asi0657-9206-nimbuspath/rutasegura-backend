@@ -5,7 +5,7 @@
 #   docker compose down -v                        apaga y borra los datos
 #
 # API Gateway:   http://localhost:8000          (URL única para las apps; emulador Android: http://10.0.2.2:8000)
-# Monolito:      http://localhost:5000/swagger
+# Monolito:      http://localhost:5000/swagger   (en macOS el 5000 lo usa AirPlay: crea un .env con MONOLITH_PORT=5001)
 # Trip-Tracking: http://localhost:5180/swagger
 # RabbitMQ:      http://localhost:15672   (guest / guest)
 # MySQL:         localhost:3307           (rutasegura / rutasegura · root / root)
@@ -21,7 +21,7 @@ x-jwt: &jwt
 
 services:
   mysql:
-    image: mysql:8.4
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: rutasegura_monolith
@@ -29,7 +29,7 @@ services:
       MYSQL_PASSWORD: rutasegura
     ports: ["3307:3306"]
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql-data-arm64:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # Por TCP y con el usuario de la app: durante la inicialización MySQL levanta un servidor temporal
@@ -40,7 +40,7 @@ services:
       retries: 40
 
   rabbitmq:
-    image: rabbitmq:3.13-management
+    image: rabbitmq:4-management
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -64,7 +64,7 @@ services:
     depends_on:
       mysql: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-    ports: ["5000:8080"]
+    ports: ["${MONOLITH_PORT:-5000}:8080"]
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
       Swagger__Enabled: "true"
@@ -140,4 +140,4 @@ services:
     entrypoint: ["sh", "-c", "apk add --no-cache -q curl jq tzdata >/dev/null && sh /smoke/e2e.sh"]
 
 volumes:
-  mysql-data:
+  mysql-data-arm64:
