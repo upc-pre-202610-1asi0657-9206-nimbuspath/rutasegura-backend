@@ -40,6 +40,8 @@ Cada respuesta trae `X-Correlation-Id` (se crea si la app no lo envía) para ras
 ## Salud
 - `/health/live`: el proceso responde.
 - `/health/ready`: 200 solo si responden el monolito (`/health`) y Trip & Tracking (`/health/live`) — `Gateway:Readiness`.
+  Si `NotificationProxy:Enabled=true`, tambien consulta Notification (`/health/ready`): requiere funciones habilitadas,
+  tablas/migraciones propias disponibles y consumidor suscrito cuando RabbitMQ esta habilitado. Su liveness no sustituye readiness.
 
 ## Ejecutar
 ```bash

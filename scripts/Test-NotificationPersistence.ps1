@@ -24,7 +24,7 @@ try {
     $taskContainerId = ($taskRunResult | Select-Object -Last 1).Trim()
     if ($taskContainerId -notmatch '^[0-9a-f]{64}$') { throw 'Identificador de contenedor inesperado.' }
 
-    Write-Output "Esperando MySQL 8.4 temporal: $taskContainerName"
+    Write-Output "Esperando MySQL 8.0 temporal: $taskContainerName"
     $taskDeadline = [DateTime]::UtcNow.AddSeconds(120)
     do {
         $taskHealthStatus = & $DockerExecutable inspect --format '{{.State.Health.Status}}' $taskContainerId

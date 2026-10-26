@@ -7,12 +7,14 @@ using RutaSegura.Notification.Api.Errors;
 using RutaSegura.Notification.Application.Internal.OutboundServices;
 using RutaSegura.Notification.Interfaces.Rest.Controllers;
 using StackExchange.Redis;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using RutaSegura.Notification.Api.Health;
 
 // Composition root del microservicio; los contratos REST pertenecen a Interfaces.
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddCheck<NotificationReadinessCheck>("notification-ready", tags: ["ready"], timeout: TimeSpan.FromSeconds(3));
 var apiEnabled = builder.Configuration.GetValue<bool>("NotificationApi:Enabled");
 var channelsEnabled = builder.Configuration.GetValue<bool>("NotificationChannels:Enabled");
 var messagingEnabled = builder.Configuration.GetValue<bool>("NotificationRabbitMq:Enabled");
@@ -62,7 +64,8 @@ if (apiEnabled)
     app.MapHub<NotificationHub>("/hubs/notifications", options => options.CloseOnAuthenticationExpiration = true);
 }
 // No hay endpoints internos ni metodos de publicacion de eventos expuestos al navegador.
-app.MapHealthChecks("/health/live");
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 app.Run();
 
 public partial class Program;

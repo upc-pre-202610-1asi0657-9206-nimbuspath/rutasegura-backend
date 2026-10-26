@@ -32,7 +32,7 @@ RutaSegura.Notification.Infrastructure/
   Persistence/EntityFrameworkCore/  # Contexto propio, configuraciones, repositorios y migraciones MySQL
   Security/                        # Cifrado de tokens push
   Messaging/{Inbound,RabbitMq}/    # ACL de eventos, consumidor, reintentos y DLQ
-  Integration/                     # Clientes HTTP internos de Administration y Trip & Tracking
+  Integration/                     # Contrato de directorio del monolito y contexto de Trip & Tracking
   Channels/                        # Worker, coordinacion MySQL y adaptador Firebase Admin
 RutaSegura.Notification.Interfaces/
   Rest/
@@ -44,6 +44,7 @@ RutaSegura.Notification.Api/
   appsettings.json
   Properties/launchSettings.json
   Security/                # JWT y contexto del usuario HTTP
+  Health/                  # Readiness local: esquema MySQL y suscripcion RabbitMQ
   Realtime/                # Hub SignalR y adaptador de avisos genericos
   Errors/                  # Traduccion segura a ProblemDetails
 ```
@@ -57,12 +58,12 @@ La fase 2 implementa NotificationDbContext propio, no el AppDbContext del monoli
 ## Implementado
 
 - Avisos por alumno y destinatario: abordaje, desembarque, proximidad, incidencia, SOS y entrega al finalizar el viaje. El SOS conserva prioridad critica y no requiere GPS.
-- Comunicados de administrador para su organizacion o una ruta, con requestId idempotente. Roster valida el alcance de la ruta y resuelve los destinatarios.
+- Comunicados de administrador para su organizacion o una ruta, con requestId idempotente. Se requiere el directorio compuesto del monolito para validar alcance de ruta y destinatarios; su contrato remoto sigue pendiente.
 - Bandeja propia paginada, detalle y marcado de lectura idempotente. La identidad proviene de INotificationUserContext, no de parametros elegidos por el cliente. Para leer avisos de alumnos se consultan los vinculos actuales; no se usa tutorOf como unica autorizacion.
 - NotificationDelivery separa aceptacion del canal, reintento, fallo y omision de ReadAt. Un destino push es una suscripcion identificada; aceptar un mensaje no acredita su visualizacion ni su lectura.
-- Puertos para persistencia, trabajo de entrega pendiente, Roster, estado activo del viaje, identidad, FCM y SignalR. No hay adaptadores ficticios en produccion.
+- Puertos para persistencia, trabajo de entrega pendiente, directorio del monolito, estado activo del viaje, identidad, FCM y SignalR. No hay adaptadores ficticios en produccion.
 - Pruebas de dominio, casos de uso mediante el Dispatcher real, contratos, dependencias y arranque del host.
-- Persistencia MySQL 8.4 propia para avisos, comunicados, suscripciones push cifradas, Inbox de eventos procesados, trabajos pendientes y entregas por canal. Repositorios y unidad de trabajo reales, migraciones y Compose local de MySQL/RabbitMQ.
+- Persistencia MySQL 8.0 propia para avisos, comunicados, suscripciones push cifradas, Inbox de eventos procesados, trabajos pendientes y entregas por canal. Repositorios y unidad de trabajo reales, migraciones y Compose local de MySQL/RabbitMQ, alineados con el Compose raiz actualizado.
 - Idempotencia del evento completo: huella del payload y sus metadatos; confirmacion atomica de Inbox + avisos + trabajo pendiente. Restricciones de base de datos para duplicados concurrentes, incluidos avisos sin alumno, y contador de version para actualizaciones concurrentes.
 
 ## Contratos con Trip & Tracking
@@ -81,12 +82,12 @@ El listado actual de contratos no transporta movimiento continuo. Tracking sigue
 
 ## Persistencia y limites para las fases siguientes
 
-1. **MySQL 8.4 propio (implementado):** NotificationDbContext, migraciones y seis tablas. Inbox + avisos + trabajo pendiente se confirman mediante un unico SaveChanges transaccional. RabbitMQ da ACK solo despues de un commit confirmado, nunca al capturar una excepcion de unicidad.
+1. **MySQL 8.0 propio (implementado):** NotificationDbContext, migraciones y seis tablas. Inbox + avisos + trabajo pendiente se confirman mediante un unico SaveChanges transaccional. RabbitMQ da ACK solo despues de un commit confirmado, nunca al capturar una excepcion de unicidad.
 2. **Unicidad (implementada):** NotificationKey = OrganizationId + SourceMessageId + SourceMessageType + RecipientUserId + SubjectId. SubjectId usa Guid.Empty para avisos sin alumno, con un CHECK de consistencia. Announcement tiene unicidad OrganizationId + RequestId. El Inbox tiene identidad consumer + messageId y una huella para detectar payloads conflictivos. Los indices protegen reintentos concurrentes; ante una carrera se descarta el scope y se reevalua el mensaje en uno nuevo. La comprobacion del core por si sola no sustituye estas restricciones.
 3. **Entrega fuera de la transaccion (fase 4):** INotificationDispatchQueue persiste trabajo; el worker expande destinos y llama a FCM/SignalR. Conserva intentos, proximo reintento y errores estables; suscripciones invalidas/deshabilitadas no eliminan la bandeja. Revalida permisos, expiracion y vigencia del viaje cuando corresponde. No promete push exactamente una vez: hay una ventana entre aceptacion externa y guardado local; el cliente deduplica por notificationId.
-4. **Directorios seguros:** Roster es propietario de vinculos y pertenencia al transportista. Resolver destinatarios y enlaces vigentes mediante contratos protegidos o proyecciones con politica explicita de revocacion. Si no puede verificarse el permiso, el adaptador falla; no debe devolver datos viejos como si fueran autorizacion vigente. Trip & Tracking provee IsActive sin compartir tablas ni Redis con el dominio de Notification.
+4. **Directorios seguros:** Stakeholder es ahora propietario de alumnos, tutores y matriculas/vinculos; Administration aporta rutas, conductores y operacion, e IAM cuentas/roles/organizaciones. El monolito debe componer un contrato protegido para destinatarios y enlaces vigentes, o acordar una proyeccion con politica explicita de revocacion. Si no puede verificarse el permiso, el adaptador falla; no devuelve datos viejos como autorizacion vigente. Trip & Tracking provee IsActive sin compartir tablas ni Redis con Notification.
 5. **JWT y Gateway (fase 4):** se mapean sub/NameIdentifier, role y organizationId de IAM a NotificationUser; YARP publica solo rutas explicitas REST y hub. El cliente web todavia debe consumirlas y registrar push. El movil del conductor sigue enviando acciones a Tracking; no necesita cambios para implementar este backend.
-6. **Redis:** no es persistencia de avisos. La fase 4 permite configurar un backplane para varias replicas SignalR; no reemplaza Inbox ni MySQL. El despliegue integrado de todos los servicios, validacion multi-replica, readiness y observabilidad completa siguen pendientes.
+6. **Redis:** no es persistencia de avisos. La fase 4 permite configurar un backplane para varias replicas SignalR; no reemplaza Inbox ni MySQL. El despliegue integrado de Notification, la validacion multi-replica y la observabilidad completa siguen pendientes. El readiness local de MySQL/RabbitMQ ya esta implementado; no acredita disponibilidad de directorios, IAM, Redis ni FCM.
 
 NotificationProcessingPolicy permite configurar caducidad de proximidad y tolerancia de reloj; los valores iniciales del core son 5 minutos y 30 segundos respectivamente. Son decisiones iniciales de implementacion ajustables, no mediciones ni valores exigidos por el reporte. Los avisos historicos de abordaje y entrega conservan el instante real y no se descartan como una proximidad efimera.
 
@@ -137,7 +138,7 @@ NotificationDependencies__TripTracking__ServiceToken=<mismo secreto configurado 
 
 Tracking configura `InternalServices__NotificationToken` para el endpoint implementado `GET /internal/v1/trips/{tripId}/notification-context?organizationId={organizationId}`. Requiere `X-Service-Token`; valida tenant antes de responder `{ organizationId, tripId, isActive }` sin GPS ni alumnos. Si falta el secreto, el endpoint deniega acceso. No publicar `/internal/**` mediante el Gateway. Restringir red de servicios y rotar secretos; no reutilizar JWT de familias como credencial de servicio.
 
-El cliente HTTP de Administration ya esta implementado en Notification, pero **Administration/Roster todavia no implementa estos endpoints en este repositorio**. Contrato minimo que debe coordinarse con su responsable, tambien protegido con `X-Service-Token`:
+El cliente HTTP del directorio ya esta implementado en Notification, pero **el monolito actualizado todavia no publica estos cuatro endpoints**. Ahora el contrato debe coordinarse con Stakeholder (alumnos, tutores y matriculas), Administration (rutas/operadores) e IAM (cuentas/organizaciones). `AdministrationRecipientDirectory` y la clave de configuracion `NotificationDependencies:Administration` conservan sus nombres para compatibilidad; deben apuntar al monolito que publique el contrato compuesto, no a un microservicio Administration inexistente. Contrato minimo protegido con `X-Service-Token`:
 
 | Operacion | Solicitud JSON | Respuesta JSON |
 | --- | --- | --- |
@@ -148,7 +149,7 @@ Las listas deben contener exclusivamente vinculos vigentes de esa organizacion. 
 
 Los clientes HTTP exigen HTTPS y deshabilitan redirecciones para no filtrar tokens. En desarrollo local exclusivamente se puede configurar `NotificationDependencies__Administration__AllowInsecureHttp=true` y el equivalente para TripTracking. El consumidor admite AMQPS con `NotificationRabbitMq__UseTls=true`, puerto y `TlsServerName` correspondientes; no deshabilitar validacion de certificados. Restringir usuarios/permisos del broker a exchanges/colas necesarios. DLQ y `.unrouted` contienen payload original potencialmente sensible: no exponerlos a clientes, no registrar cuerpos ni credenciales y acordar retencion/eliminacion segura segun politica del proyecto.
 
-El Compose local de `infrastructure/compose.yaml` agrega RabbitMQ 4.1 y MySQL 8.4 con puertos solo loopback y volumenes propios. Es un recurso de desarrollo: apuntar AMBOS servicios al mismo broker; no levantar dos brokers aislados para una misma integracion. No configura TLS ni sustituye el despliegue productivo.
+El Compose local de `infrastructure/compose.yaml` agrega RabbitMQ 4.1 y MySQL 8.0 con puertos solo loopback y volumenes propios. Es un recurso de desarrollo: apuntar AMBOS servicios al mismo broker; no levantar dos brokers aislados para una misma integracion. No configura TLS ni sustituye el despliegue productivo.
 
 ### Pruebas de fase 3
 
@@ -156,7 +157,7 @@ El Compose local de `infrastructure/compose.yaml` agrega RabbitMQ 4.1 y MySQL 8.
 ./scripts/Test-NotificationMessaging.ps1
 ```
 
-El script crea contenedores efimeros de MySQL 8.4 y RabbitMQ 4.1 con credenciales aleatorias y puertos locales dinamicos; cada caso usa bases y topologia propias. Retira exclusivamente sus contenedores al finalizar. Sin las variables de prueba, los casos de integracion se omiten explicitamente; las pruebas unitarias del decoder, coordinador y clientes HTTP siguen funcionando sin Docker.
+El script crea contenedores efimeros de MySQL 8.0 y RabbitMQ 4.1 con credenciales aleatorias y puertos locales dinamicos; cada caso usa bases y topologia propias. Retira exclusivamente sus contenedores al finalizar. Sin las variables de prueba, los casos de integracion se omiten explicitamente; las pruebas unitarias del decoder, coordinador y clientes HTTP siguen funcionando sin Docker.
 
 Se comprueban seis eventos reales, duplicados, reintentos recuperables/agotados, DLQ, identidad conflictiva, ventanas de ACK perdido, carreras entre consumidores, reconexion, confirmacion fallida por mensaje no enrutable y el flujo EfUnitOfWork → OutboxProcessor → RabbitMQ → Notification/MySQL. Los directorios son dobles exclusivos de tests, no acreditan disponibilidad de Administration. La fase 4 amplia esta suite con SignalR/HTTP reales y un transporte FCM de prueba, sin contactar Firebase.
 
@@ -166,7 +167,7 @@ Verificacion focalizada de fase 3 (23/10/2026), en Release: **331 pruebas aproba
 
 ## Fase 4: API y canales
 
-Implementada dentro de Notification y ApiGateway. No se modifica el codigo productivo de IAM, Administration/Roster ni Trip & Tracking en esta fase. No se conectan sus tablas ni se sustituyen sus directorios por datos ficticios. La base sigue siendo MySQL 8.4 propia y conserva las seis tablas y la migracion inicial: esta fase no requiere otra migracion.
+Implementada dentro de Notification y ApiGateway. No se modifica el codigo productivo de IAM, Administration/Roster ni Trip & Tracking en esta fase. No se conectan sus tablas ni se sustituyen sus directorios por datos ficticios. La base es MySQL propia (8.0 en el Compose actualizado) y conserva las seis tablas y la migracion inicial: esta fase no requiere otra migracion.
 
 ### Contrato para la web
 
@@ -190,7 +191,10 @@ La instalacion debe conservar un GUID estable por cuenta/contexto de transportis
 ### Autenticacion y autorizacion
 
 - Se verifica firma HS256, expiracion, usuario GUID, `organizationId` GUID y rol `PARENT`, `ADMIN` o `DRIVER`. Se aceptan `sub`, `nameid` o el claim URI NameIdentifier de IAM; se normaliza `role` al claim de rol de ASP.NET.
-- `Jwt:Secret` debe coincidir con el secreto configurado en IAM y tener al menos 32 bytes. No se emiten tokens desde Notification ni Gateway. Issuer/Audience se validan cuando se configuran; IAM actual no los emite, por lo que deben acordarse antes de exigirlos. No inventar valores solo en el consumidor.
+- `Jwt:Secret` debe coincidir con el secreto de IAM y tener al menos 32 bytes. IAM actualizado ya emite issuer/audience; en el despliegue conjunto actual son `rutasegura-iam` y `rutasegura-api`. Configurar los mismos valores en Notification y Gateway. No se emiten tokens desde estos servicios.
+- La API valida ademas la cuenta vigente mediante `GET /api/v1/users/me` de IAM, reenviando el JWT original. La respuesta debe coincidir en `id`, `organizationId` y `roleTier`; IAM comprueba existencia, rol, pertenencia y estado activo de la organizacion. No hay cache positiva: una revocacion bloquea la siguiente peticion. Rechazos devuelven 401; timeout, respuesta ilegible/excesiva o caida de IAM devuelven 503 `NOTIFICATION_IAM_UNAVAILABLE`, sin continuar al caso de uso ni exponer datos de IAM. No se permite acceso por disponibilidad ante fallos de esa comprobacion.
+- `Iam:AccountValidation:Enabled=true` es el valor predeterminado al activar la API; exige URL y issuer/audience configurados. `false` es una excepcion explicita para desarrollo/pruebas aisladas, que omite la consulta de vigencia; no usarla en el despliegue integrado. La llamada usa HTTPS, sin redirecciones/cookies, respuesta maxima de 64 KiB y timeout inicial de 3 segundos (configurable hasta 30). HTTP local requiere `Iam:AllowInsecureHttp=true`.
+- SignalR comprueba la cuenta al autenticar negociacion/conexion y cierra al expirar el JWT. No implementa desconexion inmediata de una conexion WebSocket ya establecida al revocar la cuenta. Sus hints no contienen titulo, cuerpo ni alumnos; toda recuperacion/lectura REST vuelve a validar IAM y el directorio. La invalidacion activa de sesiones sigue pendiente si se requiere revocacion inmediata tambien de hints.
 - API, detalle, lectura y envios revalidan vinculos tutor–alumno. Los comunicados revalidan su audiencia por organizacion/ruta; los SOS sin alumno revalidan operadores. Publicar requiere tanto rol ADMIN como presencia actual en `recipients/operators`.
 - Una dependencia caida o con respuesta invalida no equivale a permiso concedido ni a una audiencia vacia valida. REST devuelve 503; el worker reintenta sin enviar y finalmente registra fallo si no puede comprobar el acceso.
 - Las paginas pueden acortarse cuando se revoca el acceso a comunicados/SOS sin alumno despues de aplicar la paginacion relacional. No se devuelve total ni cursor estable. El cliente debe avanzar offset por el limite solicitado, no por la cantidad recibida; mejorar esta paginacion con un contrato de alcance consultable en lote sigue pendiente antes de grandes historiales.
@@ -224,6 +228,10 @@ Mantener la conexion MySQL, clave de cifrado y endpoints internos seguros de fas
 ```text
 NotificationApi__Enabled=true
 Jwt__Secret=<mismo secreto que IAM, minimo 32 bytes>
+Jwt__Issuer=rutasegura-iam
+Jwt__Audience=rutasegura-api
+Iam__BaseUrl=https://tu-monolito-interno/
+Iam__AccountValidation__Enabled=true
 Cors__AllowedOrigins__0=https://tu-web.example
 NotificationChannels__Enabled=true
 NotificationFcm__Enabled=true
@@ -240,25 +248,41 @@ En Gateway:
 ```text
 NotificationProxy__Enabled=true
 Jwt__Secret=<mismo secreto de IAM/Notification>
+Jwt__Issuer=rutasegura-iam
+Jwt__Audience=rutasegura-api
 Cors__AllowedOrigins__0=https://tu-web.example
 ReverseProxy__Clusters__notification__Destinations__primary__Address=https://tu-notification-interno/
 ```
 
-En desarrollo la direccion predeterminada es `http://localhost:5182/`, con proxy deshabilitado hasta configurarlo. YARP conserva las rutas y el JWT, valida el token en el borde y Notification lo valida nuevamente. Publica exclusivamente notifications, announcements, push-subscriptions y hub (incluida negociacion/WebSocket). No publica `/internal/**`, broker, base ni rutas de otros servicios. No se reconfigura IAM/Administration/Tracking a traves del Gateway en esta fase. TLS/HTTPS del despliegue y certificados deben configurarse en servidor/ingress; no se deshabilita validacion de certificados ni se crean secretos en appsettings.
+En desarrollo la direccion predeterminada de Notification es `http://localhost:5182/`, con proxy deshabilitado hasta configurarlo. YARP conserva las rutas y el JWT; valida el token en el borde y Notification lo valida nuevamente con la cuenta vigente en IAM. Las rutas propias son notifications, announcements, push-subscriptions y hub (incluida negociacion/WebSocket). El Gateway actualizado tambien publica rutas explicitas de IAM, Administration, Stakeholder y Tracking; se conservan las configuraciones de esos responsables. No publica `/internal/**`, broker ni base. TLS/HTTPS y certificados se configuran en servidor/ingress, sin deshabilitar validacion de certificados ni crear secretos en appsettings.
+
+### Disponibilidad local y recuperacion del consumidor
+
+`GET /health/live` responde si el proceso esta vivo y no consulta dependencias. `GET /health/ready` devuelve 200 solo cuando hay alguna funcion habilitada, no hay migraciones pendientes, se pueden consultar las seis tablas y el consumidor esta suscrito si se habilito RabbitMQ; en otro caso devuelve 503 sin detalles internos. No aplica migraciones ni crea tablas. El chequeo tiene timeout de 3 segundos. Gateway ya consulta este endpoint cuando habilita Notification. No demuestra que los directorios pendientes esten implementados, ni valida credenciales FCM, Redis, cuentas de usuarios o disponibilidad de IAM: su alcance es local.
+
+La fase 3 tambien recupera cancelaciones de suscripcion enviadas por el broker con conexion/canal aun abiertos (`basic.cancel`); marca al consumidor como no disponible y vuelve a declarar/suscribir su topologia. Una conexion TCP abierta por si sola no acredita que se este consumiendo. No borrar colas con mensajes para provocar esta recuperacion; la prueba usa una cola vacia y aleatoria exclusiva del fixture.
 
 ### Pendientes por responsable, incluidas fases anteriores
 
 | Responsable | Pendiente concreto | Impacto |
 | --- | --- | --- |
-| Administration/Roster | Implementar y proteger los cuatro endpoints de directorio descritos en fase 3; devolver alumnos, tutores, operadores y audiencias vigentes, y validar organizacion/ruta. `student-links` debe responder tambien para operadores sin alumnos con lista autoritativa vacia. | Sin esto no hay autorizacion ni destinatarios reales. No es un permiso para consultar tablas ajenas. |
-| IAM | Corregir el registro publico que acepta RoleTier y OrganizationId sin un flujo autorizado de concesion; controlar altas/invitaciones, pertenencia y roles. | Bloqueo de seguridad para produccion: un JWT firmado no corrige una identidad autoasignada. El chequeo actual de operadores en Notification es defensa adicional, no reemplaza esa correccion. |
-| IAM + equipo | Garantizar organizationId autorizado para las sesiones que usan Notification; acordar firma, issuer/audience, expiracion y revocacion. Si un tutor usa varios transportistas, definir contexto autorizado por sesion. | No inferir tenant ni permitir elegirlo libremente en el body/header. Tokens sin tenant se rechazan. |
+| Stakeholder + Administration + IAM | Publicar y proteger los cuatro endpoints de directorio descritos en fase 3, componiendo vinculos/matriculas vigentes, operadores/cuentas y pertenencia de ruta/organizacion. `student-links` debe responder para operadores sin alumnos con lista autoritativa vacia. | Sigue bloqueando destinatarios y autorizacion reales; los nuevos facades en proceso y APIs publicas no equivalen al contrato interno remoto. Notification no consulta tablas ajenas ni suplanta usuarios para obtener audiencias. |
+| IAM + Stakeholder + equipo | Definir contexto autorizado para padres: IAM/Stakeholder admiten PARENT sin organizationId y matriculas con transportistas; Notification requiere organizationId firmado. Acordar seleccion/resolucion autorizada por sesion o evolucion multi-organizacion del contrato de bandeja. | Un padre registrado normalmente sin tenant sigue recibiendo 401 en Notification. No inventar organizationId ni confiar en body/header libre; no se elimina el aislamiento para aparentar integracion completa. |
 | Responsable Firebase + web | Provisionar proyecto, identidad/credenciales server, registro cliente, permiso del navegador, VAPID y service worker sobre HTTPS; acordar tokens/FID y gestion de logout/rotacion. | Adaptador implementado, pero no se ha probado envio a Firebase/dispositivos reales. No se modifica frontend ni movil aqui. |
 | Trip & Tracking / integracion | Integrar en la version conjunta los contratos de cierre con direccion + entregas nuevas y OrganizationId autoritativo, preservando ID/fecha/correlacion del Outbox. | Eventos antiguos o incompletos permanecen en DLQ; no inferir datos al reprocesar. El codigo local de fase 3 ya contempla la coordinacion. |
 | Infraestructura / equipo | Usar el mismo broker/exchange, provisionar bindings antes de productores, revisar y reprocesar `.unrouted`/DLQ preservando identidad. No convertir classic a quorum borrando mensajes. | Pendiente operativo de fase 3: crear un binding no recupera automaticamente el backlog anterior. |
 | Infraestructura / equipo | Secretos/rotacion, permisos minimos MySQL y RabbitMQ, TLS en todos los tramos requeridos, retencion de Inbox/DLQ/logs, backups, capacidad y alertas. | Contenedores de pruebas y Compose local no constituyen un despliegue productivo. No hay retencion automatica del Inbox ni reproceso administrativo de entregas fallidas. |
-| Notification / equipo | Readiness integral, telemetria de colas/entregas, pruebas de carga/latencia, refinamiento de paginacion con audiencias revocadas y pruebas multi-replica/backplane. | No se acreditan todavia los SLO del reporte ni disponibilidad/escala de produccion. |
-| Equipo | Instalar/verificar SDK fijado 10.0.401 y runtime parcheado del despliegue; reconciliar pruebas globales. | Se valida focalizadamente con SDK 10.0.300 instalado, sin cambiar global.json ni otros servicios. |
+| Notification / equipo | Readiness de dependencias remotas, telemetria de colas/entregas, pruebas de carga/latencia, invalidacion activa de sesiones SignalR, paginacion con audiencias revocadas y pruebas multi-replica/backplane. | El readiness local ya esta resuelto; siguen sin acreditarse SLO ni disponibilidad/escala de produccion. |
+| Infraestructura / equipo | Incluir Notification en el Compose/despliegue conjunto y configurar sus directorios, IAM, base propia, broker compartido y secretos. | El Compose raiz actualizado incluye monolito/Tracking/Gateway y mantiene NotificationProxy deshabilitado; no arranca aun este microservicio. |
+| Equipo | Instalar/verificar SDK fijado 10.0.401 y runtime parcheado del despliegue; reconciliar pruebas globales y dependencias con avisos de seguridad. | Se valida con SDK 10.0.300 instalado sin cambiar global.json. La suite conjunta de Gateway emite avisos NU1903 preexistentes de Microsoft.OpenApi 2.4.1 (Monolith) y SQLitePCLRaw.lib.e_sqlite3 2.1.11 (tests); no se alteraron paquetes de esos responsables. |
+
+Revision del pull (26/10/2026): el pendiente anterior de autoasignacion de roles publicos de IAM ya fue corregido por su responsable: sign-up solo crea PARENT, conductores requieren administrador y organizaciones/administradores se provisionan por flujo protegido. Tambien existen issuer/audience y la consulta de cuenta vigente; Notification ya consume esta ultima. Se conserva la revalidacion de operadores y vinculos como autorizacion adicional. Los eventos nuevos `stakeholder.events` no sustituyen por si solos un directorio vigente; no se agregan avisos de matricula ni proyecciones con revocacion eventual sin un contrato acordado.
+
+### Verificacion de la revision del pull — 26/10/2026
+
+**276 pruebas aprobadas en Release, 0 fallos y 0 omisiones**: 121 de core/API/seguridad/proxy de Notification, 40 de persistencia, 65 de mensajeria/canales y 50 de la suite conjunta del Gateway. Las suites de infraestructura se ejecutaron con MySQL 8.0 y RabbitMQ 4.1 reales: 29 casos de persistencia y 15 de mensajeria usan contenedores efimeros. Se corrigio una expectativa heredada de version 8.4 que ya no correspondia al Compose/scripts 8.0 del pull; no se cambio la version de infraestructura elegida por el equipo ni se migraron bases existentes.
+
+Se verifica delegacion del JWT original al contrato `users/me`, revocacion sin cache positiva, discrepancias de usuario/rol/organizacion, rechazo anticipado de issuer/audience/tenant invalidos, caidas/timeouts/respuestas excesivas o ilegibles de IAM, negociacion SignalR y errores seguros. IAM remoto se sustituye por un handler HTTP exclusivo de tests; la suite conjunta de Gateway usa el IAM real del monolito con SQLite. Tambien se comprueban readiness de MySQL/tablas, separacion de liveness y readiness, propagacion de readiness por Gateway y recuperacion de cancelaciones de consumidor con conexion abierta. No se acredita aun un flujo productivo con directorio remoto, Firebase real ni backplane multi-replica. Los contenedores temporales fueron retirados al terminar; no se ejecutaron comandos Git.
 
 ### Verificacion de fase 4
 
@@ -280,6 +304,6 @@ Con el SDK 10.0.401 fijado por el repositorio:
 dotnet test src/Services/Notification/tests/RutaSegura.Notification.Tests/RutaSegura.Notification.Tests.csproj -c Release
 ```
 
-La suite RutaSegura.Notification.Persistence.Tests verifica migraciones, persistencia, rollback, indices, cifrado, aislamiento y carreras contra MySQL 8.4 real mediante scripts/Test-NotificationPersistence.ps1. Sin NOTIFICATION_TEST_MYSQL, los casos de integracion se omiten explicitamente. La suite de mensajeria siguiente agrega RabbitMQ real; ninguna de estas suites acredita Firebase, clientes web ni toda la solucion global.
+La suite RutaSegura.Notification.Persistence.Tests verifica migraciones, persistencia, rollback, indices, cifrado, aislamiento y carreras contra MySQL 8.0 real mediante scripts/Test-NotificationPersistence.ps1. Sin NOTIFICATION_TEST_MYSQL, los casos de integracion se omiten explicitamente. La suite de mensajeria siguiente agrega RabbitMQ real; ninguna de estas suites acredita Firebase, clientes web ni toda la solucion global. Las verificaciones historicas de 22/23 de octubre utilizaron MySQL 8.4; el pull actual cambio los Compose y scripts a 8.0. No reutilizar un volumen 8.4 arrancandolo con una imagen 8.0; una migracion de datos existente requiere su propio procedimiento y no se ha ejecutado aqui.
 
 Verificacion focalizada del 22/10/2026 tras fase 2: 109 pruebas aprobadas en Release, sin fallos ni omisiones: 78 de dominio/aplicacion/contratos/host y 31 de persistencia, modelo, cifrado y registro. De estas ultimas, 20 se ejecutan contra MySQL 8.4 real y verifican migraciones, atomicidad, unicidad, aislamiento y concurrencia; las otras 11 no requieren un servidor. Los contenedores temporales de prueba se retiraron al terminar, sin tocar bases o volumenes existentes. La base permanente de Compose queda preparada para configurarla con secretos propios; no se han almacenado credenciales reales en el repositorio. Se verifico con el SDK 10.0.300 instalado, ejecutando los proyectos por ruta absoluta desde E:\. La verificacion con el SDK fijado 10.0.401 y la solucion completa sigue pendiente hasta disponer de ese SDK y reconciliar las referencias IAM de los proyectos globales de pruebas. No se modifico global.json ni se ejecutaron comandos Git.

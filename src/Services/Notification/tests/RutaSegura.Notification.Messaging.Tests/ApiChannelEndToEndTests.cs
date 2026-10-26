@@ -27,6 +27,19 @@ namespace RutaSegura.Notification.Messaging.Tests;
 public sealed class ApiChannelEndToEndTests : BrokerTestContext
 {
     [BrokerFact]
+    public async Task ReadinessChecksMigratedTablesAndDetectsMissingSchema_WithoutAffectingLiveness()
+    {
+        await using var factory = new ApiFactory(NotificationConnection, EncryptionKey, Directory, new CapturingFcmTransport(), channels: false);
+        using var client = factory.CreateClient();
+        (await client.GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        // Base aleatoria y exclusiva de este fixture; no se alteran tablas ni datos del entorno del usuario.
+        await using (var db = OpenNotification())
+            await db.Database.ExecuteSqlRawAsync("DROP TABLE notification_deliveries", Ct);
+        (await client.GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        (await client.GetAsync("/health/live", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [BrokerFact]
     public async Task RabbitEventBecomesPersistentInboxRealtimeHintAndFcmDelivery_WithAuthenticatedReadAndRevocation()
     {
         var transport = new CapturingFcmTransport();
@@ -108,7 +121,7 @@ public sealed class ApiChannelEndToEndTests : BrokerTestContext
         }
     }
 
-    private sealed class ApiFactory(string connection, string encryptionKey, TestDirectory directory, IFcmTransport transport)
+    private sealed class ApiFactory(string connection, string encryptionKey, TestDirectory directory, IFcmTransport transport, bool channels = true)
         : WebApplicationFactory<notificationApi::Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -128,7 +141,8 @@ public sealed class ApiChannelEndToEndTests : BrokerTestContext
         {
             var settings = new Dictionary<string, string?>
             {
-                ["NotificationApi:Enabled"] = "true", ["NotificationChannels:Enabled"] = "true", ["NotificationRabbitMq:Enabled"] = "false",
+                ["NotificationApi:Enabled"] = "true", ["NotificationChannels:Enabled"] = channels.ToString(), ["NotificationRabbitMq:Enabled"] = "false",
+                ["Iam:AccountValidation:Enabled"] = "false", // Directorios e identidad remota se aislan en este E2E de canales.
                 ["NotificationChannels:PollingInterval"] = "00:00:00.100", ["NotificationFcm:Enabled"] = "true", ["NotificationFcm:ProjectId"] = "test",
                 ["ConnectionStrings:NotificationDatabase"] = connection, ["NotificationPersistence:PushTokenEncryptionKey"] = encryptionKey,
                 ["Jwt:Secret"] = Secret

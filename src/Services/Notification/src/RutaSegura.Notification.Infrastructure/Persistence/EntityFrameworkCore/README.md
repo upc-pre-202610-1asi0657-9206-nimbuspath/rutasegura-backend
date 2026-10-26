@@ -1,6 +1,6 @@
 # Persistencia propia de Notification — fase 2
 
-EF Core 10 y el proveedor oficial MySql.EntityFrameworkCore 10.0.12, para MySQL 8.4/InnoDB.
+EF Core 10 y el proveedor oficial MySql.EntityFrameworkCore 10.0.12, para MySQL 8.0/InnoDB en el Compose actualizado.
 No se comparte DbContext, tablas, claves foraneas ni conexiones con IAM, Administration o Tracking.
 La base de desarrollo se llama `rutasegura_notification`; Redis no participa en esta persistencia.
 
@@ -149,7 +149,7 @@ dotnet test src/Services/Notification/tests/RutaSegura.Notification.Tests -c Rel
 ./scripts/Test-NotificationPersistence.ps1
 ```
 
-El script crea un contenedor MySQL 8.4 temporal con contrasena aleatoria, puerto dinamico solo en loopback
+El script crea un contenedor MySQL 8.0 temporal con contrasena aleatoria, puerto dinamico solo en loopback
 y almacenamiento efimero. Cada prueba crea y elimina exclusivamente su propia base `notification_test_<uuid>`.
 Se aplican migraciones reales, no EnsureCreated ni un sustituto InMemory/SQLite. El script retira el
 contenedor al terminar, incluso ante un fallo. No usa ni borra la base permanente o los volumenes de Compose.

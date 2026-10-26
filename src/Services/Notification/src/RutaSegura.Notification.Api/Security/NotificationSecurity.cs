@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using RutaSegura.Notification.Application.Internal.OutboundServices;
 using RutaSegura.Notification.Application.Model.Results;
@@ -31,6 +34,19 @@ public static class NotificationSecurity
         if (Encoding.UTF8.GetByteCount(secret) < 32) throw new InvalidOperationException("Configura Jwt:Secret de al menos 32 bytes, compatible con IAM.");
         services.AddHttpContextAccessor();
         services.AddScoped<INotificationUserContext, HttpNotificationUserContext>();
+        var iam = configuration.GetSection("Iam").Get<NotificationIamOptions>() ?? new();
+        if (iam.AccountValidation.Enabled)
+        {
+            var uri = iam.Validate();
+            if (string.IsNullOrWhiteSpace(configuration["Jwt:Issuer"]) || string.IsNullOrWhiteSpace(configuration["Jwt:Audience"]))
+                throw new InvalidOperationException("Configura Jwt:Issuer y Jwt:Audience de IAM antes de habilitar la API integrada.");
+            services.AddHttpClient<INotificationIamAccountVerifier, NotificationIamAccountVerifier>(NotificationIamAccountVerifier.ClientName, client =>
+            {
+                client.BaseAddress = uri;
+                client.Timeout = iam.AccountValidation.Timeout;
+                client.MaxResponseContentBufferSize = 64 * 1024;
+            }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+        }
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
             options.MapInboundClaims = false;
@@ -52,13 +68,43 @@ public static class NotificationSecurity
                         context.Request.Query.TryGetValue("access_token", out var token)) context.Token = token;
                     return Task.CompletedTask;
                 },
-                OnTokenValidated = context =>
+                OnTokenValidated = async context =>
                 {
                     if (context.Principal?.Identity is ClaimsIdentity identity)
                         foreach (var role in identity.FindAll("role").ToArray())
                             identity.AddClaim(new(ClaimTypes.Role, role.Value));
-                    if (context.Principal is null || !NotificationIdentity.Valid(context.Principal)) context.Fail("NOTIFICATION_INVALID_IDENTITY");
-                    return Task.CompletedTask;
+                    if (context.Principal is null || !NotificationIdentity.Valid(context.Principal))
+                    { context.Fail("NOTIFICATION_INVALID_IDENTITY"); return; }
+                    var roles = context.Principal.FindAll(ClaimTypes.Role).Select(c => c.Value).Distinct(StringComparer.Ordinal).ToArray();
+                    if (roles.Length != 1) { context.Fail("NOTIFICATION_INVALID_IDENTITY"); return; }
+                    if (!iam.AccountValidation.Enabled) return;
+                    var token = context.SecurityToken switch
+                    {
+                        JsonWebToken jwt => jwt.EncodedToken,
+                        JwtSecurityToken jwt => jwt.RawData,
+                        _ => ""
+                    };
+                    if (string.IsNullOrWhiteSpace(token)) { context.Fail("NOTIFICATION_INVALID_IDENTITY"); return; }
+                    var state = await context.HttpContext.RequestServices.GetRequiredService<INotificationIamAccountVerifier>()
+                        .VerifyAsync(token, NotificationIdentity.UserId(context.Principal), NotificationIdentity.OrganizationId(context.Principal),
+                            roles[0], context.HttpContext.RequestAborted);
+                    if (state != NotificationIamAccountState.Active)
+                    {
+                        if (state == NotificationIamAccountState.Unavailable) context.HttpContext.Items["notification-iam-unavailable"] = true;
+                        context.Fail("NOTIFICATION_IAM_ACCOUNT_REJECTED");
+                    }
+                },
+                OnChallenge = async context =>
+                {
+                    if (!context.HttpContext.Items.ContainsKey("notification-iam-unavailable")) return;
+                    context.HandleResponse();
+                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                    context.Response.Headers.CacheControl = "no-store";
+                    await context.Response.WriteAsJsonAsync(new ProblemDetails
+                    {
+                        Status = 503, Title = "No se pudo verificar la cuenta.",
+                        Extensions = { ["code"] = "NOTIFICATION_IAM_UNAVAILABLE" }
+                    }, options: (System.Text.Json.JsonSerializerOptions?)null, contentType: "application/problem+json", cancellationToken: context.HttpContext.RequestAborted);
                 }
             };
         });

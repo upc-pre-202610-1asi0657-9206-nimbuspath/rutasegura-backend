@@ -27,7 +27,8 @@ public sealed class MySqlPersistenceTests : MySqlTestContext
         await context.Database.OpenConnectionAsync(Ct);
         await using var query = context.Database.GetDbConnection().CreateCommand();
         query.CommandText = "SELECT VERSION()";
-        ((string)(await query.ExecuteScalarAsync(Ct))!).ShouldStartWith("8.4.");
+        // Version del Compose y los scripts actuales; el pull migro la infraestructura de 8.4 a 8.0.
+        ((string)(await query.ExecuteScalarAsync(Ct))!).ShouldStartWith("8.0.");
         query.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name LIKE 'notification_%' AND engine = 'InnoDB'";
         Convert.ToInt32(await query.ExecuteScalarAsync(Ct)).ShouldBe(6);
     }
