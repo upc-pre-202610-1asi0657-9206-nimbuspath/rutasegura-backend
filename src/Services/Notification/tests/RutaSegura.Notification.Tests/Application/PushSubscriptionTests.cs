@@ -7,6 +7,17 @@ namespace RutaSegura.Notification.Tests.Application;
 public sealed class PushSubscriptionTests : NotificationTestContext
 {
     [Fact]
+    public async Task ReactivatingADisabledInstallationCannotBypassTheEnabledLimit()
+    {
+        var first=await Commands.Handle(new RegisterPushSubscriptionCommand(Guid.NewGuid(),"disabled-token","Web"),Ct);
+        await Commands.Handle(new DisablePushSubscriptionCommand(first.Value.Id),Ct);
+        for(var i=0;i<20;i++) (await Commands.Handle(new RegisterPushSubscriptionCommand(Guid.NewGuid(),"token-"+i,"Web"),Ct)).IsSuccess.ShouldBeTrue();
+        var disabled=Store.Subscriptions.Single(s=>s.Id==first.Value.Id);
+        (await Commands.Handle(new RegisterPushSubscriptionCommand(disabled.InstallationId,"reactivated-token","Web"),Ct))
+            .FirstError.Code.ShouldBe("PUSH_SUBSCRIPTION_LIMIT");
+        disabled.IsEnabled.ShouldBeFalse();
+    }
+    [Fact]
     public async Task RegisterRefreshAndDisableAreOwnedAndIdempotent()
     {
         var input = new RegisterPushSubscriptionCommand(Guid.NewGuid(), "private-token", "Web");

@@ -15,6 +15,14 @@ namespace RutaSegura.Notification.Interfaces.Rest.Controllers;
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class NotificationsController(INotificationQueryService queries, INotificationCommandService commands) : NotificationControllerBase
 {
+    [HttpGet("page")]
+    [ProducesResponseType<NotificationPageResource>(200)]
+    public async Task<IActionResult> Page([FromQuery] string? cursor = null, [FromQuery] int limit = 25,
+        [FromQuery] bool unreadOnly = false, CancellationToken cancellationToken = default)
+    {
+        var result = await queries.Handle(new GetMyNotificationPageQuery(cursor, limit, unreadOnly), cancellationToken);
+        return result.IsSuccess ? Ok(NotificationPageResourceFromResultAssembler.ToResourceFromResult(result.Value)) : Failure(result.FirstError);
+    }
     [HttpGet]
     [ProducesResponseType<NotificationResource[]>(200)]
     public async Task<IActionResult> List([FromQuery] int offset = 0, [FromQuery] int limit = 25,

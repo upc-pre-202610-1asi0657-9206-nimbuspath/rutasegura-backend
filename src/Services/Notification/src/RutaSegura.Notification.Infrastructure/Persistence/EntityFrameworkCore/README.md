@@ -10,7 +10,7 @@ La base de desarrollo se llama `rutasegura_notification`; Redis no participa en 
 - `Configuration/Extensions/ModelBuilderExtensions.cs`: `ApplyNotificationConfiguration`, llamado desde `OnModelCreating`.
 - `Configuration/NotificationDbContextFactory.cs`: creacion del contexto para las herramientas EF, sin iniciar el host.
 - `Repositories/`: implementaciones de los contratos de Domain y `NotificationUnitOfWork`.
-- `Migrations/`: migracion inicial, designer y snapshot; no se utiliza `EnsureCreated`.
+- `Migrations/`: dos migraciones, designers y snapshot; no se utiliza `EnsureCreated`.
 - `Infrastructure/Security/`: cifrado autenticado AES-GCM para tokens push.
 
 Tablas y columnas en snake_case, siguiendo el reporte. Fechas en UTC `datetime(6)`; UUID como `varchar(36)`
@@ -26,6 +26,7 @@ con conversion explicita. El contenido es un value object owned y se almacena en
 | notification_processed_events | Inbox de eventos confirmados | UNIQUE consumer + message_id |
 | notification_dispatch_jobs | Trabajo pendiente de expandir a canales | UNIQUE organizacion + notification_id |
 | notification_deliveries | Entrega por canal/destino, intentos, reintentos y resultado | UNIQUE organizacion + notification_id + canal + destino |
+| notification_delivery_replays | Auditoria de reproceso administrativo | UNIQUE organizacion + request_id; FK organizacion + delivery_id |
 
 `subject_id` es obligatorio: usa el alumno o Guid.Empty cuando no lo hay. Un CHECK exige que corresponda
 al `student_id`, evitando duplicados que MySQL permite con columnas NULL en indices unicos.
@@ -34,17 +35,17 @@ un aviso de otra organizacion. No hay FK hacia tablas de otros servicios.
 
 Los avisos, trabajos y entregas no se eliminan al deshabilitar una suscripcion. Los repositorios filtran
 organizacion y usuario; la bandeja aplica los vinculos de alumnos autorizados antes de paginar. La resolucion
-de esos vinculos sigue perteneciendo a Roster, no a estas tablas.
+de esos vinculos pertenece al contrato compuesto de Stakeholder/Administration/IAM, no a estas tablas.
 
 El hash del token es globalmente unico para impedir que un token activo quede asociado a dos usuarios u
 organizaciones. Una instalacion tampoco se reasigna automaticamente a otra cuenta: el flujo autenticado
-de registro, cierre de sesion y cambio de propietario se implementara en la fase de API/identidad.
+de registro, cierre de sesion y cambio de propietario se encuentra documentado en la API. Registro/baja se serializan con un lock MySQL por usuario/organizacion hasta el commit; reactivar una suscripcion tambien cuenta para el limite de 20 activas.
 
 ## Transacciones e idempotencia
 
 Los repositorios solo consultan o agregan al ChangeTracker: nunca confirman por separado.
 El decorador Transaction existente llama a IUnitOfWork una vez cuando el caso de uso termina con exito.
-NotificationUnitOfWork ejecuta un unico SaveChanges; EF/MySQL confirma o revierte el lote completo.
+NotificationUnitOfWork ejecuta SaveChanges dentro de una transaccion explicita propia cuando no existe una del llamador. Confirma solo al completar el lote y revierte ante un fallo; esto protege tambien la insercion de auditoria seguida de una actualizacion con conflicto de concurrencia. No se depende de la decision automatica del proveedor sobre lotes de multiples sentencias.
 
 ReceiveTripEventHandler consulta el Inbox antes de resolver destinatarios y registra la marca de procesado
 en el mismo lote que los avisos y el trabajo pendiente. Guarda una huella SHA-256 del payload concreto y
@@ -137,8 +138,13 @@ dotnet run --project src/Services/Notification/src/RutaSegura.Notification.Api
 
 Api registra la persistencia real si existe la conexion; nunca migra ni abre una conexion al arrancar.
 Sin conexion configurada, solo expone liveness/OpenAPI, no readiness ni funcionalidad de negocio.
-Los casos de uso continuan desactivados en el host hasta integrar directorios/identidad reales de las fases
-siguientes; las pruebas los ejecutan con directorios de prueba y persistencia MySQL real.
+Los casos de uso se activan con las opciones de API/RabbitMQ/canales; la integracion de directorios reales sigue pendiente en el monolito. Las pruebas usan directorios exclusivos de tests y MySQL real, sin agregar sustitutos en produccion.
+
+## Segunda migracion y mantenimiento — cierre de Notifications
+
+`20261026215013_CloseNotificationsOperationalGaps` agrega auditoria de reprocesos, clave alternativa de entregas por organizacion/ID, indice `ix_notification_retention` y contadores `cycle_attempt_count`/`replay_count`. Copia los intentos anteriores al contador del ciclo para no reiniciar el presupuesto existente. Aplicarla con el migrador del Compose o el procedimiento EF anterior **antes** de actualizar el host. Readiness consulta las siete tablas y rechaza migraciones pendientes. La prueba de upgrade crea el esquema anterior, inserta una entrega existente y comprueba que la migracion conserva sus cinco intentos.
+
+La limpieza optativa esta deshabilitada y en DryRun por defecto, con plazo sin definir (0). Solo una politica aprobada debe fijar `NotificationRetention:ReadNoticesDays`, habilitarla y retirar DryRun despues de revisar candidatos. Purga por lotes unicamente avisos leidos antiguos y sus trabajos/entregas terminales; protege pendientes, fallidos, no leidos y reprocesos auditados. Conserva Inbox, comunicados, auditoria y suscripciones. No constituye una politica integral de eliminacion de datos. Ver configuracion y limites en el README del servicio.
 
 ## Verificacion repetible
 

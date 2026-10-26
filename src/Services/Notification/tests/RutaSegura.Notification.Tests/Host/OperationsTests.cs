@@ -45,6 +45,13 @@ public sealed class OperationsTests
         list.GetProperty("security").GetArrayLength().ShouldBe(1);
         list.GetProperty("responses").GetProperty("200").GetProperty("content").GetProperty("application/json").GetProperty("schema").GetProperty("type").GetString().ShouldBe("array");
         list.GetProperty("responses").TryGetProperty("503", out _).ShouldBeTrue();
+        var page = paths.GetProperty("/api/v1/notifications/page").GetProperty("get");
+        page.GetProperty("description").GetString().ShouldNotBeNull().ShouldContain("nextCursor");
+        page.GetProperty("responses").TryGetProperty("400", out _).ShouldBeTrue();
+        var replay = paths.GetProperty("/api/v1/notifications/deliveries/{deliveryId}/replay").GetProperty("post");
+        replay.GetProperty("description").GetString().ShouldNotBeNull().ShouldContain("Solo ADMIN");
+        replay.GetProperty("responses").TryGetProperty("202", out _).ShouldBeTrue();
+        replay.GetProperty("responses").TryGetProperty("409", out _).ShouldBeTrue();
         paths.GetProperty("/api/v1/announcements").GetProperty("post").GetProperty("responses").TryGetProperty("201", out _).ShouldBeTrue();
         paths.TryGetProperty("/internal/v1/notifications/student-links", out _).ShouldBeFalse();
         text.ShouldNotContain(MonitoringToken);

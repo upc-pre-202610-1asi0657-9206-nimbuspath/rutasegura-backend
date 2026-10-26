@@ -25,10 +25,11 @@ internal sealed class RegisterPushSubscriptionHandler(IPushSubscriptionRepositor
             return Error.Validation("PUSH_INVALID_SUBSCRIPTION", "Se requiere instalacion, token y plataforma Web, Android o Ios validos.");
         var user = current.Value;
         var existing = await subscriptions.FindByInstallationAsync(user.OrganizationId, user.UserId, command.InstallationId, cancellationToken);
+        if ((existing is null || !existing.IsEnabled) &&
+            (await subscriptions.ListEnabledAsync(user.OrganizationId, user.UserId, cancellationToken)).Count >= 20)
+            return Error.Conflict("PUSH_SUBSCRIPTION_LIMIT", "Desactiva una suscripcion antes de registrar otra.");
         if (existing is null)
         {
-            if ((await subscriptions.ListEnabledAsync(user.OrganizationId, user.UserId, cancellationToken)).Count >= 20)
-                return Error.Conflict("PUSH_SUBSCRIPTION_LIMIT", "Desactiva una suscripcion antes de registrar otra.");
             existing = PushSubscription.Register(user.OrganizationId, user.UserId, command.InstallationId, command.Token, platform, clock.GetUtcNow());
             subscriptions.Add(existing);
         }

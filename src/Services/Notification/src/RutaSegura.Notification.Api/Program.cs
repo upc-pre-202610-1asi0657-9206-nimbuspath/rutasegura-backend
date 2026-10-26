@@ -17,9 +17,12 @@ using OpenTelemetry.Metrics;
 
 // Composition root del microservicio; los contratos REST pertenecen a Interfaces.
 var migrateOnly = args.Contains("--migrate", StringComparer.Ordinal);
-var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--migrate").ToArray());
+var testFcmOnly = args.Contains("--test-fcm", StringComparer.Ordinal);
+var builder = WebApplication.CreateBuilder(args.Where(arg => arg is not ("--migrate" or "--test-fcm")).ToArray());
 // Docker secrets usa nombres de archivo jerarquicos (por ejemplo Jwt__Secret). El entorno sigue teniendo precedencia.
 builder.Configuration.AddKeyPerFile("/run/secrets", optional: true).AddEnvironmentVariables();
+if (migrateOnly && testFcmOnly) { Console.Error.WriteLine("Selecciona un solo modo de operacion."); Environment.ExitCode=1; return; }
+if (testFcmOnly) { Environment.ExitCode = await NotificationFcmSmoke.RunAsync(builder.Configuration); return; }
 if (migrateOnly)
 {
     try
@@ -44,6 +47,11 @@ var messagingEnabled = builder.Configuration.GetValue<bool>("NotificationRabbitM
 if (apiEnabled)
 {
     builder.Services.AddNotificationSecurity(builder.Configuration);
+    var sessionOptions = builder.Configuration.GetSection("NotificationRealtime").Get<NotificationRealtimeSessionOptions>() ?? new();
+    sessionOptions.Validate();
+    builder.Services.AddSingleton(sessionOptions);
+    builder.Services.AddSingleton<NotificationRealtimeSessions>();
+    builder.Services.AddHostedService<NotificationRealtimeSessionMonitor>();
     builder.Services.AddControllers().AddApplicationPart(typeof(NotificationsController).Assembly)
         .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = _ => new BadRequestObjectResult(new ProblemDetails
         { Status = 400, Title = "Solicitud invalida.", Extensions = { ["code"] = "NOTIFICATION_INVALID_REQUEST" } }));

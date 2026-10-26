@@ -117,7 +117,7 @@ public sealed class ApiChannelEndToEndTests : BrokerTestContext
         (await client.GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         // Base aleatoria y exclusiva de este fixture; no se alteran tablas ni datos del entorno del usuario.
         await using (var db = OpenNotification())
-            await db.Database.ExecuteSqlRawAsync("DROP TABLE notification_deliveries", Ct);
+            await db.Database.ExecuteSqlRawAsync("DROP TABLE notification_delivery_replays", Ct);
         (await client.GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
         (await client.GetAsync("/health/live", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }

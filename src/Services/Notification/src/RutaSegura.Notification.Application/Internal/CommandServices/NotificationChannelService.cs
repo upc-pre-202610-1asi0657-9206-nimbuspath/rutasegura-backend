@@ -82,7 +82,7 @@ internal sealed class NotificationChannelService(INotificationDispatchRepository
 
     private void RecordFailure(NotificationDelivery delivery, string code, bool retryable, DateTimeOffset now)
     {
-        if (!retryable || delivery.AttemptCount + 1 >= policy.MaxAttempts) delivery.Fail(code, now);
-        else delivery.Retry(code, now.AddSeconds(Math.Min(300, 5 * Math.Pow(2, delivery.AttemptCount))), now);
+        if (!retryable || delivery.CycleAttemptCount + 1 >= policy.MaxAttempts) delivery.Fail(code, now);
+        else delivery.Retry(code, now.AddSeconds(Math.Min(300, 5 * Math.Pow(2, delivery.CycleAttemptCount))), now);
     }
 }

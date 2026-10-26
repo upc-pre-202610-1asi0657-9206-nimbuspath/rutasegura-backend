@@ -53,6 +53,8 @@ public abstract class NotificationTestContext : IDisposable
         services.AddSingleton<IProcessedNotificationEventRepository>(Store);
         services.AddSingleton<IPushSubscriptionRepository>(Store);
         services.AddSingleton<INotificationDispatchQueue>(Store);
+        services.AddSingleton<INotificationDispatchRepository>(Store);
+        services.AddSingleton<INotificationDeliveryAdministrationRepository>(Store);
         services.AddSingleton<INotificationRecipientDirectory>(Directory);
         services.AddSingleton<ITripNotificationContext>(Directory);
         services.AddSingleton<INotificationUserContext>(User);
@@ -106,8 +108,24 @@ internal sealed class UnitOfWorkFake : IUnitOfWork
     }
 }
 
-internal sealed class MemoryStore : INotificationRepository, IAnnouncementRepository, INotificationDispatchQueue, IProcessedNotificationEventRepository, IPushSubscriptionRepository
+internal sealed class MemoryStore : INotificationRepository, IAnnouncementRepository, INotificationDispatchQueue, IProcessedNotificationEventRepository, IPushSubscriptionRepository,
+    INotificationDispatchRepository, INotificationDeliveryAdministrationRepository
 {
+    public List<NotificationDelivery> Deliveries { get; } = [];
+    public List<NotificationDeliveryReplay> Replays { get; } = [];
+    public Task<NotificationDispatchJob?> GetJobAsync(Guid organizationId, Guid jobId, CancellationToken ct) => Task.FromResult<NotificationDispatchJob?>(null);
+    public Task<NotificationDelivery?> GetDeliveryAsync(Guid organizationId, Guid deliveryId, CancellationToken ct) =>
+        Task.FromResult(Deliveries.SingleOrDefault(d => d.OrganizationId == organizationId && d.Id == deliveryId));
+    public Task<IReadOnlyList<NotificationDispatchJob>> ListPendingJobsAsync(int limit, CancellationToken ct) => Task.FromResult<IReadOnlyList<NotificationDispatchJob>>([]);
+    public Task<IReadOnlyList<NotificationDelivery>> ListDueDeliveriesAsync(DateTimeOffset now, int limit, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<NotificationDelivery>>(Deliveries.Where(d => d.Status == DeliveryStatus.Pending || (d.Status == DeliveryStatus.RetryScheduled && d.NextAttemptAt <= now)).Take(limit).ToArray());
+    public void Add(NotificationDelivery delivery) => Deliveries.Add(delivery);
+    public void Add(NotificationDeliveryReplay replay) => Replays.Add(replay);
+    public Task<NotificationDeliveryReplay?> FindReplayAsync(Guid organization, Guid requestId, CancellationToken ct) =>
+        Task.FromResult(Replays.SingleOrDefault(r => r.OrganizationId == organization && r.RequestId == requestId));
+    public Task<IReadOnlyList<NotificationDelivery>> ListFailedAsync(Guid organization, int offset, int limit, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<NotificationDelivery>>(Deliveries.Where(d => d.OrganizationId == organization && d.Status == DeliveryStatus.Failed)
+            .OrderByDescending(d => d.LastAttemptAt).ThenBy(d => d.Id).Skip(offset).Take(limit).ToArray());
     public List<PushSubscription> Subscriptions { get; } = [];
     Task<PushSubscription?> IPushSubscriptionRepository.GetAsync(Guid organizationId, Guid userId, Guid subscriptionId, CancellationToken ct) =>
         Task.FromResult(Subscriptions.SingleOrDefault(s => s.OrganizationId == organizationId && s.UserId == userId && s.Id == subscriptionId));
@@ -131,7 +149,8 @@ internal sealed class MemoryStore : INotificationRepository, IAnnouncementReposi
         Task.FromResult<IReadOnlyList<NotificationEntity>>(Notifications.Where(n =>
                 n.OrganizationId == filter.OrganizationId && n.RecipientUserId == filter.RecipientUserId &&
                 (n.StudentId is null || filter.AuthorizedStudentIds.Contains(n.StudentId.Value)) &&
-                (!filter.UnreadOnly || n.ReadAt is null))
+                (!filter.UnreadOnly || n.ReadAt is null) && (filter.Snapshot is null || n.CreatedAt <= filter.Snapshot) &&
+                (filter.BeforeCreatedAt is null || n.CreatedAt < filter.BeforeCreatedAt || (n.CreatedAt == filter.BeforeCreatedAt && n.Id.CompareTo(filter.AfterId!.Value) > 0)))
             .OrderByDescending(n => n.CreatedAt).ThenBy(n => n.Id).Skip(filter.Offset).Take(filter.Limit).ToArray());
     public void Add(NotificationEntity notification) => Notifications.Add(notification);
     public Task<Announcement?> FindByRequestAsync(Guid organizationId, Guid requestId, CancellationToken cancellationToken) =>

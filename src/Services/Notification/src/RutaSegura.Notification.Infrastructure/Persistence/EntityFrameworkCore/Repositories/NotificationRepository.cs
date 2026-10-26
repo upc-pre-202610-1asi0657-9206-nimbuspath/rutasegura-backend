@@ -24,6 +24,9 @@ public sealed class NotificationRepository(NotificationDbContext context) : INot
             n.OrganizationId == filter.OrganizationId && n.RecipientUserId == filter.RecipientUserId &&
             (n.StudentId == null || students.Contains(n.StudentId.Value)));
         if (filter.UnreadOnly) query = query.Where(n => n.ReadAt == null);
+        if (filter.Snapshot is { } snapshot) query = query.Where(n => n.CreatedAt <= snapshot);
+        if (filter.BeforeCreatedAt is { } before && filter.AfterId is { } after)
+            query = query.Where(n => n.CreatedAt < before || (n.CreatedAt == before && n.Id.CompareTo(after) > 0));
         return await query.OrderByDescending(n => n.CreatedAt).ThenBy(n => n.Id)
             .Skip(filter.Offset).Take(filter.Limit).ToArrayAsync(cancellationToken);
     }

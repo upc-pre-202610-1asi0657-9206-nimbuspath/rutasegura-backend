@@ -50,6 +50,7 @@ public static class NotificationSecurity
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
             options.MapInboundClaims = false;
+            options.SaveToken = true;
             options.IncludeErrorDetails = false;
             options.TokenValidationParameters = new()
             {

@@ -24,8 +24,13 @@ public static class NotificationApplicationExtensions
     {
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(NotificationProcessingPolicy.Default);
+        services.TryAddSingleton(new NotificationReplayPolicy());
+        services.TryAddSingleton(provider => new NotificationCursorCodec(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32), provider.GetRequiredService<TimeProvider>()));
         if (registerUseCases)
         {
+            services.AddScoped<NotificationInboxReader>();
+            services.AddScoped<INotificationDeliveryCommandService, NotificationDeliveryCommandService>();
+            services.AddScoped<INotificationDeliveryQueryService, NotificationDeliveryQueryService>();
             services.AddRutaSeguraApplication(typeof(NotificationApplicationExtensions).Assembly);
             services.AddScoped<INotificationCommandService, NotificationCommandService>();
             services.AddScoped<INotificationQueryService, NotificationQueryService>();

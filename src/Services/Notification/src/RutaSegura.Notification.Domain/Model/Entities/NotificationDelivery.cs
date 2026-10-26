@@ -15,6 +15,8 @@ public sealed class NotificationDelivery : Entity<Guid>
     public Guid DestinationId { get; private set; }
     public DeliveryStatus Status { get; private set; }
     public int AttemptCount { get; private set; }
+    public int CycleAttemptCount { get; private set; }
+    public int ReplayCount { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? LastAttemptAt { get; private set; }
     public DateTimeOffset? NextAttemptAt { get; private set; }
@@ -74,6 +76,18 @@ public sealed class NotificationDelivery : Entity<Guid>
         Status = DeliveryStatus.Skipped;
     }
 
+    public void Replay(DateTimeOffset now, int maxReplays)
+    {
+        if (Status != DeliveryStatus.Failed || ReplayCount >= maxReplays || maxReplays is < 1 or > 10)
+            throw new DomainException("DELIVERY_REPLAY_NOT_ALLOWED", "Solo se reprocesan entregas fallidas dentro de su presupuesto.");
+        if (now < CreatedAt || now < LastAttemptAt) throw new DomainException("DELIVERY_INVALID_REPLAY_TIME", "Instante de reproceso invalido.");
+        ReplayCount++;
+        CycleAttemptCount = 0;
+        Status = DeliveryStatus.RetryScheduled;
+        NextAttemptAt = now;
+        LastErrorCode = null;
+    }
+
     private void RecordAttempt(DateTimeOffset now)
     {
         EnsurePending();
@@ -81,6 +95,7 @@ public sealed class NotificationDelivery : Entity<Guid>
             (NextAttemptAt is not null && now < NextAttemptAt))
             throw new DomainException("DELIVERY_INVALID_ATTEMPT_TIME", "El intento debe respetar el orden temporal y el reintento programado.");
         AttemptCount++;
+        CycleAttemptCount++;
         LastAttemptAt = now.ToUniversalTime();
     }
 

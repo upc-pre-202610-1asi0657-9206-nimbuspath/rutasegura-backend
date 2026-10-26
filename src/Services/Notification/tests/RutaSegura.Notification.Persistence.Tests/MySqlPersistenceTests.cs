@@ -22,7 +22,7 @@ public sealed class MySqlPersistenceTests : MySqlTestContext
         await context.SaveChangesAsync(Ct);
         await context.Database.MigrateAsync(Ct);
         (await context.Notifications.CountAsync(Ct)).ShouldBe(1);
-        (await context.Database.GetAppliedMigrationsAsync(Ct)).ShouldHaveSingleItem();
+        (await context.Database.GetAppliedMigrationsAsync(Ct)).Count().ShouldBe(2);
         context.Database.HasPendingModelChanges().ShouldBeFalse();
         await context.Database.OpenConnectionAsync(Ct);
         await using var query = context.Database.GetDbConnection().CreateCommand();
@@ -30,7 +30,7 @@ public sealed class MySqlPersistenceTests : MySqlTestContext
         // Version del Compose y los scripts actuales; el pull migro la infraestructura de 8.4 a 8.0.
         ((string)(await query.ExecuteScalarAsync(Ct))!).ShouldStartWith("8.0.");
         query.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name LIKE 'notification_%' AND engine = 'InnoDB'";
-        Convert.ToInt32(await query.ExecuteScalarAsync(Ct)).ShouldBe(6);
+        Convert.ToInt32(await query.ExecuteScalarAsync(Ct)).ShouldBe(7);
     }
 
     [MySqlFact]

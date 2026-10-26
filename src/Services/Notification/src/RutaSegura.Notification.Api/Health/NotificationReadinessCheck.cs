@@ -28,6 +28,7 @@ public sealed class NotificationReadinessCheck(IServiceScopeFactory scopes, ICon
             _ = await db.ProcessedEvents.AnyAsync(cancellationToken);
             _ = await db.DispatchJobs.AnyAsync(cancellationToken);
             _ = await db.Deliveries.AnyAsync(cancellationToken);
+            _ = await db.DeliveryReplays.AnyAsync(cancellationToken);
             if (configuration.GetValue<bool>("NotificationApi:Enabled") && configuration.GetValue("Iam:AccountValidation:Enabled", true))
             {
                 var client = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(Security.NotificationIamAccountVerifier.ClientName);

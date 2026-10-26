@@ -1,8 +1,9 @@
 # Controllers REST
 
-Implementados en fase 4: NotificationsController (bandeja/detalle/lectura), AnnouncementsController
-(publicacion de comunicados) y PushSubscriptionsController (listar/registrar/actualizar/desactivar).
-Usan Resources y Transform de Interfaces.Rest e INotificationCommandService / INotificationQueryService.
+Implementados: NotificationsController (bandeja/detalle/lectura y pagina con cursor), AnnouncementsController
+(publicacion de comunicados), PushSubscriptionsController (listar/registrar/actualizar/desactivar)
+y NotificationDeliveriesController (fallos y reproceso administrativo auditado).
+Usan Resources y Transform de Interfaces.Rest y los CommandServices / QueryServices de Application.
 No devuelven agregados ni acceden directamente al DbContext, broker o proveedores.
 
 Api registra este assembly cuando NotificationApi:Enabled=true. JWT, SignalR, arranque y configuracion

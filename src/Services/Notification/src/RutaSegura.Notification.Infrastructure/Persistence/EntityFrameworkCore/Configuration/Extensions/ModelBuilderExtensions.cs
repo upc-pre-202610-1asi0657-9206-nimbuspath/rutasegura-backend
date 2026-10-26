@@ -13,6 +13,15 @@ public static class ModelBuilderExtensions
 {
     public static void ApplyNotificationConfiguration(this ModelBuilder builder, IPushTokenProtector protector)
     {
+        builder.Entity<NotificationDeliveryReplay>(entity =>
+        {
+            entity.ToTable("notification_delivery_replays");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.ReasonCode).HasMaxLength(40).IsRequired();
+            entity.HasIndex(r => new { r.OrganizationId, r.RequestId }).IsUnique().HasDatabaseName("ux_delivery_replay_request");
+            entity.HasOne<NotificationDelivery>().WithMany().HasForeignKey(r => new { r.OrganizationId, r.DeliveryId })
+                .HasPrincipalKey(d => new { d.OrganizationId, d.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
         builder.Entity<Announcement>(entity =>
         {
             entity.ToTable("notification_announcements");
@@ -50,6 +59,7 @@ public static class ModelBuilderExtensions
                 .IsUnique().HasDatabaseName("ux_notification_source_recipient_subject");
             entity.HasIndex(n => new { n.OrganizationId, n.RecipientUserId, n.CreatedAt, n.Id }).HasDatabaseName("ix_notification_inbox");
             entity.HasIndex(n => new { n.OrganizationId, n.RecipientUserId, n.ReadAt, n.CreatedAt }).HasDatabaseName("ix_notification_unread");
+            entity.HasIndex(n => new { n.ReadAt, n.Id }).HasDatabaseName("ix_notification_retention");
             entity.HasOne<Announcement>().WithMany().HasForeignKey(n => new { n.OrganizationId, n.AnnouncementId })
                 .HasPrincipalKey(a => new { a.OrganizationId, a.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.Property<long>("Version").IsConcurrencyToken();

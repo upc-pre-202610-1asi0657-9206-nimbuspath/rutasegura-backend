@@ -68,6 +68,9 @@ internal sealed class NotificationApiFactory : WebApplicationFactory<notificatio
             services.RemoveAll<IProcessedNotificationEventRepository>(); services.AddSingleton<IProcessedNotificationEventRepository>(Store);
             services.RemoveAll<IPushSubscriptionRepository>(); services.AddSingleton<IPushSubscriptionRepository>(Store);
             services.RemoveAll<INotificationDispatchQueue>(); services.AddSingleton<INotificationDispatchQueue>(Store);
+            services.RemoveAll<INotificationDispatchRepository>(); services.AddSingleton<INotificationDispatchRepository>(Store);
+            services.RemoveAll<INotificationDeliveryAdministrationRepository>(); services.AddSingleton<INotificationDeliveryAdministrationRepository>(Store);
+            services.RemoveAll<INotificationSubscriptionLock>(); // Este fixture usa persistencia en memoria, sin servidor MySQL.
             services.RemoveAll<IUnitOfWork>(); services.AddSingleton<IUnitOfWork>(UnitOfWork);
             services.RemoveAll<INotificationRecipientDirectory>(); services.AddSingleton<INotificationRecipientDirectory>(Directory);
             services.RemoveAll<ITripNotificationContext>(); services.AddSingleton<ITripNotificationContext>(Directory);
