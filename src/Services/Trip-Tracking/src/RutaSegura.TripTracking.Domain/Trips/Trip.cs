@@ -113,6 +113,59 @@ public sealed class Trip : AggregateRoot<TripId>
         static DomainException Invalid(string message) => new(TripErrors.InvalidDefinition, message);
     }
 
+    /// <summary>
+    /// Actualiza un viaje que aún no empezó con la planificación vigente de la ruta (Route Planning cambió paradas,
+    /// alumnos inscritos por sus padres, conductor o vehículo). Los alumnos que siguen en la ruta conservan su
+    /// estado (p. ej. una ausencia avisada por el tutor); los nuevos entran como pendientes.
+    /// </summary>
+    /// <returns><c>false</c> si el viaje ya no está programado (en curso o terminado conserva su copia).</returns>
+    public bool RefreshPlan(
+        string routeName,
+        DriverId driverId,
+        VehicleId vehicleId,
+        IReadOnlyCollection<TripStopDefinition> stops,
+        IReadOnlyCollection<TripPassengerDefinition> passengers)
+    {
+        if (Status != TripStatus.Scheduled) return false;
+        if (string.IsNullOrWhiteSpace(routeName))
+            throw new DomainException(TripErrors.InvalidDefinition, "El viaje debe tener el nombre de la ruta.");
+        if (driverId.Value == Guid.Empty || vehicleId.Value == Guid.Empty)
+            throw new DomainException(TripErrors.InvalidDefinition, "El viaje necesita un conductor y un vehículo asignados.");
+        if (stops.Count == 0)
+            throw new DomainException(TripErrors.InvalidDefinition, "La ruta debe tener al menos una parada.");
+        if (stops.Select(s => s.StopId).Distinct().Count() != stops.Count ||
+            stops.Select(s => s.Sequence).Distinct().Count() != stops.Count)
+            throw new DomainException(TripErrors.InvalidDefinition, "Las paradas no pueden repetir identificador ni orden.");
+        if (passengers.Select(p => p.StudentId).Distinct().Count() != passengers.Count)
+            throw new DomainException(TripErrors.InvalidDefinition, "Un alumno no puede figurar dos veces en el mismo viaje.");
+        var stopIds = stops.Select(s => s.StopId).ToHashSet();
+        if (passengers.Any(p => !stopIds.Contains(p.StopId)))
+            throw new DomainException(TripErrors.InvalidDefinition, "Todos los alumnos deben estar asignados a una parada de la ruta.");
+
+        RouteName = routeName.Trim();
+        DriverId = driverId;
+        VehicleId = vehicleId;
+
+        _stops.RemoveAll(existing => !stopIds.Contains(existing.StopId));
+        foreach (var definition in stops)
+        {
+            var existing = _stops.FirstOrDefault(s => s.StopId == definition.StopId);
+            if (existing is null) _stops.Add(new TripStop(definition));
+            else existing.Redefine(definition);
+        }
+
+        var studentIds = passengers.Select(p => p.StudentId).ToHashSet();
+        _passengers.RemoveAll(existing => !studentIds.Contains(existing.StudentId));
+        foreach (var definition in passengers)
+        {
+            var existing = _passengers.FirstOrDefault(p => p.StudentId == definition.StudentId);
+            if (existing is null) _passengers.Add(new TripPassenger(definition));
+            else existing.MoveTo(definition.StopId);
+        }
+
+        return true;
+    }
+
     // ───────────────────────────── Ciclo de vida ─────────────────────────────
 
     public bool Start(DriverId driverId, ClientEventId clientEventId, DateTimeOffset now)

@@ -91,6 +91,12 @@ internal sealed class InMemoryRouteRepository : InMemoryRepository<Route>, IRout
         CancellationToken cancellationToken) =>
         Task.FromResult(Items.Count(r => r.OrganizationId == organizationId && r.IsActive()));
 
+    public Task<Route?> FindByEnrollmentCodeAsync(RouteEnrollmentCode code, CancellationToken cancellationToken) =>
+        Single(r => r.EnrollmentCode == code);
+
+    public Task<IEnumerable<Route>> FindAllByIdsAsync(IReadOnlyCollection<RouteId> routeIds,
+        CancellationToken cancellationToken) => Many(r => routeIds.Contains(r.Id));
+
     public Task<bool> ExistsByNameAsync(OrganizationId organizationId, RouteName name,
         CancellationToken cancellationToken) =>
         Task.FromResult(Items.Any(r => r.OrganizationId == organizationId &&

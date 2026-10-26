@@ -24,6 +24,9 @@ public interface ITripRepository
     /// <summary>Monitoreo de la empresa: viajes de una organización en un rango, opcionalmente por estado.</summary>
     Task<IReadOnlyList<Trip>> ListByOrganizationAsync(OrganizationId organizationId, DateTimeOffset from, DateTimeOffset to, TripStatus? status, CancellationToken cancellationToken);
 
+    /// <summary>Viajes de la ruta que siguen programados (aún no empezaron); se actualizan si la ruta cambia.</summary>
+    Task<IReadOnlyList<Trip>> ListScheduledByRouteAsync(RouteId routeId, CancellationToken cancellationToken);
+
     void Add(Trip trip);
 }
 

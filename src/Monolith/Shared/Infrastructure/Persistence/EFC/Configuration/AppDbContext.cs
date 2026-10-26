@@ -1,5 +1,6 @@
 using Monolith.Iam.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Administration.Infrastructure.Persistence.EFC.Configuration.Extensions;
+using Monolith.Stakeholder.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Shared.Infrastructure.Persistence.EFC.Interceptors;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         // Per-bounded-context model configuration (declared in each context's Infrastructure layer).
         builder.ApplyIamConfiguration();
         builder.ApplyAdministrationConfiguration();
+        builder.ApplyStakeholderConfiguration();
         // General Naming Convention for the database objects
         builder.UseSnakeCaseNamingConvention();
     }

@@ -47,7 +47,8 @@ public static class AdministrationResourceFromEntityAssembler
             route.StudentCount,
             route.Stops.Select(ToResourceFromEntity).ToList(),
             route.ActivatedAt,
-            route.CreatedAt);
+            route.CreatedAt,
+            route.EnrollmentCode.Value);
 
     public static RouteStopResource ToResourceFromEntity(RouteStop stop) =>
         new(stop.Id.Identifier,
@@ -56,7 +57,8 @@ public static class AdministrationResourceFromEntityAssembler
             stop.Address,
             stop.Location.Latitude,
             stop.Location.Longitude,
-            stop.Students.Select(student => student.Identifier).ToList());
+            stop.Students.Select(student => student.Identifier).ToList(),
+            stop.Origin.Value);
 
     public static ActiveRouteQuotaResource ToResourceFromModel(ActiveRouteQuota quota) =>
         new(quota.PlanCode, quota.ActiveRoutes, quota.MaxActiveRoutes, quota.RemainingActiveRoutes,

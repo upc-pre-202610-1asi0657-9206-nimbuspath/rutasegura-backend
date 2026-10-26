@@ -9,6 +9,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Monolith.Administration.Infrastructure.Configuration;
+using Monolith.Administration.Interfaces.ACL;
+using Monolith.Stakeholder.Infrastructure.Configuration;
 using Monolith.Iam.Application.ACL;
 using Monolith.Iam.Application.Internal.CommandServices;
 using Monolith.Iam.Application.CommandServices;
@@ -162,6 +164,12 @@ builder.Services.AddScoped<IIamContextFacade, IamContextFacade>();
 // Administration bounded context (Roster + Route Planning): repositories, application services,
 // plan limits, Iam ACL, outbox and — when Administration:Messaging:Enabled — RabbitMQ workers.
 builder.Services.AddAdministrationBoundedContext(builder.Configuration);
+// Facade (ACL) of Route Planning used by the Stakeholder context to place enrolled children on routes.
+builder.Services.AddScoped<IRoutePlanningContextFacade, RoutePlanningContextFacade>();
+
+// Stakeholder bounded context (parents and their children): students, photo, pickup address, enrollments in the
+// routes of a company (placed on stops through the Route Planning facade) and stakeholder.events for Trip & Tracking.
+builder.Services.AddStakeholderBoundedContext(builder.Configuration);
 
 
 // ---------------------------------------------------------------------------

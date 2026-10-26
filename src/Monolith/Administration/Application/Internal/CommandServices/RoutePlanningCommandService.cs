@@ -202,6 +202,53 @@ public class RoutePlanningCommandService(
             return Result<Route>.Success(route);
         });
 
+    // ── Families (enrollments made by parents in the Stakeholder context) ─────
+
+    /// <summary>The vehicle capacity (aforo) applies as when the administrator plans a student.</summary>
+    public Task<Result<Route>> Handle(PlaceStudentOnRouteCommand command, CancellationToken cancellationToken) =>
+        AdministrationOperation.ExecuteAsync<Route>(async () =>
+        {
+            var route = await FindRouteAsync(command.OrganizationId, command.RouteId, cancellationToken);
+            if (route is null) return RouteNotFound();
+
+            SeatingCapacity? capacity = null;
+            if (route.Assignment is { } assignment)
+                capacity = (await vehicleRepository.FindByVehicleIdAsync(assignment.VehicleId, cancellationToken))
+                    ?.Capacity;
+
+            route.PlaceStudent(new StudentId(command.StudentId), new GeoLocation(command.Latitude, command.Longitude),
+                command.Address, capacity);
+            return await UpdateAsync(route, null, cancellationToken);
+        });
+
+    public Task<Result<Route>> Handle(RemoveStudentFromRouteCommand command, CancellationToken cancellationToken) =>
+        AdministrationOperation.ExecuteAsync<Route>(async () =>
+        {
+            var route = await FindRouteAsync(command.OrganizationId, command.RouteId, cancellationToken);
+            if (route is null) return RouteNotFound();
+
+            if (!route.RemoveStudent(new StudentId(command.StudentId))) return Result<Route>.Success(route);
+            return await UpdateAsync(route, null, cancellationToken);
+        });
+
+    public Task<Result<Route>> Handle(RegenerateRouteEnrollmentCodeCommand command,
+        CancellationToken cancellationToken) =>
+        AdministrationOperation.ExecuteAsync<Route>(async () =>
+        {
+            var route = await FindRouteAsync(command.OrganizationId, command.RouteId, cancellationToken);
+            if (route is null) return RouteNotFound();
+
+            // 31^8 codes: a collision is very unlikely, but the unique index must never be the one to find it.
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                route.RegenerateEnrollmentCode();
+                if (await routeRepository.FindByEnrollmentCodeAsync(route.EnrollmentCode, cancellationToken) is null)
+                    break;
+            }
+
+            return await UpdateAsync(route, null, cancellationToken);
+        });
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private Task<Result<Route>> ChangeRouteAsync(Guid organizationId, Guid routeId, Action<Route> change,

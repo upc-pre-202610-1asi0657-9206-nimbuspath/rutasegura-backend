@@ -21,6 +21,12 @@ public record GetAllRoutesQuery(Guid OrganizationId);
 
 public record GetRoutesByDriverQuery(Guid OrganizationId, Guid DriverId);
 
+/// <summary>Route families enroll in with a code (any organization: the code itself is the secret).</summary>
+public record GetRouteByEnrollmentCodeQuery(string EnrollmentCode);
+
+/// <summary>Routes by id, any organization. Only for the published facade (callers scope the result themselves).</summary>
+public record GetRoutesByIdsQuery(IReadOnlyCollection<Guid> RouteIds);
+
 /// <summary>How many routes are active and how many the contracted plan allows.</summary>
 public record GetActiveRouteQuotaQuery(Guid OrganizationId);
 

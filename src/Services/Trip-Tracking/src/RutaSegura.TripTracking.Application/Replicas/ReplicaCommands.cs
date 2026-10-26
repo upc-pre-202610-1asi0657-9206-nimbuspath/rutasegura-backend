@@ -3,6 +3,8 @@ using RutaSegura.BuildingBlocks.Application.Results;
 using RutaSegura.BuildingBlocks.Application.Validation;
 using RutaSegura.TripTracking.Application.Abstractions;
 using RutaSegura.TripTracking.Domain.Common;
+using RutaSegura.TripTracking.Domain.Tracking;
+using RutaSegura.TripTracking.Domain.Trips;
 
 namespace RutaSegura.TripTracking.Application.Replicas;
 
@@ -64,12 +66,24 @@ internal sealed class UpsertRouteSnapshotCommandValidator : IValidator<UpsertRou
     }
 }
 
-internal sealed class UpsertRouteSnapshotCommandHandler(IRouteCatalogStore routes) : ICommandHandler<UpsertRouteSnapshotCommand, Unit>
+internal sealed class UpsertRouteSnapshotCommandHandler(IRouteCatalogStore routes, ITripRepository trips)
+    : ICommandHandler<UpsertRouteSnapshotCommand, Unit>
 {
     public async Task<Result<Unit>> HandleAsync(UpsertRouteSnapshotCommand command, CancellationToken cancellationToken)
     {
-        // Los viajes ya programados conservan su copia de paradas y alumnos; el cambio aplica a los siguientes.
-        await routes.UpsertAsync(command.Route, cancellationToken);
+        var route = command.Route;
+        await routes.UpsertAsync(route, cancellationToken);
+
+        // Los viajes que aún no empiezan (hoy y mañana ya están programados) reciben la planificación nueva: un alumno
+        // inscrito por su padre o una parada nueva aparece en el siguiente viaje y no recién pasado mañana.
+        // Los viajes en curso o terminados conservan su copia.
+        var stops = route.Stops.Select(s => new TripStopDefinition(
+            new StopId(s.StopId), s.Sequence, s.Name, GeoPosition.Create(s.Latitude, s.Longitude))).ToList();
+        var passengers = (route.Students ?? [])
+            .Select(s => new TripPassengerDefinition(new StudentId(s.StudentId), new StopId(s.StopId))).ToList();
+        foreach (var trip in await trips.ListScheduledByRouteAsync(new RouteId(route.RouteId), cancellationToken))
+            trip.RefreshPlan(route.Name, new DriverId(route.DriverId), new VehicleId(route.VehicleId), stops, passengers);
+
         return Unit.Value;
     }
 }

@@ -6,6 +6,7 @@ set -u
 
 MONO="${MONOLITH_URL:-http://localhost:5000}"
 TT="${TRIP_TRACKING_URL:-http://localhost:5180}"
+GW="${GATEWAY_URL:-}"
 RMQ="${RABBITMQ_API:-http://localhost:15672/api}"
 KEY="${PROVISIONING_KEY:?Falta PROVISIONING_KEY}"
 RUN=$(date +%s)
@@ -159,8 +160,86 @@ record_exists() {
 }
 wait_until 60 "Registro del viaje completado en la ruta" record_exists && echo "         $(jq -c '.[0] | {absentStudents, incidentCount, durationMinutes}' "$BODY")"
 
+if [ -n "$GW" ]; then
+  step "5b. API Gateway: la app usa una sola URL"
+  wait_until 60 "Gateway /health/ready (monolito y Trip-Tracking responden)" sh -c "curl -fs $GW/health/ready"
+  expect 200 "Sign-in del conductor por el Gateway" POST "$GW/api/v1/users/sign-in" "" "{\"email\":\"$DRIVER_EMAIL\",\"password\":\"$PASSWORD\"}"
+  GW_DRIVER=$(jq -r '.token' "$BODY")
+  expect 200 "Iam por el Gateway: /users/me" GET "$GW/api/v1/users/me" "$GW_DRIVER"
+  expect 200 "Administration por el Gateway: perfil del conductor" GET "$GW/api/v1/roster/drivers/me" "$GW_DRIVER"
+  expect 200 "Trip-Tracking por el Gateway: agenda" GET "$GW/api/v1/drivers/me/trips" "$GW_DRIVER"
+  expect 200 "Trip-Tracking por el Gateway: resumen del viaje" GET "$GW/api/v1/trips/$TRIP_ID/summary" "$GW_DRIVER"
+  expect 200 "SignalR por el Gateway: negotiate del hub" POST "$GW/hubs/trip-tracking/negotiate?negotiateVersion=1&access_token=$GW_DRIVER" "" ""
+  expect 401 "Trip-Tracking por el Gateway sin token" GET "$GW/api/v1/drivers/me/trips"
+  expect 404 "El Gateway no expone el provisioning" POST "$GW/api/v1/organizations" "" '{}' "X-Provisioning-Key: $KEY"
+  expect 404 "El Gateway no expone /internal" GET "$GW/internal/v1/trips/$TRIP_ID/notification-context"
+fi
+
 step "6. Retiro de la ruta (route-retired)"
 expect 200 "Desactivar ruta" POST "$MONO/api/v1/routes/$ROUTE_ID/deactivate" "$ADMIN" '{}'
+
+if [ -n "$GW" ]; then
+  step "6b. Familias (Stakeholder) por el Gateway: hijos, inscripción y paradas automáticas"
+  # Una ruta nueva con una parada manual; el conductor y el vehículo quedaron libres al desactivar la anterior.
+  FAMILY_ROUTE="Ruta Familias $RUN"
+  expect 201 "Crear ruta para familias" POST "$GW/api/v1/routes" "$ADMIN" \
+    "{\"name\":\"$FAMILY_ROUTE\",\"direction\":\"PICKUP\",\"departureTime\":\"$DEPARTURE\",\"estimatedArrivalTime\":\"$ARRIVAL\",\"timeZoneId\":\"America/Lima\",\"operatingDays\":[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\",\"Saturday\",\"Sunday\"]}" || exit 1
+  FAMILY_ROUTE_ID=$(jq -r '.id' "$BODY")
+  CODE=$(jq -r '.enrollmentCode' "$BODY")
+  echo "  Código de inscripción: $CODE"
+  expect 200 "Parada manual (colegio)" POST "$GW/api/v1/routes/$FAMILY_ROUTE_ID/stops" "$ADMIN" \
+    '{"name":"Colegio San Agustin","latitude":-12.09500,"longitude":-77.00500}'
+  expect 200 "Asignar conductor y vehículo" PUT "$GW/api/v1/routes/$FAMILY_ROUTE_ID/assignment" "$ADMIN" \
+    "{\"driverId\":\"$DRIVER_ID\",\"vehicleId\":\"$VEHICLE_ID\"}"
+  expect 200 "Activar ruta" POST "$GW/api/v1/routes/$FAMILY_ROUTE_ID/activate" "$ADMIN" '{}'
+  family_trip() {
+    call GET "$GW/api/v1/drivers/me/trips" "$DRIVER" >/dev/null
+    jq -e --arg n "$FAMILY_ROUTE" 'any(.[]; .routeName == $n and .status == "Scheduled")' "$BODY"
+  }
+  wait_until 90 "Trip-Tracking programó el viaje de la ruta de familias" family_trip || exit 1
+  FAMILY_TRIP=$(jq -r --arg n "$FAMILY_ROUTE" '[.[] | select(.routeName == $n)][0].tripId' "$BODY")
+
+  expect 200 "El padre registra su teléfono" PUT "$GW/api/v1/stakeholders/me/profile" "$PARENT" \
+    '{"phoneNumber":"987 654 321","documentNumber":"45781236"}'
+  expect 201 "El padre registra a su hija con la dirección de recojo" POST "$GW/api/v1/stakeholders/me/students" "$PARENT" \
+    '{"firstName":"Valeria","lastName":"Quispe","birthDate":"2017-05-14","schoolGrade":"3.° de primaria","pickupLocation":{"address":"Av. Primavera 1240, Surco","reference":"Puerta verde","latitude":-12.11234,"longitude":-76.98567}}' || exit 1
+  CHILD_ID=$(jq -r '.id' "$BODY")
+  printf '\211PNG\r\n\032\n\000\000\000\rIHDR' > /tmp/foto.png
+  got=$(curl -s -o "$BODY" -w '%{http_code}' -X PUT "$GW/api/v1/stakeholders/me/students/$CHILD_ID/photo" \
+    -H "Authorization: Bearer $PARENT" -F "photo=@/tmp/foto.png;type=image/png")
+  [ "$got" = "200" ] && ok "Foto de la alumna (multipart) ($got)" || ko "Foto de la alumna: esperado 200, recibido $got"
+  expect 200 "El padre ve la ruta del código" GET "$GW/api/v1/stakeholders/route-offers/$CODE" "$PARENT"
+  expect 201 "El padre inscribe a su hija en la ruta" POST "$GW/api/v1/stakeholders/me/students/$CHILD_ID/enrollments" "$PARENT" \
+    "{\"enrollmentCode\":\"$CODE\"}" || exit 1
+  ENROLLMENT_ID=$(jq -r '.id' "$BODY")
+  expect 200 "Route Planning creó la parada en la dirección de recojo" GET "$GW/api/v1/routes/$FAMILY_ROUTE_ID" "$ADMIN"
+  jq -e --arg c "$CHILD_ID" 'any(.stops[]; .origin == "ENROLLMENT" and (.studentIds | index($c)))' "$BODY" >/dev/null \
+    && ok "Parada automática con la alumna" || ko "Parada automática con la alumna"
+  child_on_trip() {
+    call GET "$GW/api/v1/trips/$FAMILY_TRIP/live" "$DRIVER" >/dev/null
+    jq -e --arg c "$CHILD_ID" 'any(.passengers[]; .studentId == $c)' "$BODY"
+  }
+  wait_until 60 "El viaje ya programado incluye a la alumna (route-updated)" child_on_trip
+  guardian_sees_trip() {
+    call GET "$GW/api/v1/guardians/me/trips" "$PARENT" >/dev/null
+    jq -e --arg t "$FAMILY_TRIP" 'tostring | contains($t)' "$BODY"
+  }
+  wait_until 60 "El padre ve el viaje de su hija (stakeholder.guardian-student-linked)" guardian_sees_trip
+  expect 200 "El conductor ve a la alumna con nombre y teléfono del padre" GET "$GW/api/v1/stakeholders/drivers/me/students" "$DRIVER"
+  jq -e '.[0].fullName == "Valeria Quispe" and .[0].guardian.phoneNumber == "987654321"' "$BODY" >/dev/null \
+    && ok "Lista del conductor con nombre y teléfono" || ko "Lista del conductor con nombre y teléfono"
+  expect 200 "El conductor descarga la foto" GET "$GW/api/v1/stakeholders/students/$CHILD_ID/photo" "$DRIVER"
+  expect 200 "El conductor ve su vehículo" GET "$GW/api/v1/roster/drivers/me/vehicles" "$DRIVER"
+  expect 200 "El ADMIN ve las inscripciones de su empresa" GET "$GW/api/v1/stakeholders/enrollments?routeId=$FAMILY_ROUTE_ID" "$ADMIN"
+  expect 403 "Un padre no ve las inscripciones de la empresa" GET "$GW/api/v1/stakeholders/enrollments" "$PARENT"
+  expect 200 "El padre retira a su hija de la ruta" DELETE "$GW/api/v1/stakeholders/me/students/$CHILD_ID/enrollments/$ENROLLMENT_ID" "$PARENT"
+  child_left_trip() {
+    call GET "$GW/api/v1/trips/$FAMILY_TRIP/live" "$DRIVER" >/dev/null
+    jq -e --arg c "$CHILD_ID" 'all(.passengers[]; .studentId != $c)' "$BODY"
+  }
+  wait_until 60 "La alumna salió del viaje programado" child_left_trip
+  expect 200 "Desactivar la ruta de familias" POST "$GW/api/v1/routes/$FAMILY_ROUTE_ID/deactivate" "$ADMIN" '{}'
+fi
 
 step "7. Mensajes fallidos (DLQ)"
 wait_until 10 "administration.inbound.dlq vacía" dlq_empty administration.inbound.dlq

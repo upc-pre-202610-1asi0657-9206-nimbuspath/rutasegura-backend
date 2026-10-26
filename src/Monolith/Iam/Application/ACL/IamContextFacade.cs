@@ -22,6 +22,14 @@ public class IamContextFacade(
                 user.GetFullName(), user.GetEmail());
     }
 
+    public async Task<string?> FetchOrganizationNameAsync(Guid organizationId, CancellationToken cancellationToken)
+    {
+        if (organizationId == Guid.Empty) return null;
+        var organization = await organizationRepository.FindByOrganizationIdAsync(new OrganizationId(organizationId),
+            cancellationToken);
+        return organization?.GetName();
+    }
+
     public async Task<bool> IsOrganizationActiveAsync(Guid organizationId, CancellationToken cancellationToken)
     {
         if (organizationId == Guid.Empty) return false;

@@ -77,6 +77,15 @@ public static class IamSecurityServiceCollectionExtensions
                 .RequireRole(IamRoles.Driver)
                 .RequireClaim(IamClaimTypes.OrganizationId)
                 .AddRequirements(new ActiveIamAccountRequirement(IamRoles.Driver, true)));
+            options.AddPolicy(IamPolicies.Guardian, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(IamRoles.Parent)
+                .AddRequirements(new ActiveIamAccountRequirement(IamRoles.Parent, false)));
+            options.AddPolicy(IamPolicies.OrganizationStaff, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(IamRoles.Admin, IamRoles.Driver)
+                .RequireClaim(IamClaimTypes.OrganizationId)
+                .AddRequirements(new ActiveIamAccountRequirement(null, true)));
         });
 
         return services;

@@ -33,6 +33,11 @@ internal sealed class InMemoryTripRepository : ITripRepository
             .Where(t => status is null || t.Status == status)
             .ToList());
 
+    public Task<IReadOnlyList<Trip>> ListScheduledByRouteAsync(RouteId routeId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Trip>>(Trips
+            .Where(t => t.RouteId == routeId && t.Status == TripStatus.Scheduled)
+            .ToList());
+
     public void Add(Trip trip) => Trips.Add(trip);
 }
 

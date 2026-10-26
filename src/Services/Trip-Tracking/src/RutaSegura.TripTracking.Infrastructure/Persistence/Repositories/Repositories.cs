@@ -50,6 +50,12 @@ internal sealed class TripRepository(TripTrackingDbContext db) : ITripRepository
         return await query.OrderBy(t => t.ScheduledStart).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Trip>> ListScheduledByRouteAsync(RouteId routeId, CancellationToken cancellationToken) =>
+        await Aggregates
+            .Where(t => t.RouteId == routeId && t.Status == TripStatus.Scheduled)
+            .OrderBy(t => t.ScheduledStart)
+            .ToListAsync(cancellationToken);
+
     public void Add(Trip trip) => db.Trips.Add(trip);
 
     /// <summary>

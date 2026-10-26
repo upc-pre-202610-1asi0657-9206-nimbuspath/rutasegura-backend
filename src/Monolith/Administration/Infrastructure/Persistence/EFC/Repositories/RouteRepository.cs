@@ -41,6 +41,16 @@ public class RouteRepository(AppDbContext context) : BaseRepository<Route>(conte
             .CountAsync(route => route.OrganizationId == organizationId && route.Status == active, cancellationToken);
     }
 
+    public Task<Route?> FindByEnrollmentCodeAsync(RouteEnrollmentCode code, CancellationToken cancellationToken) =>
+        Context.Set<Route>().FirstOrDefaultAsync(route => route.EnrollmentCode == code, cancellationToken);
+
+    public async Task<IEnumerable<Route>> FindAllByIdsAsync(IReadOnlyCollection<RouteId> routeIds,
+        CancellationToken cancellationToken)
+    {
+        if (routeIds.Count == 0) return [];
+        return await Context.Set<Route>().WhereIn(route => route.Id, routeIds).ToListAsync(cancellationToken);
+    }
+
     public Task<bool> ExistsByNameAsync(OrganizationId organizationId, RouteName name,
         CancellationToken cancellationToken) =>
         Context.Set<Route>().AnyAsync(route => route.OrganizationId == organizationId && route.Name == name,

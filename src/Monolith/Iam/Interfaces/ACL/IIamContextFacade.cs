@@ -10,6 +10,9 @@ public interface IIamContextFacade
     /// <summary>Account data other contexts may rely on, or null when the user does not exist.</summary>
     Task<IamUserAccount?> FetchUserAccountAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>Display name of the organization (transport company), or null when it does not exist.</summary>
+    Task<string?> FetchOrganizationNameAsync(Guid organizationId, CancellationToken cancellationToken);
+
     /// <summary>True when the organization exists and is ACTIVE (not suspended).</summary>
     Task<bool> IsOrganizationActiveAsync(Guid organizationId, CancellationToken cancellationToken);
 

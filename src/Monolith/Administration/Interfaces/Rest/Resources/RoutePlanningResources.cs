@@ -49,7 +49,8 @@ public record RouteStopResource(
     string? Address,
     double Latitude,
     double Longitude,
-    IReadOnlyList<Guid> StudentIds);
+    IReadOnlyList<Guid> StudentIds,
+    string Origin);
 
 public record RouteResource(
     Guid Id,
@@ -62,7 +63,8 @@ public record RouteResource(
     int StudentCount,
     IReadOnlyList<RouteStopResource> Stops,
     DateTimeOffset? ActivatedAt,
-    DateTimeOffset? CreatedAt);
+    DateTimeOffset? CreatedAt,
+    string? EnrollmentCode = null);
 
 public record ActiveRouteQuotaResource(
     string PlanCode,
@@ -70,3 +72,13 @@ public record ActiveRouteQuotaResource(
     int MaxActiveRoutes,
     int RemainingActiveRoutes,
     bool LimitReached);
+
+/// <summary>Vehicle the authenticated driver operates (read-only view for the mobile app).</summary>
+public record DriverVehicleResource(
+    Guid Id,
+    string LicensePlate,
+    int SeatingCapacity,
+    string Brand,
+    string Model,
+    string Status,
+    IReadOnlyList<Guid> RouteIds);

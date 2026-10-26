@@ -61,3 +61,21 @@ public record ActivateRouteCommand(Guid OrganizationId, Guid RouteId);
 public record DeactivateRouteCommand(Guid OrganizationId, Guid RouteId);
 
 public record DeleteRouteCommand(Guid OrganizationId, Guid RouteId);
+
+/// <summary>
+///     Families: places a child enrolled by its parent at the stop of its pickup address (creating the stop when
+///     there is none nearby). Sent by the Stakeholder bounded context through <c>IRoutePlanningContextFacade</c>.
+/// </summary>
+public record PlaceStudentOnRouteCommand(
+    Guid OrganizationId,
+    Guid RouteId,
+    Guid StudentId,
+    double Latitude,
+    double Longitude,
+    string? Address);
+
+/// <summary>Families: the enrollment ended; the child leaves the route (idempotent).</summary>
+public record RemoveStudentFromRouteCommand(Guid OrganizationId, Guid RouteId, Guid StudentId);
+
+/// <summary>Gives the route a new enrollment code (e.g. the previous one was shared by mistake).</summary>
+public record RegenerateRouteEnrollmentCodeCommand(Guid OrganizationId, Guid RouteId);

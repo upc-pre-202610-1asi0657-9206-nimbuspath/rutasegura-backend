@@ -259,6 +259,12 @@ namespace Monolith.Migrations
                         .HasColumnType("varchar(10)")
                         .HasColumnName("direction");
 
+                    b.Property<string>("EnrollmentCode")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("enrollment_code");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -319,6 +325,10 @@ namespace Monolith.Migrations
 
                     b.HasKey("Id")
                         .HasName("p_k_route_itineraries");
+
+                    b.HasIndex("EnrollmentCode")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_route_itineraries_enrollment_code");
 
                     b.HasIndex("OrganizationId", "Name")
                         .IsUnique()
@@ -464,6 +474,12 @@ namespace Monolith.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("name");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("origin");
 
                     b.Property<Guid>("RouteId")
                         .HasColumnType("char(36)")
@@ -653,6 +669,304 @@ namespace Monolith.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.GuardianProfile", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("document_number");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("phone_number");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("UserId")
+                        .HasName("p_k_stakeholder_guardian_profiles");
+
+                    b.ToTable("stakeholder_guardian_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.Student", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("date")
+                        .HasColumnName("birth_date");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("GuardianUserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("guardian_user_id");
+
+                    b.Property<DateTime?>("RemovedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("removed_at");
+
+                    b.Property<string>("SchoolGrade")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("school_grade");
+
+                    b.Property<string>("SchoolName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("school_name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "FullName", "Monolith.Stakeholder.Domain.Model.Aggregates.Student.FullName#FullName", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("FirstName")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("varchar(100)")
+                                .HasColumnName("first_name");
+
+                            b1.Property<string>("LastName")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("varchar(100)")
+                                .HasColumnName("last_name");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Photo", "Monolith.Stakeholder.Domain.Model.Aggregates.Student.Photo#StudentPhoto", b1 =>
+                        {
+                            b1.Property<string>("ContentType")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("varchar(16)")
+                                .HasColumnName("photo_content_type");
+
+                            b1.Property<int>("SizeBytes")
+                                .HasColumnType("int")
+                                .HasColumnName("photo_size_bytes");
+
+                            b1.Property<DateTime>("UploadedAt")
+                                .HasColumnType("datetime(6)")
+                                .HasColumnName("photo_uploaded_at");
+
+                            b1.Property<string>("Version")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("varchar(16)")
+                                .HasColumnName("photo_version");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "PickupLocation", "Monolith.Stakeholder.Domain.Model.Aggregates.Student.PickupLocation#PickupLocation", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("Address")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("varchar(200)")
+                                .HasColumnName("pickup_address");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double")
+                                .HasColumnName("pickup_latitude");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double")
+                                .HasColumnName("pickup_longitude");
+
+                            b1.Property<string>("Reference")
+                                .HasMaxLength(200)
+                                .HasColumnType("varchar(200)")
+                                .HasColumnName("pickup_reference");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("p_k_stakeholder_students");
+
+                    b.HasIndex("GuardianUserId", "Status")
+                        .HasDatabaseName("i_x_stakeholder_students_guardian_user_id_status");
+
+                    b.ToTable("stakeholder_students", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Entities.RouteEnrollment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("direction");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("end_reason");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("ended_at");
+
+                    b.Property<DateTime>("EnrolledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("enrolled_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("RouteId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("route_id");
+
+                    b.Property<string>("RouteName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("route_name");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("student_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_stakeholder_route_enrollments");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("i_x_stakeholder_route_enrollments_student_id");
+
+                    b.HasIndex("OrganizationId", "Status")
+                        .HasDatabaseName("i_x_stakeholder_route_enrollments_organization_id_status");
+
+                    b.HasIndex("RouteId", "Status")
+                        .HasDatabaseName("i_x_stakeholder_route_enrollments_route_id_status");
+
+                    b.ToTable("stakeholder_route_enrollments", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Stakeholder.Infrastructure.Messaging.StakeholderOutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("message_type");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("processed_at");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("int")
+                        .HasColumnName("schema_version");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_stakeholder_outbox_messages");
+
+                    b.HasIndex("ProcessedAt", "NextAttemptAt")
+                        .HasDatabaseName("i_x_stakeholder_outbox_messages_processed_at_next_attempt_at");
+
+                    b.ToTable("stakeholder_outbox_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Stakeholder.Infrastructure.Persistence.EFC.StudentPhotoRecord", b =>
+                {
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("student_id");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("mediumblob")
+                        .HasColumnName("content");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("StudentId")
+                        .HasName("p_k_stakeholder_student_photos");
+
+                    b.ToTable("stakeholder_student_photos", (string)null);
+                });
+
             modelBuilder.Entity("Monolith.Administration.Domain.Model.Entities.RouteStop", b =>
                 {
                     b.HasOne("Monolith.Administration.Domain.Model.Aggregates.Route", null)
@@ -697,9 +1011,24 @@ namespace Monolith.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Entities.RouteEnrollment", b =>
+                {
+                    b.HasOne("Monolith.Stakeholder.Domain.Model.Aggregates.Student", null)
+                        .WithMany("_enrollments")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_stakeholder_route_enrollments_student_id");
+                });
+
             modelBuilder.Entity("Monolith.Administration.Domain.Model.Aggregates.Route", b =>
                 {
                     b.Navigation("_stops");
+                });
+
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.Student", b =>
+                {
+                    b.Navigation("_enrollments");
                 });
 #pragma warning restore 612, 618
         }

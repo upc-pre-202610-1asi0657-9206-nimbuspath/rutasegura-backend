@@ -17,7 +17,7 @@ public sealed class HostStartupTests
         using var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
-        // Solo los servicios con adaptadores reales publican readiness (Trip & Tracking: MySQL, RabbitMQ, Redis).
+        // Solo publican readiness los hosts con dependencias reales (Trip & Tracking: MySQL, RabbitMQ, Redis; Gateway: servicios).
         // Sin dependencias levantadas responde 503, pero el endpoint debe existir.
         using var readiness = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
         if (readinessMapped)
@@ -30,5 +30,6 @@ public sealed class HostStartupTests
 
     [Fact] public Task TripTrackingHostStarts() => AssertHealthy<trip::Program>(readinessMapped: true);
     [Fact] public Task NotificationHostStarts() => AssertHealthy<notification::Program>();
-    [Fact] public Task GatewayHostStarts() => AssertHealthy<gateway::Program>();
+    // El Gateway publica readiness: responde 200 solo si el monolito y Trip & Tracking responden.
+    [Fact] public Task GatewayHostStarts() => AssertHealthy<gateway::Program>(readinessMapped: true);
 }

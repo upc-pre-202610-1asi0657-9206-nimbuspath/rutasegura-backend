@@ -141,6 +141,15 @@ public class RoutesController(
         Respond(await commandService.Handle(new UnassignStudentFromRouteCommand(OrganizationId, routeId, studentId),
             cancellationToken));
 
+    // ── Enrollment code (families enroll their children with it) ─────────────
+
+    [HttpPost("{routeId:guid}/enrollment-code")]
+    [SwaggerOperation(Summary = "Generate a new enrollment code (the previous one stops working)",
+        OperationId = "RegenerateRouteEnrollmentCode")]
+    public async Task<IActionResult> RegenerateEnrollmentCode(Guid routeId, CancellationToken cancellationToken) =>
+        Respond(await commandService.Handle(new RegenerateRouteEnrollmentCodeCommand(OrganizationId, routeId),
+            cancellationToken));
+
     // ── Assignment and lifecycle ─────────────────────────────────────────────
 
     [HttpPut("{routeId:guid}/assignment")]

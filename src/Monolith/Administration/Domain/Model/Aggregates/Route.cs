@@ -41,6 +41,7 @@ public partial class Route : IHasDomainEvents
         Direction = new RouteDirection();
         Schedule = new RouteSchedule();
         Status = RouteStatus.CreateDraft();
+        EnrollmentCode = new RouteEnrollmentCode();
     }
 
     /// <summary>Creates a route in DRAFT, without stops or assignment.</summary>
@@ -56,6 +57,7 @@ public partial class Route : IHasDomainEvents
         Direction = direction ?? throw new ArgumentNullException(nameof(direction));
         Schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
         Status = RouteStatus.CreateDraft();
+        EnrollmentCode = RouteEnrollmentCode.Generate();
         _domainEvents.Add(new RouteCreatedEvent(Id, OrganizationId));
     }
 
@@ -74,6 +76,9 @@ public partial class Route : IHasDomainEvents
     public RouteAssignment? Assignment { get; private set; }
 
     public DateTimeOffset? ActivatedAt { get; private set; }
+
+    /// <summary>Code families use to enroll their children (see <see cref="PlaceStudent" />).</summary>
+    public RouteEnrollmentCode EnrollmentCode { get; private set; }
 
     /// <summary>Stops ordered by sequence.</summary>
     public IReadOnlyList<RouteStop> Stops => _stops.OrderBy(stop => stop.Sequence).ToList();
@@ -136,7 +141,10 @@ public partial class Route : IHasDomainEvents
     ///     Adds a stop at <paramref name="position" /> (1-based) or at the end when it is null. Following stops
     ///     are shifted.
     /// </summary>
-    public RouteStop AddStop(string name, string? address, GeoLocation location, int? position = null)
+    public RouteStop AddStop(string name, string? address, GeoLocation location, int? position = null) =>
+        InsertStop(name, address, location, position, StopOrigin.CreateManual());
+
+    private RouteStop InsertStop(string name, string? address, GeoLocation location, int? position, StopOrigin origin)
     {
         ArgumentNullException.ThrowIfNull(location);
         if (_stops.Count >= MaxStops)
@@ -148,7 +156,7 @@ public partial class Route : IHasDomainEvents
 
         var ordered = Stops.ToList();
         var index = position is null ? ordered.Count : Math.Min(position.Value - 1, ordered.Count);
-        var stop = new RouteStop(index + 1, name, address, location);
+        var stop = new RouteStop(index + 1, name, address, location, origin);
         ordered.Insert(index, stop);
         _stops.Add(stop);
         Resequence(ordered);
@@ -213,6 +221,7 @@ public partial class Route : IHasDomainEvents
 
         current?.RemoveStudent(studentId);
         target.AddStudent(studentId);
+        if (current is not null) RemoveIfDisposable(current);
         RecordDetailsChanged();
     }
 
@@ -223,6 +232,7 @@ public partial class Route : IHasDomainEvents
                    ?? throw new AdministrationDomainException(AdministrationError.StudentNotOnRoute,
                        "The student is not planned on this route.");
         stop.RemoveStudent(studentId);
+        RemoveIfDisposable(stop);
         RecordDetailsChanged();
     }
 

@@ -31,6 +31,14 @@ public sealed class TripStop
 
     public bool IsReached => ReachedAt is not null;
 
+    /// <summary>Solo antes de iniciar el viaje: la ruta movió o renombró la parada.</summary>
+    internal void Redefine(TripStopDefinition definition)
+    {
+        Sequence = definition.Sequence;
+        Name = definition.Name;
+        Position = definition.Position;
+    }
+
     internal void MarkReached(DateTimeOffset at) => ReachedAt ??= at;
 
     internal void MarkApproachNotified() => ApproachNotified = true;

@@ -1,9 +1,10 @@
-# Entorno local completo: Monolito (Iam + Administration) + Trip & Tracking + MySQL + RabbitMQ + Redis.
+# Entorno local completo: API Gateway + Monolito (Iam + Administration) + Trip & Tracking + MySQL + RabbitMQ + Redis.
 #
 #   docker compose up -d --build                  levanta todo
 #   docker compose --profile smoke run --rm smoke prueba rutas, comandos y eventos de punta a punta
 #   docker compose down -v                        apaga y borra los datos
 #
+# API Gateway:   http://localhost:8000          (URL única para las apps; emulador Android: http://10.0.2.2:8000)
 # Monolito:      http://localhost:5000/swagger
 # Trip-Tracking: http://localhost:5180/swagger
 # RabbitMQ:      http://localhost:15672   (guest / guest)
@@ -104,6 +105,22 @@ services:
       Seed__Demo: "false"
       DevTokens__Enabled: "false"
 
+  # Punto de entrada único de las apps: enruta a Iam/Administration (monolito) y a Trip & Tracking (incluido SignalR).
+  gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    depends_on:
+      monolith: { condition: service_started }
+      trip-tracking: { condition: service_started }
+    ports: ["8000:8080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ReverseProxy__Clusters__monolith__Destinations__primary__Address: http://monolith:8080/
+      ReverseProxy__Clusters__trip-tracking__Destinations__primary__Address: http://trip-tracking:8080/
+      NotificationProxy__Enabled: "false"
+      Cors__AllowedOrigins__0: http://localhost:4200
+
   # Prueba de punta a punta (solo con --profile smoke). No necesita nada instalado en tu PC.
   smoke:
     profiles: ["smoke"]
@@ -111,11 +128,13 @@ services:
     depends_on:
       monolith: { condition: service_healthy }
       trip-tracking: { condition: service_healthy }
+      gateway: { condition: service_healthy }
     volumes:
       - ./scripts/smoke:/smoke:ro
     environment:
       MONOLITH_URL: http://monolith:8080
       TRIP_TRACKING_URL: http://trip-tracking:8080
+      GATEWAY_URL: http://gateway:8080
       RABBITMQ_API: http://rabbitmq:15672/api
       PROVISIONING_KEY: "local-docker-provisioning-key-0123456789abcdef"
     entrypoint: ["sh", "-c", "apk add --no-cache -q curl jq tzdata >/dev/null && sh /smoke/e2e.sh"]

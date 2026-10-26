@@ -63,7 +63,7 @@ JSON en camelCase; fechas ISO 8601 con zona (`2026-10-23T06:40:00-05:00`); enums
 
 | Método | Ruta | Body | Respuesta |
 |---|---|---|---|
-| GET | `/drivers/me/trips?from&to` | — (sin rango = hoy en Lima) | `DriverTripDto[]` |
+| GET | `/drivers/me/trips?from&to` | — (sin rango = hoy en Lima) | `DriverTripDto[]` (incluye `routeId` para cruzarlo con `GET /api/v1/stakeholders/drivers/me/students`) |
 | POST | `/trips/{tripId}/start` | `{ clientEventId }` | `DriverActionResult` |
 | POST | `/tracking/positions` | `{ tripId, readings: [{ latitude, longitude, recordedAt, accuracyMeters, speedKmh?, headingDegrees? }] }` (≤ 500) | `{ accepted, ignored, rejected, lastAcceptedAt }` |
 | POST | `/trips/{tripId}/boardings` | `{ studentId, clientEventId, occurredAt?, position? }` | `DriverActionResult` |
@@ -192,7 +192,7 @@ se publicarán con `schema-version` 2.
 **Cola:** `trip-tracking.inbound` (durable, DLQ `trip-tracking.inbound.dlq`). Se reconocen por el **sufijo del tipo**,
 así que el prefijo puede ser `administration.` o `iam.`.
 
-**Requisitos del publicador:** exchange topic durable (`administration.events` o `iam.events`), routing key = tipo,
+**Requisitos del publicador:** exchange topic durable (`administration.events`, `stakeholder.events` o `iam.events`), routing key = tipo,
 `message_id` = UUID único y estable en reintentos, `type` = tipo de mensaje, body JSON camelCase.
 
 ### 5.1 `*.route-published` / `*.route-updated` — Administration (Route Planning)
@@ -212,13 +212,14 @@ así que el prefijo puede ser `administration.` o `iam.`.
 }
 ```
 Snapshot **completo** (no parcial). `direction`: `Pickup` | `Return`. Todos los alumnos deben estar en una parada de la
-ruta y la zona horaria debe existir; si no, el mensaje va a la DLQ. Los viajes ya programados conservan su copia;
-el cambio aplica a los siguientes.
+ruta y la zona horaria debe existir; si no, el mensaje va a la DLQ. Desde el 25/10/2026 los viajes **todavía programados** (`Scheduled`, hoy y mañana) se actualizan con la planificación nueva (paradas, alumnos, conductor, vehículo y nombre) — p. ej. un niño inscrito por su padre aparece en el siguiente viaje; los alumnos que siguen conservan su estado (una ausencia ya avisada). Los viajes en curso o terminados conservan su copia. Un cambio de hora de salida no mueve el viaje ya programado.
 
 ### 5.2 `*.route-retired` — Administration
 `{ "routeId": "..." }` → deja de programar viajes de esa ruta.
 
-### 5.3 `*.guardian-student-linked` / `*.guardian-student-unlinked` — Roster / IAM (US-02)
+### 5.3 `*.guardian-student-linked` / `*.guardian-student-unlinked` — Stakeholder (US-02)
+
+Lo publica el bounded context **Stakeholder** del monolito en `stakeholder.events` (`stakeholder.guardian-student-linked|unlinked`) cuando un padre registra o borra a su hijo. Se mantienen los bindings a `administration.events` e `iam.events` por compatibilidad.
 `{ "guardianId": "...", "studentId": "..." }` → habilita o retira el acceso del tutor al seguimiento del alumno.
 
 | Resultado del consumo | Acción |

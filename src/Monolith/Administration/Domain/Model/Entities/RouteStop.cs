@@ -19,15 +19,17 @@ public class RouteStop
         Id = new RouteStopId();
         Name = string.Empty;
         Location = new GeoLocation();
+        Origin = StopOrigin.CreateManual();
     }
 
-    internal RouteStop(int sequence, string name, string? address, GeoLocation location)
+    internal RouteStop(int sequence, string name, string? address, GeoLocation location, StopOrigin? origin = null)
     {
         Id = RouteStopId.New();
         Sequence = sequence;
         Name = ValidName(name);
         Address = ValidAddress(address);
         Location = location ?? throw new ArgumentNullException(nameof(location));
+        Origin = origin ?? StopOrigin.CreateManual();
     }
 
     public RouteStopId Id { get; private set; }
@@ -41,6 +43,12 @@ public class RouteStop
 
     public GeoLocation Location { get; private set; }
 
+    /// <summary>MANUAL (planned by the administrator) or ENROLLMENT (created at a child's pickup address).</summary>
+    public StopOrigin Origin { get; private set; }
+
+    /// <summary>An automatic stop without students has no reason to exist.</summary>
+    public bool IsDisposable => Origin.IsEnrollment() && _students.Count == 0;
+
     /// <summary>Students picked up / dropped off at this stop.</summary>
     public IReadOnlyCollection<StudentId> Students => _students.AsReadOnly();
 
@@ -48,6 +56,8 @@ public class RouteStop
 
     internal void Update(string name, string? address, GeoLocation location)
     {
+        // Once the administrator edits an automatic stop it becomes part of the manual plan.
+        Origin = StopOrigin.CreateManual();
         Name = ValidName(name);
         Address = ValidAddress(address);
         Location = location ?? throw new ArgumentNullException(nameof(location));

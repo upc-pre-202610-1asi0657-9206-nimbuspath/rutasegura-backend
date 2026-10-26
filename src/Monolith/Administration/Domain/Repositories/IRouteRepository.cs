@@ -23,5 +23,11 @@ public interface IRouteRepository : IBaseRepository<Route>
     /// <summary>ACTIVE routes of the organization; compared with the plan limit.</summary>
     Task<int> CountActiveByOrganizationIdAsync(OrganizationId organizationId, CancellationToken cancellationToken);
 
+    /// <summary>The route families enroll in with <paramref name="code" />, if any.</summary>
+    Task<Route?> FindByEnrollmentCodeAsync(RouteEnrollmentCode code, CancellationToken cancellationToken);
+
+    /// <summary>Routes with the given ids (any organization); used by the published facade.</summary>
+    Task<IEnumerable<Route>> FindAllByIdsAsync(IReadOnlyCollection<RouteId> routeIds, CancellationToken cancellationToken);
+
     Task<bool> ExistsByNameAsync(OrganizationId organizationId, RouteName name, CancellationToken cancellationToken);
 }

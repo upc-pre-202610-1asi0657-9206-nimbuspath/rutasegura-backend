@@ -116,6 +116,9 @@ public static class ModelBuilderExtensions
                 .HasMaxLength(10).IsRequired();
             route.Property(r => r.Status).HasConversion(status => status.Value, value => new RouteStatus(value, false))
                 .HasMaxLength(10).IsRequired();
+            route.Property(r => r.EnrollmentCode)
+                .HasConversion(code => code.Value, value => new RouteEnrollmentCode(value, false))
+                .HasMaxLength(RouteEnrollmentCode.MaxLength).IsRequired();
 
             route.ComplexProperty(r => r.Schedule, schedule =>
             {
@@ -145,6 +148,7 @@ public static class ModelBuilderExtensions
 
             route.HasIndex(r => new { r.OrganizationId, r.Name }).IsUnique();
             route.HasIndex(r => new { r.OrganizationId, r.Status });
+            route.HasIndex(r => r.EnrollmentCode).IsUnique();
         });
 
         builder.Entity<RouteStop>(stop =>
@@ -156,6 +160,9 @@ public static class ModelBuilderExtensions
             stop.Property(s => s.Sequence).IsRequired();
             stop.Property(s => s.Name).HasMaxLength(RouteStop.NameMaxLength).IsRequired();
             stop.Property(s => s.Address).HasMaxLength(RouteStop.AddressMaxLength);
+            stop.Property(s => s.Origin)
+                .HasConversion(origin => origin.Value, value => new StopOrigin(value, false))
+                .HasMaxLength(12).IsRequired();
             stop.ComplexProperty(s => s.Location, location =>
             {
                 location.IsRequired();

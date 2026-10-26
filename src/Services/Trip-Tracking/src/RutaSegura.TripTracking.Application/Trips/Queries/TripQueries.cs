@@ -164,7 +164,7 @@ internal sealed class GetTripSummaryQueryHandler(ITripRepository trips) : IQuery
 
 public sealed record DriverTripDto(
     Guid TripId, string RouteName, string Direction, DateTimeOffset ScheduledStart, string Status,
-    Guid VehicleId, int StopCount, int StudentCount);
+    Guid VehicleId, int StopCount, int StudentCount, Guid RouteId = default);
 
 public sealed record GetDriverAgendaQuery(Guid DriverId, DateTimeOffset From, DateTimeOffset To) : IQuery<IReadOnlyList<DriverTripDto>>;
 
@@ -179,7 +179,7 @@ internal sealed class GetDriverAgendaQueryHandler(ITripRepository trips) : IQuer
             .OrderBy(t => t.ScheduledStart)
             .Select(t => new DriverTripDto(
                 t.Id.Value, t.RouteName, t.Direction.ToString(), t.ScheduledStart, t.Status.ToString(),
-                t.VehicleId.Value, t.Stops.Count, t.Passengers.Count(p => p.Status != PassengerStatus.Absent)))
+                t.VehicleId.Value, t.Stops.Count, t.Passengers.Count(p => p.Status != PassengerStatus.Absent), t.RouteId.Value))
             .ToList();
 
         return Result<IReadOnlyList<DriverTripDto>>.Success(agenda);

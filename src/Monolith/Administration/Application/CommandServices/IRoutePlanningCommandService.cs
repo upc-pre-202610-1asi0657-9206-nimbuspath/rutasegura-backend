@@ -35,4 +35,10 @@ public interface IRoutePlanningCommandService
     Task<Result<Route>> Handle(DeactivateRouteCommand command, CancellationToken cancellationToken);
 
     Task<Result<Route>> Handle(DeleteRouteCommand command, CancellationToken cancellationToken);
+
+    Task<Result<Route>> Handle(PlaceStudentOnRouteCommand command, CancellationToken cancellationToken);
+
+    Task<Result<Route>> Handle(RemoveStudentFromRouteCommand command, CancellationToken cancellationToken);
+
+    Task<Result<Route>> Handle(RegenerateRouteEnrollmentCodeCommand command, CancellationToken cancellationToken);
 }

@@ -2,7 +2,9 @@
 
 Backend .NET 10 del proyecto refactorizado. El catálogo de historias y el Sprint Backlog se mantienen en el informe AV2 de la raíz. Este README describe el código ejecutable; `RESUMEN-AVANCE.md` y el README de Trip-Tracking conservan el avance previo.
 
-## Monolito: IAM y Administration
+## Monolito: IAM, Administration y Stakeholder
+
+**Stakeholder** (nuevo) es el bounded context de las familias: el padre registra a sus hijos (nombre, foto, dirección de recojo) y los inscribe con el código que comparte la empresa; Route Planning crea o reutiliza la parada de cada dirección. Ver [src/Monolith/Stakeholder/README.md](src/Monolith/Stakeholder/README.md). Pruebas en `tests/RutaSegura.Monolith.Stakeholder.Tests` y `StakeholderEndToEndTests`.
 
 IAM y Administration ya no son microservicios: viven como bounded contexts dentro de `src/Monolith` (carpetas `Iam/` y `Administration/`, cada una con Domain, Application, Infrastructure e Interfaces). El microservicio `src/Services/Administration` se eliminó. Administration (Roster + Route Planning) tiene implementadas sus cuatro capas, con la seguridad de Iam integrada; ver [src/Monolith/Administration/README.md](src/Monolith/Administration/README.md). Sus pruebas están en `tests/RutaSegura.Monolith.Administration.Tests`, `.IntegrationTests` y `.ContractTests`.
 
@@ -70,7 +72,9 @@ La prueba de humo (`scripts/smoke/e2e.sh`) corre en un contenedor y no necesita 
 4. **Evento `administration.route-published` hacia Trip-Tracking:** este programa el viaje.
 5. **Trip-Tracking:** el conductor (con token de Iam) inicia el viaje, reporta un incidente, lanza un SOS que el ADMIN resuelve, marca la ausencia del alumno y finaliza.
 6. **Eventos de vuelta a Administration:** `incident-reported`, `sos-raised`, `sos-resolved` y `trip-completed` se convierten en alertas y en el registro del viaje.
-7. Desactiva la ruta y comprueba que las colas DLQ estén vacías.
+7. Desactiva la ruta.
+8. **Familias por el Gateway (Stakeholder):** el padre registra a su hija con foto y la inscribe con el código; la ruta crea la parada, el viaje ya programado la incluye, el padre ve el viaje y el conductor la ve con el teléfono del padre; luego la retira.
+9. Comprueba que las colas DLQ estén vacías.
 
 **Si un arranque falla a medias:** ejecuta `docker compose down -v` antes de reintentar, porque MySQL solo crea usuarios y bases con el volumen vacío.
 

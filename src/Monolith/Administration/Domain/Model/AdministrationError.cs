@@ -43,6 +43,7 @@ public enum AdministrationError
     ResourceBelongsToAnotherOrganization,
     ResourceScheduleConflict,
     PlanRouteLimitReached,
+    RouteNotAcceptingEnrollments,
 
     // ── Operations monitoring (events coming from Trip & Tracking) ───────────
     AlertNotFound,

@@ -75,6 +75,7 @@ public sealed class NotificationContextTests
         public Task<IReadOnlyList<Trip>> ListByDriverAsync(DriverId driverId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyList<Trip>> ListByStudentsAsync(IReadOnlyCollection<StudentId> students, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyList<Trip>> ListByOrganizationAsync(OrganizationId organizationId, DateTimeOffset from, DateTimeOffset to, TripStatus? status, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Trip>> ListScheduledByRouteAsync(RouteId routeId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public void Add(Trip trip) => throw new NotSupportedException();
     }
 }

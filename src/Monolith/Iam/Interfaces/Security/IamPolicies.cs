@@ -15,4 +15,10 @@ public static class IamPolicies
 
     /// <summary>Driver (role DRIVER) of an organization.</summary>
     public const string OrganizationDriver = "iam:organization-driver";
+
+    /// <summary>Parent / guardian (role PARENT): self-registered, does not belong to an organization.</summary>
+    public const string Guardian = "iam:guardian";
+
+    /// <summary>Staff of an organization (role ADMIN or DRIVER); the token carries <c>organizationId</c>.</summary>
+    public const string OrganizationStaff = "iam:organization-staff";
 }

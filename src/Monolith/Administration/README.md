@@ -47,8 +47,8 @@ Administration/
 | Tabla | Contenido |
 | :--- | :--- |
 | `roster_drivers`, `roster_vehicles` | Agregados Driver y Vehicle (nombre, licencia y modelo como *complex types*) |
-| `route_itineraries` | Agregado Route: horario y asignación (opcional) como *complex types* |
-| `route_stops` | Paradas (FK `route_id`, cascada); alumnos de cada parada en `student_ids` (JSON) |
+| `route_itineraries` | Agregado Route: horario y asignación (opcional) como *complex types*; `enrollment_code` único (migración `AddStakeholderBoundedContext`) |
+| `route_stops` | Paradas (FK `route_id`, cascada); alumnos de cada parada en `student_ids` (JSON); `origin` = `MANUAL` (ADMIN) o `ENROLLMENT` (creada por una inscripción) |
 | `operations_alerts`, `operations_trip_records` | Incidentes/SOS y viajes completados recibidos de Trip & Tracking |
 | `administration_outbox_messages`, `administration_inbox_messages` | Outbox (publicación confiable) e Inbox (consumo idempotente) |
 
@@ -62,11 +62,12 @@ Todos requieren el JWT de Iam. La organización **siempre** sale del claim `orga
 | :--- | :--- | :--- |
 | ADMIN | `POST/GET /api/v1/roster/drivers`, `GET /{driverId}`, `GET /{driverId}/routes` | Registrar y consultar conductores |
 | ADMIN | `POST /api/v1/roster/drivers/{id}/verify` · `/suspend` · `/reinstate`, `PUT /{id}/contact` · `/license` | Ciclo de vida del conductor |
-| DRIVER | `GET /api/v1/roster/drivers/me`, `GET /me/routes` | El conductor autenticado ve su perfil y sus rutas |
+| DRIVER | `GET /api/v1/roster/drivers/me`, `GET /me/routes`, `GET /me/vehicles` | El conductor autenticado ve su perfil, sus rutas (sin código de inscripción) y los vehículos de sus rutas (placa, modelo, asientos) |
 | ADMIN | `POST/GET /api/v1/roster/vehicles`, `GET /{id}`, `PUT /{id}/capacity`, `POST /{id}/enable` · `/disable` | Flota y aforo |
 | ADMIN | `POST/GET /api/v1/routes`, `GET /quota`, `GET/DELETE /{routeId}`, `PUT /{routeId}/name` · `/schedule` | Rutas y cupo del plan |
 | ADMIN | `POST /api/v1/routes/{id}/stops`, `PUT/DELETE /{id}/stops/{stopId}`, `PUT /{id}/stops/order` | Paradas (dónde se recoge / deja a cada niño) |
-| ADMIN | `PUT /api/v1/routes/{id}/stops/{stopId}/students/{studentId}`, `DELETE /{id}/students/{studentId}` | Alumno por parada |
+| ADMIN | `PUT /api/v1/routes/{id}/stops/{stopId}/students/{studentId}`, `DELETE /{id}/students/{studentId}` | Mover un alumno de parada o quitarlo (los padres inscriben con el código, ver Stakeholder) |
+| ADMIN | `POST /api/v1/routes/{id}/enrollment-code` | Nuevo código de inscripción para las familias (el anterior deja de funcionar) |
 | ADMIN | `PUT/DELETE /api/v1/routes/{id}/assignment`, `POST /{id}/activate` · `/deactivate`, `GET /{id}/trip-records` | Asignación, activación (límite del plan) e historial |
 | ADMIN | `GET /api/v1/operations/alerts?onlyOpen=true`, `POST /{alertId}/acknowledge` · `/resolve` | Seguimiento de incidentes y SOS |
 
@@ -107,10 +108,15 @@ Con `Messaging:Enabled = false` los eventos se acumulan en el outbox. Con `true`
 | Ruta activa: ≥ 1 parada y asignación; activar respeta el **límite de rutas activas del plan** | `Route.Activate` + `IPlanLimitsProvider` | `RouteNotReadyForActivation`, `PlanRouteLimitReached` (409) |
 | Una ruta activa no se borra, no cambia de sentido ni pierde su asignación | `Route` | `RouteInvalidTransition` |
 | Un SOS se resuelve en Trip & Tracking; aquí solo se atiende (acknowledge) | `OperationalAlert` | `AlertInvalidTransition` |
+| Inscripción de familias: el niño va a la parada a ≤ 150 m de su recojo o a una parada `ENROLLMENT` nueva (inserción más barata); una parada `ENROLLMENT` vacía se elimina | `Route.PlaceStudent` / `RemoveStudent` | `RouteNotAcceptingEnrollments` (INACTIVE), `VehicleCapacityExceeded`, `RouteStopLimitReached` |
 
 Toda consulta y comando lleva el `OrganizationId` del administrador autenticado (claim del JWT); los recursos de otra organización se responden como *no encontrados*.
 
 **Límite del plan.** Subscription aún no existe: Route Planning lo consulta por el puerto `IPlanLimitsProvider`. La infraestructura dará un adaptador con un plan por configuración y, cuando exista Subscription, llamará a su fachada sin cambiar Domain ni Application. Solo las rutas `ACTIVE` cuentan; desactivar una libera cupo.
+
+## Fachada para Stakeholder (ACL)
+
+`Interfaces/ACL/IRoutePlanningContextFacade` es lo único que Stakeholder usa de Route Planning: buscar la ruta por código, leer rutas y paradas de los alumnos, las rutas de un conductor, y colocar o quitar a un niño (`PlaceStudentOnRouteCommand` / `RemoveStudentFromRouteCommand`, que pasan por las mismas reglas y el mismo outbox que el resto de casos de uso).
 
 ## Integración con Trip & Tracking (RabbitMQ)
 
