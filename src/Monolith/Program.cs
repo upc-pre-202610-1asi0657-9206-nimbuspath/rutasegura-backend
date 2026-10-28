@@ -11,6 +11,8 @@ using Microsoft.OpenApi;
 using Monolith.Administration.Infrastructure.Configuration;
 using Monolith.Administration.Interfaces.ACL;
 using Monolith.Stakeholder.Infrastructure.Configuration;
+using Monolith.Subscription.Infrastructure.Configuration;
+using Monolith.Subscription.Interfaces.ACL;
 using Monolith.Iam.Application.ACL;
 using Monolith.Iam.Application.Internal.CommandServices;
 using Monolith.Iam.Application.CommandServices;
@@ -160,6 +162,11 @@ builder.Services.AddScoped<IHashingService, HashingService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 // Facade (ACL) other bounded contexts use to ask Iam about accounts and organizations.
 builder.Services.AddScoped<IIamContextFacade, IamContextFacade>();
+
+// Subscription bounded context: plan catalog, the contract of each organization and plan changes paid through the
+// payment gateway. Route Planning reads the limits in force through its facade (ACL).
+builder.Services.AddSubscriptionBoundedContext(builder.Configuration);
+builder.Services.AddScoped<ISubscriptionContextFacade, SubscriptionContextFacade>();
 
 // Administration bounded context (Roster + Route Planning): repositories, application services,
 // plan limits, Iam ACL, outbox and — when Administration:Messaging:Enabled — RabbitMQ workers.
