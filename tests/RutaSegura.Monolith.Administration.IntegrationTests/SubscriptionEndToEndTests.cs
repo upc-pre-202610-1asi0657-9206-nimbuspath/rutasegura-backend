@@ -159,6 +159,72 @@ public sealed class SubscriptionEndToEndTests : IDisposable
             .ExpectAsync(HttpStatusCode.Forbidden)).Code().ShouldBe("SimulatedPaymentsDisabled");
     }
 
+    [Fact]
+    public void MercadoPago_WithoutCredentials_RefusesToStart()
+    {
+        using var app = new MonolithApp(settings: new Dictionary<string, string?>
+        {
+            ["Subscription:PaymentGateway:Provider"] = "MercadoPago"
+        });
+
+        var error = Should.Throw<InvalidOperationException>(() => app.CreateClient());
+        error.Message.ShouldContain("MercadoPago:AccessToken");
+        error.Message.ShouldContain("MercadoPago:NotificationUrl");
+    }
+
+    [Fact]
+    public async Task MercadoPago_VerifiesTheWebhookAndNeverSimulatesPayments()
+    {
+        using var app = new MonolithApp(settings: new Dictionary<string, string?>
+        {
+            ["Subscription:PaymentGateway:Provider"] = "MercadoPago",
+            ["Subscription:PaymentGateway:MercadoPago:AccessToken"] = "TEST-integration-tests",
+            ["Subscription:PaymentGateway:MercadoPago:NotificationUrl"] =
+                "https://api.rutasegura.test/api/v1/subscription/payments/notifications",
+            // Nothing listens there: the tests never reach Mercado Pago.
+            ["Subscription:PaymentGateway:MercadoPago:ApiBaseUrl"] = "http://127.0.0.1:9/",
+            ["Subscription:PaymentGateway:MercadoPago:TimeoutSeconds"] = "2"
+        });
+        var admin = await app.AdminAsync();
+        var gateway = app.CreateClient();
+
+        // The checkout cannot be created: the change is cancelled and the plan in force stays.
+        (await admin.PostJson("/api/v1/subscription/plan-changes", new { targetPlanId = "COMPLETE" })
+            .ExpectAsync(HttpStatusCode.ServiceUnavailable)).Code().ShouldBe("PaymentGatewayUnavailable");
+        (await admin.PostJson("/api/v1/subscription/sandbox/checkouts/mp_x/complete", new { approved = true })
+            .ExpectAsync(HttpStatusCode.Forbidden)).Code().ShouldBe("SimulatedPaymentsDisabled");
+
+        // A forged webhook is refused; an authentic one whose payment cannot be read is retried later (503).
+        const string paymentId = "123456";
+        const string requestId = "req-it-1";
+        const string ts = "1704908010";
+        var forged = MercadoPagoWebhook(paymentId, $"ts={ts},v1={new string('0', 64)}", requestId);
+        (await gateway.SendAsync(forged, Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        var v1 = Convert.ToHexStringLower(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(MonolithApp.TestPaymentWebhookSecret),
+            Encoding.UTF8.GetBytes($"id:{paymentId};request-id:{requestId};ts:{ts};")));
+        var authentic = MercadoPagoWebhook(paymentId, $"ts={ts},v1={v1}", requestId);
+        (await gateway.SendAsync(authentic, Ct)).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+
+        (await app.WithDbAsync(db => db.Set<ProcessedPaymentEvent>().CountAsync())).ShouldBe(0);
+        (await Quota(admin)).GetProperty("planCode").GetString().ShouldBe("BASIC");
+    }
+
+    private static HttpRequestMessage MercadoPagoWebhook(string paymentId, string signature, string requestId)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/v1/subscription/payments/notifications?data.id={paymentId}&type=payment")
+        {
+            Content = new StringContent(
+                $$"""{"action":"payment.updated","data":{"id":"{{paymentId}}"},"type":"payment"}""",
+                Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("x-signature", signature);
+        request.Headers.Add("x-request-id", requestId);
+        return request;
+    }
+
     private static async Task<string> RequestCompleteAsync(HttpClient admin) =>
         (await admin.PostJson("/api/v1/subscription/plan-changes", new { targetPlanId = "COMPLETE" })
             .ExpectAsync(HttpStatusCode.Accepted)).GetProperty("paymentReference").GetString()!;

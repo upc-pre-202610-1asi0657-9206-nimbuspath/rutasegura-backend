@@ -27,11 +27,11 @@ public sealed class SandboxPaymentGatewayTests
     }
 
     [Fact]
-    public void SignedNotification_IsReadBack()
+    public async Task SignedNotification_IsReadBack()
     {
         var signed = _sandbox.Create("sbx_1", approved: true, 9_990, "PEN");
 
-        var notification = _gateway.ReadNotification(signed.Payload, signed.Signature);
+        var notification = await Read(_sandbox, signed.Payload, Signature(signed));
 
         notification.ShouldNotBeNull();
         notification.PaymentReference.ShouldBe("sbx_1");
@@ -39,15 +39,15 @@ public sealed class SandboxPaymentGatewayTests
         notification.AmountInCents.ShouldBe(9_990);
         notification.Currency.ShouldBe("PEN");
         notification.EventId.ShouldStartWith("evt_");
-        signed.Signature.ShouldStartWith("sha256=");
+        Signature(signed).ShouldStartWith("sha256=");
     }
 
     [Fact]
-    public void DeclinedNotification_CarriesItsReason()
+    public async Task DeclinedNotification_CarriesItsReason()
     {
         var signed = _sandbox.Create("sbx_1", approved: false, 9_990, "PEN");
 
-        var notification = _gateway.ReadNotification(signed.Payload, signed.Signature)!;
+        var notification = (await Read(_sandbox, signed.Payload, Signature(signed)))!;
 
         notification.Outcome.ShouldBe(PaymentOutcome.Rejected);
         notification.Reason.ShouldNotBeNullOrWhiteSpace();
@@ -58,39 +58,39 @@ public sealed class SandboxPaymentGatewayTests
     [InlineData("")]
     [InlineData("sha256=00")]
     [InlineData("not-a-signature")]
-    public void MissingOrWrongSignature_IsRejected(string? signature)
+    public async Task MissingOrWrongSignature_IsRejected(string? signature)
     {
         var signed = _sandbox.Create("sbx_1", approved: true, 9_990, "PEN");
 
-        _gateway.ReadNotification(signed.Payload, signature).ShouldBeNull();
+        (await Read(_sandbox, signed.Payload, signature)).ShouldBeNull();
     }
 
     [Fact]
-    public void SignatureOfAnotherSecret_IsRejected()
+    public async Task SignatureOfAnotherSecret_IsRejected()
     {
         var foreign = Sandbox(secret: "a-different-secret-a-different-secret").Create("sbx_1", true, 9_990, "PEN");
 
-        _gateway.ReadNotification(foreign.Payload, foreign.Signature).ShouldBeNull();
+        (await Read(_sandbox, foreign.Payload, Signature(foreign))).ShouldBeNull();
     }
 
     [Fact]
-    public void SignedGarbage_IsRejected()
+    public async Task SignedGarbage_IsRejected()
     {
         const string payload = "{\"hello\":\"world\"}";
 
-        _gateway.ReadNotification(payload, _sandbox.Sign(payload)).ShouldBeNull();
-        _gateway.ReadNotification("not json", _sandbox.Sign("not json")).ShouldBeNull();
+        (await Read(_sandbox, payload, _sandbox.Sign(payload))).ShouldBeNull();
+        (await Read(_sandbox, "not json", _sandbox.Sign("not json"))).ShouldBeNull();
     }
 
     [Fact]
-    public void WithoutAConfiguredSecret_OnlyItsOwnNotificationsAreAccepted()
+    public async Task WithoutAConfiguredSecret_OnlyItsOwnNotificationsAreAccepted()
     {
         var first = Sandbox(secret: null);
         var second = Sandbox(secret: null);
         var signed = first.Create("sbx_1", true, 9_990, "PEN");
 
-        ((IPaymentGateway)first).ReadNotification(signed.Payload, signed.Signature).ShouldNotBeNull();
-        ((IPaymentGateway)second).ReadNotification(signed.Payload, signed.Signature).ShouldBeNull();
+        (await Read(first, signed.Payload, Signature(signed))).ShouldNotBeNull();
+        (await Read(second, signed.Payload, Signature(signed))).ShouldBeNull();
     }
 
     [Fact]
@@ -99,4 +99,14 @@ public sealed class SandboxPaymentGatewayTests
         Sandbox(allowSimulatedPayments: true).Enabled.ShouldBeTrue();
         Sandbox(allowSimulatedPayments: false).Enabled.ShouldBeFalse();
     }
+
+    private static Task<PaymentNotification?> Read(IPaymentGateway gateway, string payload, string? signature) =>
+        gateway.ReadNotificationAsync(new PaymentNotificationMessage(payload,
+            signature is null
+                ? new Dictionary<string, string>()
+                : new Dictionary<string, string> { [SandboxPaymentGateway.SignatureHeader] = signature },
+            new Dictionary<string, string>()), Ct);
+
+    private static string Signature(SignedPaymentNotification signed) =>
+        signed.Headers[SandboxPaymentGateway.SignatureHeader];
 }

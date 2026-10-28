@@ -121,8 +121,6 @@ public sealed class FakeGateway(SandboxPaymentGateway sandbox) : IPaymentGateway
 
     public string Provider => "Fake";
 
-    public string SignatureHeader => SandboxPaymentGateway.SignatureHeader;
-
     public Task<PaymentCheckout> CreateCheckoutAsync(PaymentCheckoutRequest request,
         CancellationToken cancellationToken)
     {
@@ -131,8 +129,14 @@ public sealed class FakeGateway(SandboxPaymentGateway sandbox) : IPaymentGateway
         return ((IPaymentGateway)sandbox).CreateCheckoutAsync(request, cancellationToken);
     }
 
-    public PaymentNotification? ReadNotification(string payload, string? signature) =>
-        ((IPaymentGateway)sandbox).ReadNotification(payload, signature);
+    /// <summary>Makes reading a notification fail as if the gateway API were down.</summary>
+    public bool ApiDown { get; set; }
+
+    public Task<PaymentNotification?> ReadNotificationAsync(PaymentNotificationMessage message,
+        CancellationToken cancellationToken) =>
+        ApiDown
+            ? throw new PaymentGatewayUnavailableException("timeout")
+            : ((IPaymentGateway)sandbox).ReadNotificationAsync(message, cancellationToken);
 }
 
 /// <summary>Command and query services wired with the in-memory doubles.</summary>

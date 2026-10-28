@@ -114,7 +114,7 @@ public sealed class SubscriptionCommandServiceTests
     {
         var reference = await PendingReferenceAsync("COMPLETE");
         var notification = _fixture.Sandbox.Create(reference, true, 9_990, "PEN");
-        var command = new ProcessPaymentNotificationCommand(notification.Payload, notification.Signature);
+        var command = new ProcessPaymentNotificationCommand(notification.Payload, notification.Headers);
 
         (await _fixture.Commands.Handle(command, Ct)).Value!.Resolution.ShouldBe("APPLIED");
         var retry = await _fixture.Commands.Handle(command, Ct);
@@ -157,7 +157,7 @@ public sealed class SubscriptionCommandServiceTests
             .Create(reference, true, 9_990, "PEN");
 
         var result = await _fixture.Commands.Handle(
-            new ProcessPaymentNotificationCommand(forged.Payload, forged.Signature), Ct);
+            new ProcessPaymentNotificationCommand(forged.Payload, forged.Headers), Ct);
 
         result.Error.ShouldBe(SubscriptionError.PaymentNotificationInvalid);
         _fixture.PaymentEvents.Saved.ShouldBeEmpty();
@@ -171,9 +171,39 @@ public sealed class SubscriptionCommandServiceTests
         var signed = _fixture.Sandbox.Create(reference, true, 9_990, "PEN");
 
         var result = await _fixture.Commands.Handle(new ProcessPaymentNotificationCommand(
-            signed.Payload.Replace("9990", "1"), signed.Signature), Ct);
+            signed.Payload.Replace("9990", "1"), signed.Headers), Ct);
 
         result.Error.ShouldBe(SubscriptionError.PaymentNotificationInvalid);
+    }
+
+    [Fact]
+    public async Task PendingPayment_IsRecordedAndTheChangeKeepsWaiting()
+    {
+        var reference = await PendingReferenceAsync("COMPLETE");
+        var payload = $$"""{"eventId":"evt_pending","reference":"{{reference}}","status":"PENDING","amountInCents":9990,"currency":"PEN"}""";
+
+        var receipt = (await _fixture.Commands.Handle(new ProcessPaymentNotificationCommand(payload,
+            new Dictionary<string, string> { ["x-payment-signature"] = _fixture.Sandbox.Sign(payload) }), Ct)).Value!;
+
+        receipt.Resolution.ShouldBe(SubscriptionCommandService.PendingResolution);
+        receipt.PlanChangeStatus.ShouldBe(PlanChangeStatus.PendingPayment);
+        _fixture.PaymentEvents.Saved.ShouldHaveSingleItem().Outcome.ShouldBe("PENDING");
+        (await PayAsync(reference)).Resolution.ShouldBe("APPLIED");
+    }
+
+    [Fact]
+    public async Task GatewayApiDown_WhileReadingANotification_Returns503AndRecordsNothing()
+    {
+        var reference = await PendingReferenceAsync("COMPLETE");
+        var signed = _fixture.Sandbox.Create(reference, true, 9_990, "PEN");
+        _fixture.Gateway.ApiDown = true;
+
+        var result = await _fixture.Commands.Handle(
+            new ProcessPaymentNotificationCommand(signed.Payload, signed.Headers), Ct);
+
+        result.Error.ShouldBe(SubscriptionError.PaymentGatewayUnavailable);
+        _fixture.PaymentEvents.Saved.ShouldBeEmpty();
+        (await LimitsAsync()).PlanCode.ShouldBe("BASIC");
     }
 
     [Fact]
@@ -280,7 +310,7 @@ public sealed class SubscriptionCommandServiceTests
         var signed = _fixture.Sandbox.Create(reference, approved, change?.Price.AmountInCents ?? 9_990,
             change?.Price.Currency ?? "PEN");
         var result = await _fixture.Commands.Handle(
-            new ProcessPaymentNotificationCommand(signed.Payload, signed.Signature), Ct);
+            new ProcessPaymentNotificationCommand(signed.Payload, signed.Headers), Ct);
         result.IsSuccess.ShouldBeTrue(result.Message);
         return result.Value!;
     }
