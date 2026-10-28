@@ -37,8 +37,6 @@ public sealed class SandboxPaymentGateway : IPaymentGateway, ISimulatedPaymentNo
 
     public string Provider => PaymentGatewayOptions.SandboxProvider;
 
-    string IPaymentGateway.SignatureHeader => SignatureHeader;
-
     public bool Enabled => _options.AllowSimulatedPayments;
 
     public Task<PaymentCheckout> CreateCheckoutAsync(PaymentCheckoutRequest request,
@@ -51,7 +49,11 @@ public sealed class SandboxPaymentGateway : IPaymentGateway, ISimulatedPaymentNo
         return Task.FromResult(new PaymentCheckout(reference, checkoutUrl));
     }
 
-    public PaymentNotification? ReadNotification(string payload, string? signature)
+    public Task<PaymentNotification?> ReadNotificationAsync(PaymentNotificationMessage message,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ReadNotification(message.Payload, message.Header(SignatureHeader)));
+
+    private PaymentNotification? ReadNotification(string payload, string? signature)
     {
         if (string.IsNullOrEmpty(payload) || !IsValidSignature(payload, signature)) return null;
 
@@ -66,7 +68,7 @@ public sealed class SandboxPaymentGateway : IPaymentGateway, ISimulatedPaymentNo
         }
 
         if (body is null || string.IsNullOrWhiteSpace(body.EventId) || string.IsNullOrWhiteSpace(body.Reference) ||
-            string.IsNullOrWhiteSpace(body.Currency) || body.AmountInCents < 0)
+            string.IsNullOrWhiteSpace(body.Currency) || body.AmountInCents < 0 || !Enum.IsDefined(body.Status))
             return null;
         return new PaymentNotification(body.EventId, body.Reference, body.Status, body.AmountInCents, body.Currency,
             body.Reason);
@@ -79,7 +81,8 @@ public sealed class SandboxPaymentGateway : IPaymentGateway, ISimulatedPaymentNo
             $"evt_{Guid.NewGuid():N}", paymentReference,
             approved ? PaymentOutcome.Approved : PaymentOutcome.Rejected, amountInCents, currency,
             approved ? null : "Declined in the sandbox."), Json);
-        return new SignedPaymentNotification(payload, Sign(payload));
+        return new SignedPaymentNotification(payload,
+            new Dictionary<string, string> { [SignatureHeader] = Sign(payload) });
     }
 
     /// <summary>Signature the gateway puts in <see cref="SignatureHeader" /> for a body.</summary>

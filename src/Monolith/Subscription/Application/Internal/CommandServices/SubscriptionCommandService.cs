@@ -28,6 +28,9 @@ public class SubscriptionCommandService(
 {
     public const string DuplicateResolution = "DUPLICATE";
     public const string UnmatchedResolution = "UNMATCHED";
+    public const string PendingResolution = "PENDING";
+
+    private static readonly IReadOnlyDictionary<string, string> EmptyValues = new Dictionary<string, string>();
 
     public Task<Result<PlanChange>> Handle(RequestPlanChangeCommand command, CancellationToken cancellationToken) =>
         SubscriptionOperation.ExecuteAsync<PlanChange>(async () =>
@@ -99,7 +102,20 @@ public class SubscriptionCommandService(
         CancellationToken cancellationToken) =>
         SubscriptionOperation.ExecuteAsync<PaymentNotificationReceipt>(async () =>
         {
-            var notification = paymentGateway.ReadNotification(command.Payload ?? string.Empty, command.Signature);
+            var message = new PaymentNotificationMessage(command.Payload ?? string.Empty,
+                command.Headers ?? EmptyValues, command.Query ?? EmptyValues);
+            PaymentNotification? notification;
+            try
+            {
+                notification = await paymentGateway.ReadNotificationAsync(message, cancellationToken);
+            }
+            catch (PaymentGatewayUnavailableException)
+            {
+                // 503: the gateway retries the notification later.
+                return Result<PaymentNotificationReceipt>.Failure(SubscriptionError.PaymentGatewayUnavailable,
+                    "The payment could not be checked with the payment gateway. Try again later.");
+            }
+
             if (notification is null)
                 return Result<PaymentNotificationReceipt>.Failure(SubscriptionError.PaymentNotificationInvalid,
                     "The notification is not signed by the payment gateway.");
@@ -122,7 +138,7 @@ public class SubscriptionCommandService(
             // The same signed notification a gateway would send: verified and deduplicated like a real one.
             var signed = simulatedPayments.Create(command.PaymentReference, command.Approved,
                 change.Price.AmountInCents, change.Price.Currency);
-            return await Handle(new ProcessPaymentNotificationCommand(signed.Payload, signed.Signature),
+            return await Handle(new ProcessPaymentNotificationCommand(signed.Payload, signed.Headers),
                 cancellationToken);
         });
 
@@ -148,11 +164,15 @@ public class SubscriptionCommandService(
                 : Conflict<PaymentNotificationReceipt>();
         }
 
-        var resolution = notification.Outcome == PaymentOutcome.Approved
-            ? subscription.ConfirmPayment(notification.PaymentReference,
-                new Money(notification.AmountInCents, notification.Currency), now)
-            : subscription.RejectPayment(notification.PaymentReference, notification.Reason, now);
-        var resolutionCode = SubscriptionOperation.ToCode(resolution);
+        var resolutionCode = notification.Outcome switch
+        {
+            PaymentOutcome.Approved => SubscriptionOperation.ToCode(subscription.ConfirmPayment(
+                notification.PaymentReference, new Money(notification.AmountInCents, notification.Currency), now)),
+            PaymentOutcome.Rejected => SubscriptionOperation.ToCode(
+                subscription.RejectPayment(notification.PaymentReference, notification.Reason, now)),
+            // Not final yet: recorded, the change keeps waiting for the notification with the final status.
+            _ => PendingResolution
+        };
 
         subscriptionRepository.Update(subscription);
         await paymentEventRepository.AddAsync(new ProcessedPaymentEvent(notification.EventId,

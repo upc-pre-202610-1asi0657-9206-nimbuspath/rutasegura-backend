@@ -7,6 +7,7 @@ using Monolith.Subscription.Application.Internal.QueryServices;
 using Monolith.Subscription.Application.QueryServices;
 using Monolith.Subscription.Domain.Repositories;
 using Monolith.Subscription.Infrastructure.Payments;
+using Monolith.Subscription.Infrastructure.Payments.MercadoPago;
 using Monolith.Subscription.Infrastructure.Payments.Sandbox;
 using Monolith.Subscription.Infrastructure.Persistence.EFC.Repositories;
 
@@ -32,15 +33,47 @@ public static class SubscriptionServiceCollectionExtensions
         services.AddScoped<ISubscriptionQueryService, SubscriptionQueryService>();
 
         services.AddOptions<PaymentGatewayOptions>().Bind(configuration.GetSection(PaymentGatewayOptions.Section));
-        var provider = configuration[$"{PaymentGatewayOptions.Section}:Provider"] ?? PaymentGatewayOptions.SandboxProvider;
-        if (!string.Equals(provider, PaymentGatewayOptions.SandboxProvider, StringComparison.OrdinalIgnoreCase))
+        var options = configuration.GetSection(PaymentGatewayOptions.Section).Get<PaymentGatewayOptions>() ?? new();
+        if (string.Equals(options.Provider, PaymentGatewayOptions.MercadoPagoProvider,
+                StringComparison.OrdinalIgnoreCase))
+            AddMercadoPago(services, options);
+        else if (string.Equals(options.Provider, PaymentGatewayOptions.SandboxProvider,
+                     StringComparison.OrdinalIgnoreCase))
+            AddSandbox(services);
+        else
             throw new InvalidOperationException(
-                $"Payment gateway '{provider}' is not implemented. Supported: {PaymentGatewayOptions.SandboxProvider}.");
+                $"Payment gateway '{options.Provider}' is not implemented. Supported: " +
+                $"{PaymentGatewayOptions.MercadoPagoProvider}, {PaymentGatewayOptions.SandboxProvider}.");
+        return services;
+    }
 
+    private static void AddSandbox(IServiceCollection services)
+    {
         // One instance: the secret generated when none is configured must sign and verify the same notifications.
         services.AddSingleton<SandboxPaymentGateway>();
         services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<SandboxPaymentGateway>());
         services.AddSingleton<ISimulatedPaymentNotifier>(sp => sp.GetRequiredService<SandboxPaymentGateway>());
-        return services;
+    }
+
+    private static void AddMercadoPago(IServiceCollection services, PaymentGatewayOptions options)
+    {
+        // Fail at startup rather than on the first payment; the values themselves are never logged.
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(options.MercadoPago.AccessToken)) missing.Add("MercadoPago:AccessToken");
+        if (string.IsNullOrWhiteSpace(options.WebhookSecret)) missing.Add("WebhookSecret");
+        if (!Uri.TryCreate(options.MercadoPago.NotificationUrl, UriKind.Absolute, out var notificationUrl) ||
+            notificationUrl.Scheme != Uri.UriSchemeHttps)
+            missing.Add("MercadoPago:NotificationUrl (public https URL)");
+        if (missing.Count > 0)
+            throw new InvalidOperationException(
+                $"Mercado Pago needs {string.Join(", ", missing)} in {PaymentGatewayOptions.Section}. " +
+                "Set them through environment variables or user-secrets, never in appsettings.");
+
+        services.AddHttpClient<IPaymentGateway, MercadoPagoPaymentGateway>(client =>
+        {
+            client.BaseAddress = new Uri(options.MercadoPago.ApiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(options.MercadoPago.TimeoutSeconds);
+        });
+        services.AddSingleton<ISimulatedPaymentNotifier, DisabledSimulatedPayments>();
     }
 }

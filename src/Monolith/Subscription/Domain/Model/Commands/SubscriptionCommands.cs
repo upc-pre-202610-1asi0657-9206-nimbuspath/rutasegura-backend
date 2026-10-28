@@ -7,10 +7,13 @@ public record RequestPlanChangeCommand(Guid OrganizationId, Guid RequestedBy, st
 public record CancelPlanChangeCommand(Guid OrganizationId, Guid PlanChangeId);
 
 /// <summary>
-///     A notification of the payment gateway, exactly as it arrived: the raw body and its signature header. The
-///     gateway adapter verifies the signature before anything is trusted.
+///     A notification of the payment gateway, exactly as it arrived: the raw body, its headers and its query string.
+///     The gateway adapter verifies the signature before anything is trusted.
 /// </summary>
-public record ProcessPaymentNotificationCommand(string Payload, string? Signature);
+public record ProcessPaymentNotificationCommand(
+    string Payload,
+    IReadOnlyDictionary<string, string> Headers,
+    IReadOnlyDictionary<string, string>? Query = null);
 
 /// <summary>
 ///     Sandbox gateway only: the administrator finishes a simulated checkout (approve or decline) so the whole flow
