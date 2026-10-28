@@ -85,6 +85,9 @@
   <Folder Name="/tests/RutaSegura.Monolith.Stakeholder.Tests/">
     <Project Path="tests/RutaSegura.Monolith.Stakeholder.Tests/RutaSegura.Monolith.Stakeholder.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/RutaSegura.Monolith.Subscription.Tests/">
+    <Project Path="tests/RutaSegura.Monolith.Subscription.Tests/RutaSegura.Monolith.Subscription.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/RutaSegura.Monolith.Administration.ContractTests/">
     <Project Path="tests/RutaSegura.Monolith.Administration.ContractTests/RutaSegura.Monolith.Administration.ContractTests.csproj" />
   </Folder>
