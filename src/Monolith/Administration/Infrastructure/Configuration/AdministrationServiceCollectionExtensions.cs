@@ -43,8 +43,7 @@ public static class AdministrationServiceCollectionExtensions
         services.AddScoped<IOperationsMonitoringQueryService, OperationsMonitoringQueryService>();
 
         // Outbound adapters (Application ports)
-        services.Configure<PlanLimitsOptions>(configuration.GetSection(PlanLimitsOptions.Section));
-        services.AddScoped<IPlanLimitsProvider, ConfiguredPlanLimitsProvider>();
+        services.AddScoped<IPlanLimitsProvider, SubscriptionPlanLimitsProvider>();
         services.AddScoped<IIamAccountService, IamAccountService>();
         services.AddScoped<IIntegrationEventOutbox, EfIntegrationEventOutbox>();
 
