@@ -30,7 +30,7 @@ public class TripPlanRefreshTests
         var trip = new TripBuilder().Build();
         trip.NotifyGuardianAbsence(Camila, "Tiene fiebre", ScheduledStart.AddHours(-1));
 
-        var refreshed = trip.RefreshPlan("Ruta 3", OtherDriver, Vehicle, PlanWithNewStop(),
+        var refreshed = trip.RefreshPlan("Ruta 3", OtherDriver, Vehicle, ScheduledStart, PlanWithNewStop(),
         [
             new TripPassengerDefinition(Valeria, Stop1),
             new TripPassengerDefinition(Camila, Stop2),
@@ -53,7 +53,7 @@ public class TripPlanRefreshTests
     {
         var trip = new TripBuilder().Build();
 
-        trip.RefreshPlan("Ruta 3", Driver, Vehicle, PlanWithNewStop(),
+        trip.RefreshPlan("Ruta 3", Driver, Vehicle, ScheduledStart, PlanWithNewStop(),
         [
             new TripPassengerDefinition(Valeria, NewStop),
             new TripPassengerDefinition(Mateo, Stop1),
@@ -68,7 +68,7 @@ public class TripPlanRefreshTests
     {
         var trip = new TripBuilder().BuildStarted();
 
-        trip.RefreshPlan("Ruta 3", Driver, Vehicle, PlanWithNewStop(), [new TripPassengerDefinition(Lucia, NewStop)])
+        trip.RefreshPlan("Ruta 3", Driver, Vehicle, ScheduledStart, PlanWithNewStop(), [new TripPassengerDefinition(Lucia, NewStop)])
             .ShouldBeFalse();
 
         trip.Passengers.Count.ShouldBe(3);
@@ -81,7 +81,7 @@ public class TripPlanRefreshTests
         var trip = new TripBuilder().Build();
 
         Should.Throw<RutaSegura.BuildingBlocks.Domain.DomainException>(() =>
-            trip.RefreshPlan("Ruta 3", Driver, Vehicle, PlanWithNewStop(),
+            trip.RefreshPlan("Ruta 3", Driver, Vehicle, ScheduledStart, PlanWithNewStop(),
                 [new TripPassengerDefinition(Lucia, new StopId(Guid.NewGuid()))]));
     }
 }
