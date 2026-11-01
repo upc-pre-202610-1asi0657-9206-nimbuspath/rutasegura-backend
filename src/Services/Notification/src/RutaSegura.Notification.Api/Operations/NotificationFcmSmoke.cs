@@ -1,5 +1,4 @@
 using RutaSegura.Notification.Application.Model.Results;
-using RutaSegura.Notification.Domain.Model.Aggregates;
 using RutaSegura.Notification.Infrastructure.Channels;
 using RutaSegura.Notification.Infrastructure.Channels.Fcm;
 
@@ -8,6 +7,9 @@ namespace RutaSegura.Notification.Api.Operations;
 /// <summary>Prueba manual local del MISMO adaptador productivo. No abre HTTP ni escribe avisos o destinatarios ficticios.</summary>
 public static class NotificationFcmSmoke
 {
+    // Mismo límite que el agregado PushSubscription; la capa Api no referencia Domain.
+    private const int MaxTokenLength = 4096;
+
     public static async Task<int> RunAsync(IConfiguration configuration)
     {
         var project = configuration["NotificationFcm:ProjectId"];
@@ -17,9 +19,9 @@ public static class NotificationFcmSmoke
         try
         {
             var info = new FileInfo(file);
-            if (info.Length > PushSubscription.MaxTokenLength + 4) throw new FormatException();
+            if (info.Length > MaxTokenLength + 4) throw new FormatException();
             var token = (await File.ReadAllTextAsync(file)).Trim();
-            if (token.Length is < 1 or > PushSubscription.MaxTokenLength || token.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))) throw new FormatException();
+            if (token.Length is < 1 or > MaxTokenLength || token.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))) throw new FormatException();
             var options = new NotificationFcmOptions { Enabled = true, ProjectId = project };
             using var transport = new FcmSdkTransport(options);
             var sender = new FcmPushNotificationSender(transport, options);

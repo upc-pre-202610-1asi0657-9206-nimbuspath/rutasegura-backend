@@ -12,7 +12,8 @@ if (Test-Path -LiteralPath $taskDirectory) {
     if (Get-ChildItem -LiteralPath $taskDirectory -Force | Select-Object -First 1) { throw 'El directorio contiene archivos. No se sobrescribiran claves existentes.' }
 }
 New-Item -ItemType Directory -Path $taskDirectory -Force | Out-Null
-function New-LocalSecret { [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant() }
+function Get-RandomBytes([int]$Count) { $bytes = New-Object byte[] $Count; $rng = [Security.Cryptography.RandomNumberGenerator]::Create(); try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }; $bytes }
+function New-LocalSecret { (Get-RandomBytes 32 | ForEach-Object { $_.ToString("x2") }) -join "" }
 $taskDatabasePassword = New-LocalSecret
 $taskJwt = New-LocalSecret
 $taskRabbitPassword = New-LocalSecret
@@ -21,7 +22,7 @@ $taskFiles = @{
     'mysql-password' = $taskDatabasePassword
     'mysql-root-password' = (New-LocalSecret)
     'ConnectionStrings__NotificationDatabase' = "Server=notification-mysql;Port=3306;Database=rutasegura_notification;UserID=notification_app;Password=$taskDatabasePassword;SslMode=Disabled;Connection Timeout=5"
-    'NotificationPersistence__PushTokenEncryptionKey' = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+    'NotificationPersistence__PushTokenEncryptionKey' = [Convert]::ToBase64String((Get-RandomBytes 32))
     'Jwt__Secret' = $taskJwt
     'NotificationRabbitMq__Password' = $taskRabbitPassword
     'service-token' = $taskServiceToken

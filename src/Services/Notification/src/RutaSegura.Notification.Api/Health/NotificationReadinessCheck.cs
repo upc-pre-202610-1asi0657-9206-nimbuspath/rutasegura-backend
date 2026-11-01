@@ -21,14 +21,8 @@ public sealed class NotificationReadinessCheck(IServiceScopeFactory scopes, ICon
             var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
             if ((await db.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
                 return HealthCheckResult.Unhealthy("Esquema pendiente de provisionamiento.");
-            // Verifica las seis tablas, incluso si el historial de migraciones fue modificado externamente.
-            _ = await db.Notifications.AnyAsync(cancellationToken);
-            _ = await db.Announcements.AnyAsync(cancellationToken);
-            _ = await db.PushSubscriptions.AnyAsync(cancellationToken);
-            _ = await db.ProcessedEvents.AnyAsync(cancellationToken);
-            _ = await db.DispatchJobs.AnyAsync(cancellationToken);
-            _ = await db.Deliveries.AnyAsync(cancellationToken);
-            _ = await db.DeliveryReplays.AnyAsync(cancellationToken);
+            // Verifica todas las tablas, incluso si el historial de migraciones fue modificado externamente.
+            await db.VerifyTablesAsync(cancellationToken);
             if (configuration.GetValue<bool>("NotificationApi:Enabled") && configuration.GetValue("Iam:AccountValidation:Enabled", true))
             {
                 var client = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(Security.NotificationIamAccountVerifier.ClientName);

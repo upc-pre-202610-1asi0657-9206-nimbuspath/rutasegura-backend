@@ -21,6 +21,18 @@ public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext
     public DbSet<NotificationDelivery> Deliveries => Set<NotificationDelivery>();
     public DbSet<NotificationDeliveryReplay> DeliveryReplays => Set<NotificationDeliveryReplay>();
 
+    /// <summary>Verifica que las siete tablas existan y sean consultables (para la readiness de la capa Api, que no referencia Domain).</summary>
+    public async Task VerifyTablesAsync(CancellationToken cancellationToken)
+    {
+        _ = await Notifications.AnyAsync(cancellationToken);
+        _ = await Announcements.AnyAsync(cancellationToken);
+        _ = await PushSubscriptions.AnyAsync(cancellationToken);
+        _ = await ProcessedEvents.AnyAsync(cancellationToken);
+        _ = await DispatchJobs.AnyAsync(cancellationToken);
+        _ = await Deliveries.AnyAsync(cancellationToken);
+        _ = await DeliveryReplays.AnyAsync(cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyNotificationConfiguration(tokenProtector);
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

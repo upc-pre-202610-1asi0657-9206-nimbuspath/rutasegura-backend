@@ -29,7 +29,7 @@ public sealed class HostStartupTests
     }
 
     [Fact] public Task TripTrackingHostStarts() => AssertHealthy<trip::Program>(readinessMapped: true);
-    [Fact] public Task NotificationHostStarts() => AssertHealthy<notification::Program>();
+    [Fact] public Task NotificationHostStarts() => AssertHealthy<notification::Program>(readinessMapped: true);
     // El Gateway publica readiness: responde 200 solo si el monolito y Trip & Tracking responden.
     [Fact] public Task GatewayHostStarts() => AssertHealthy<gateway::Program>(readinessMapped: true);
 }

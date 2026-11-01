@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using RutaSegura.BuildingBlocks.Application.Messaging;
 using RutaSegura.TripTracking.Api.Controllers;
+using RutaSegura.TripTracking.Application.DependencyInjection;
 using RutaSegura.TripTracking.Application.Abstractions;
 using RutaSegura.TripTracking.Domain.Common;
 using RutaSegura.TripTracking.Domain.Tracking;
@@ -51,9 +54,18 @@ public sealed class NotificationContextTests
     private static NotificationContextController Controller(Repository repository, string? expected, string? supplied)
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["InternalServices:NotificationToken"] = expected }).Build();
-        var controller = new NotificationContextController(configuration, repository) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
+        var controller = new NotificationContextController(configuration, Dispatcher(repository)) { ControllerContext = new() { HttpContext = new DefaultHttpContext() } };
         if (supplied is not null) controller.Request.Headers["X-Service-Token"] = supplied;
         return controller;
+    }
+
+    private static IDispatcher Dispatcher(Repository repository)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ITripRepository>(repository);
+        services.AddTripTrackingApplication();
+        return services.BuildServiceProvider().GetRequiredService<IDispatcher>();
     }
 
     private static Trip TripFor(Guid organization, bool active)
