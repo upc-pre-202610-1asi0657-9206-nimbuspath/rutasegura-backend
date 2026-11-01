@@ -35,7 +35,7 @@ Administration/
   Infrastructure/
     Persistence/EFC/  ModelBuilderExtensions (ApplyAdministrationConfiguration), conversores y repositorios
     Messaging/        Outbox (+ OutboxPublisherService), Inbound (InboundMessageProcessor, TripTrackingEventsConsumer), RabbitMq
-    Subscription/     ConfiguredPlanLimitsProvider (plan por configuración mientras no exista Subscription)
+    Subscription/     SubscriptionPlanLimitsProvider (límites del plan vigente desde la fachada de Subscription)
     Acl/              IamAccountService → IIamContextFacade (fachada publicada por Iam)
     Configuration/    AddAdministrationBoundedContext
   Interfaces/Rest/    DriversController, DriverProfileController, VehiclesController, RoutesController,
@@ -85,7 +85,6 @@ Estados HTTP: 404 no encontrado (también para recursos de otra organización), 
 ```json
 "Database": { "MigrateOnStartup": true },
 "Administration": {
-  "Plans": { "Default": { "PlanCode": "BASIC", "MaxActiveRoutes": 3 }, "Organizations": { "<organizationId>": { "PlanCode": "PRO", "MaxActiveRoutes": 10 } } },
   "Messaging": { "Enabled": false, "HostName": "localhost", "EventsExchange": "administration.events", "InboundQueue": "administration.inbound" }
 }
 ```
@@ -112,7 +111,7 @@ Con `Messaging:Enabled = false` los eventos se acumulan en el outbox. Con `true`
 
 Toda consulta y comando lleva el `OrganizationId` del administrador autenticado (claim del JWT); los recursos de otra organización se responden como *no encontrados*.
 
-**Límite del plan.** Subscription aún no existe: Route Planning lo consulta por el puerto `IPlanLimitsProvider`. La infraestructura dará un adaptador con un plan por configuración y, cuando exista Subscription, llamará a su fachada sin cambiar Domain ni Application. Solo las rutas `ACTIVE` cuentan; desactivar una libera cupo.
+**Límite del plan.** Route Planning lo consulta por el puerto `IPlanLimitsProvider`. Su adaptador (`SubscriptionPlanLimitsProvider`) llama a `ISubscriptionContextFacade`, la fachada del contexto [Subscription](../Subscription/README.md), que devuelve los límites del plan vigente de la organización (el plan por defecto si no contrató otro o si venció su periodo pagado). Domain y Application no cambiaron al reemplazar el antiguo plan por configuración (`Administration:Plans`, eliminado). Solo las rutas `ACTIVE` cuentan; desactivar una libera cupo.
 
 ## Fachada para Stakeholder (ACL)
 

@@ -1,6 +1,7 @@
 using Monolith.Iam.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Administration.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Stakeholder.Infrastructure.Persistence.EFC.Configuration.Extensions;
+using Monolith.Subscription.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using Monolith.Shared.Infrastructure.Persistence.EFC.Interceptors;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.ApplyIamConfiguration();
         builder.ApplyAdministrationConfiguration();
         builder.ApplyStakeholderConfiguration();
+        builder.ApplySubscriptionConfiguration();
         // General Naming Convention for the database objects
         builder.UseSnakeCaseNamingConvention();
     }

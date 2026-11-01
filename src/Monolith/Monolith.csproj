@@ -5,6 +5,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Local secrets in Development (dotnet user-secrets), e.g. the TEST credentials of Mercado Pago. -->
+    <UserSecretsId>rutasegura-monolith-0f3c9a52-6d1e-4b7a-9c85-2e4f71a0b6d3</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

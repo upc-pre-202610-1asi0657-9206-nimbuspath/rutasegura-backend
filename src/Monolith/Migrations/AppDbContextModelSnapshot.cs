@@ -967,6 +967,259 @@ namespace Monolith.Migrations
                     b.ToTable("stakeholder_student_photos", (string)null);
                 });
 
+            modelBuilder.Entity("Monolith.Subscription.Domain.Model.Aggregates.Plan", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_available");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_default");
+
+                    b.Property<int>("MaxActiveRoutes")
+                        .HasColumnType("int")
+                        .HasColumnName("max_active_routes");
+
+                    b.Property<int>("MaxVehicles")
+                        .HasColumnType("int")
+                        .HasColumnName("max_vehicles");
+
+                    b.Property<long>("MonthlyPriceInCents")
+                        .HasColumnType("bigint")
+                        .HasColumnName("monthly_price_in_cents");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Code")
+                        .HasName("p_k_subscription_plans");
+
+                    b.ToTable("subscription_plans", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Code = "BASIC",
+                            Currency = "PEN",
+                            Description = "Para conductores independientes que empiezan: hasta 3 rutas activas y 3 vehículos.",
+                            IsAvailable = true,
+                            IsDefault = true,
+                            MaxActiveRoutes = 3,
+                            MaxVehicles = 3,
+                            MonthlyPriceInCents = 0L,
+                            Name = "Plan Básico"
+                        },
+                        new
+                        {
+                            Code = "COMPLETE",
+                            Currency = "PEN",
+                            Description = "Para pequeñas empresas de transporte: hasta 10 rutas activas y 10 vehículos.",
+                            IsAvailable = true,
+                            IsDefault = false,
+                            MaxActiveRoutes = 10,
+                            MaxVehicles = 10,
+                            MonthlyPriceInCents = 9990L,
+                            Name = "Plan Completo"
+                        },
+                        new
+                        {
+                            Code = "PREMIUM",
+                            Currency = "PEN",
+                            Description = "Para operaciones grandes: hasta 30 rutas activas y 30 vehículos.",
+                            IsAvailable = true,
+                            IsDefault = false,
+                            MaxActiveRoutes = 30,
+                            MaxVehicles = 30,
+                            MonthlyPriceInCents = 19990L,
+                            Name = "Plan Premium"
+                        });
+                });
+
+            modelBuilder.Entity("Monolith.Subscription.Domain.Model.Aggregates.ProcessedPaymentEvent", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("event_id");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("PaymentReference")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("payment_reference");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("received_at");
+
+                    b.Property<string>("Resolution")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("resolution");
+
+                    b.HasKey("EventId")
+                        .HasName("p_k_subscription_payment_events");
+
+                    b.HasIndex("PaymentReference")
+                        .HasDatabaseName("i_x_subscription_payment_events_payment_reference");
+
+                    b.ToTable("subscription_payment_events", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Subscription.Domain.Model.Aggregates.TenantSubscription", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("PaidUntil")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("paid_until");
+
+                    b.Property<string>("PlanCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("plan_code");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("started_at");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int")
+                        .HasColumnName("version");
+
+                    b.HasKey("OrganizationId")
+                        .HasName("p_k_subscription_tenants");
+
+                    b.ToTable("subscription_tenants", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Subscription.Domain.Model.Entities.PlanChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CheckoutUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("checkout_url");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)")
+                        .HasColumnName("payment_reference");
+
+                    b.Property<string>("PreviousPlanCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("previous_plan_code");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("requested_by");
+
+                    b.Property<string>("ResolutionDetail")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("resolution_detail");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TargetPlanCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("target_plan_code");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Price", "Monolith.Subscription.Domain.Model.Entities.PlanChange.Price#Money", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<long>("AmountInCents")
+                                .HasColumnType("bigint")
+                                .HasColumnName("price_in_cents");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("varchar(3)")
+                                .HasColumnName("price_currency");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("p_k_subscription_plan_changes");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("i_x_subscription_plan_changes_organization_id");
+
+                    b.HasIndex("PaymentReference")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_subscription_plan_changes_payment_reference");
+
+                    b.ToTable("subscription_plan_changes", (string)null);
+                });
+
             modelBuilder.Entity("Monolith.Administration.Domain.Model.Entities.RouteStop", b =>
                 {
                     b.HasOne("Monolith.Administration.Domain.Model.Aggregates.Route", null)
@@ -1021,6 +1274,16 @@ namespace Monolith.Migrations
                         .HasConstraintName("fk_stakeholder_route_enrollments_student_id");
                 });
 
+            modelBuilder.Entity("Monolith.Subscription.Domain.Model.Entities.PlanChange", b =>
+                {
+                    b.HasOne("Monolith.Subscription.Domain.Model.Aggregates.TenantSubscription", null)
+                        .WithMany("PlanChanges")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_subscription_plan_changes_subscription_tenants_organization_~");
+                });
+
             modelBuilder.Entity("Monolith.Administration.Domain.Model.Aggregates.Route", b =>
                 {
                     b.Navigation("_stops");
@@ -1029,6 +1292,11 @@ namespace Monolith.Migrations
             modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.Student", b =>
                 {
                     b.Navigation("_enrollments");
+                });
+
+            modelBuilder.Entity("Monolith.Subscription.Domain.Model.Aggregates.TenantSubscription", b =>
+                {
+                    b.Navigation("PlanChanges");
                 });
 #pragma warning restore 612, 618
         }
