@@ -62,7 +62,9 @@
   <Folder Name="/src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Infrastructure/">
     <Project Path="src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Infrastructure/RutaSegura.TripTracking.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/src/Services/Trip-Tracking/tests/" />
+  <Folder Name="/src/Services/Trip-Tracking/tests/">
+    <Project Path="src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Bdd.Tests/RutaSegura.TripTracking.Bdd.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Application.Tests/">
     <Project Path="src/Services/Trip-Tracking/tests/RutaSegura.TripTracking.Application.Tests/RutaSegura.TripTracking.Application.Tests.csproj" />
   </Folder>
