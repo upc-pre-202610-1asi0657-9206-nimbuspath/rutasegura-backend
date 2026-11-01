@@ -8,8 +8,17 @@ using NotificationEntity = RutaSegura.Notification.Domain.Model.Aggregates.Notif
 
 namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore.Repositories;
 
-public sealed class NotificationDispatchRepository(NotificationDbContext context) : INotificationDispatchQueue, INotificationDispatchRepository
+public sealed class NotificationDispatchRepository(NotificationDbContext context) : INotificationDispatchQueue, INotificationDispatchRepository, INotificationDeliveryAdministrationRepository
 {
+    public async Task<IReadOnlyList<NotificationDelivery>> ListFailedAsync(Guid organization, int offset, int limit, CancellationToken ct)
+    {
+        if (offset < 0 || limit is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(limit));
+        return await context.Deliveries.AsNoTracking().Where(d => d.OrganizationId == organization && d.Status == DeliveryStatus.Failed)
+            .OrderByDescending(d => d.LastAttemptAt).ThenBy(d => d.Id).Skip(offset).Take(limit).ToArrayAsync(ct);
+    }
+    public Task<NotificationDeliveryReplay?> FindReplayAsync(Guid organization, Guid requestId, CancellationToken ct) =>
+        context.DeliveryReplays.SingleOrDefaultAsync(r => r.OrganizationId == organization && r.RequestId == requestId, ct);
+    public void Add(NotificationDeliveryReplay replay) => context.DeliveryReplays.Add(replay);
     public Task<NotificationDispatchJob?> GetJobAsync(Guid organizationId, Guid jobId, CancellationToken cancellationToken) =>
         context.DispatchJobs.SingleOrDefaultAsync(j => j.OrganizationId == organizationId && j.Id == jobId, cancellationToken);
     public Task<NotificationDelivery?> GetDeliveryAsync(Guid organizationId, Guid deliveryId, CancellationToken cancellationToken) =>

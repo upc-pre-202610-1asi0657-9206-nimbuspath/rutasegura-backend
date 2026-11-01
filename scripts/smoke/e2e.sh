@@ -1,6 +1,6 @@
 #!/bin/sh
 # Prueba de humo de punta a punta: Iam -> Administration -> RabbitMQ -> Trip-Tracking -> RabbitMQ -> Administration.
-# Se ejecuta con:  docker compose --profile smoke run --rm smoke
+# Se ejecuta con: docker compose --env-file .local/notification/compose.env --profile smoke run --rm smoke
 # Requiere: sh, curl, jq y tzdata (la imagen del servicio "smoke" los instala).
 set -u
 
@@ -8,6 +8,8 @@ MONO="${MONOLITH_URL:-http://localhost:5000}"
 TT="${TRIP_TRACKING_URL:-http://localhost:5180}"
 GW="${GATEWAY_URL:-}"
 RMQ="${RABBITMQ_API:-http://localhost:15672/api}"
+RMQ_USER="${RABBITMQ_USER:-guest}"
+RMQ_PASSWORD="${RABBITMQ_PASSWORD:-guest}"
 KEY="${PROVISIONING_KEY:?Falta PROVISIONING_KEY}"
 RUN=$(date +%s)
 PASSWORD="Password123"
@@ -50,7 +52,7 @@ wait_until() {
   ko "$desc (sin respuesta en ${secs}s)"; return 1
 }
 
-rmq() { curl -s -u guest:guest "$RMQ/$1"; }
+rmq() { curl -s -u "$RMQ_USER:$RMQ_PASSWORD" "$RMQ/$1"; }
 bound() { rmq "exchanges/%2F/$1/bindings/source" | jq -e --arg q "$2" 'any(.[]; .destination == $q)'; }
 dlq_empty() { [ "$(rmq "queues/%2F/$1" | jq '.messages // 0')" = "0" ]; }
 

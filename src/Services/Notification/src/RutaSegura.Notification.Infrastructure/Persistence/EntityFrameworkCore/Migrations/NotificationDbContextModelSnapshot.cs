@@ -166,6 +166,9 @@ namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore
 
                     b.HasIndex("OrganizationId", "AnnouncementId");
 
+                    b.HasIndex("ReadAt", "Id")
+                        .HasDatabaseName("ix_notification_retention");
+
                     b.HasIndex("OrganizationId", "RecipientUserId", "CreatedAt", "Id")
                         .HasDatabaseName("ix_notification_inbox");
 
@@ -285,6 +288,10 @@ namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("CycleAttemptCount")
+                        .HasColumnType("int")
+                        .HasColumnName("cycle_attempt_count");
+
                     b.Property<string>("DestinationId")
                         .IsRequired()
                         .HasMaxLength(36)
@@ -326,6 +333,10 @@ namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore
                         .HasColumnName("provider_message_id")
                         .UseCollation("utf8mb4_bin");
 
+                    b.Property<int>("ReplayCount")
+                        .HasColumnType("int")
+                        .HasColumnName("replay_count");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(24)
@@ -347,6 +358,64 @@ namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore
                         .HasDatabaseName("ux_delivery_destination");
 
                     b.ToTable("notification_deliveries", (string)null);
+                });
+
+            modelBuilder.Entity("RutaSegura.Notification.Domain.Model.Entities.NotificationDeliveryReplay", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("id")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.Property<string>("DeliveryId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("delivery_id")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("organization_id")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)")
+                        .HasColumnName("reason_code")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("request_id")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("requested_at");
+
+                    b.Property<string>("RequestedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("requested_by_user_id")
+                        .UseCollation("utf8mb4_bin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "DeliveryId");
+
+                    b.HasIndex("OrganizationId", "RequestId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_delivery_replay_request");
+
+                    b.ToTable("notification_delivery_replays", (string)null);
                 });
 
             modelBuilder.Entity("RutaSegura.Notification.Domain.Model.Entities.NotificationDispatchJob", b =>
@@ -552,6 +621,16 @@ namespace RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore
                     b.HasOne("RutaSegura.Notification.Domain.Model.Aggregates.Notification", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId", "NotificationId")
+                        .HasPrincipalKey("OrganizationId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RutaSegura.Notification.Domain.Model.Entities.NotificationDeliveryReplay", b =>
+                {
+                    b.HasOne("RutaSegura.Notification.Domain.Model.Entities.NotificationDelivery", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId", "DeliveryId")
                         .HasPrincipalKey("OrganizationId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

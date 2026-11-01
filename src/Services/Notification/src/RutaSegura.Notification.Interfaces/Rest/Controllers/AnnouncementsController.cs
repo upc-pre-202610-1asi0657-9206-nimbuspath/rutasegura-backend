@@ -13,6 +13,8 @@ namespace RutaSegura.Notification.Interfaces.Rest.Controllers;
 public sealed class AnnouncementsController(INotificationCommandService commands) : NotificationControllerBase
 {
     [HttpPost]
+    [ProducesResponseType<AnnouncementResource>(201)]
+    [ProducesResponseType<AnnouncementResource>(200)]
     public async Task<IActionResult> Create(CreateAnnouncementResource resource, CancellationToken cancellationToken)
     {
         var result = await commands.Handle(CreateAnnouncementCommandFromResourceAssembler.ToCommandFromResource(resource), cancellationToken);

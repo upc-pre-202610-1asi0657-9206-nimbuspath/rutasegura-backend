@@ -5,6 +5,7 @@ using RutaSegura.Notification.Application.Model.Commands;
 using RutaSegura.Notification.Application.Model.Queries;
 using RutaSegura.Notification.Application.QueryServices;
 using RutaSegura.Notification.Interfaces.Rest.Transform;
+using RutaSegura.Notification.Interfaces.Rest.Resources;
 
 namespace RutaSegura.Notification.Interfaces.Rest.Controllers;
 
@@ -14,7 +15,16 @@ namespace RutaSegura.Notification.Interfaces.Rest.Controllers;
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class NotificationsController(INotificationQueryService queries, INotificationCommandService commands) : NotificationControllerBase
 {
+    [HttpGet("page")]
+    [ProducesResponseType<NotificationPageResource>(200)]
+    public async Task<IActionResult> Page([FromQuery] string? cursor = null, [FromQuery] int limit = 25,
+        [FromQuery] bool unreadOnly = false, CancellationToken cancellationToken = default)
+    {
+        var result = await queries.Handle(new GetMyNotificationPageQuery(cursor, limit, unreadOnly), cancellationToken);
+        return result.IsSuccess ? Ok(NotificationPageResourceFromResultAssembler.ToResourceFromResult(result.Value)) : Failure(result.FirstError);
+    }
     [HttpGet]
+    [ProducesResponseType<NotificationResource[]>(200)]
     public async Task<IActionResult> List([FromQuery] int offset = 0, [FromQuery] int limit = 25,
         [FromQuery] bool unreadOnly = false, CancellationToken cancellationToken = default)
     {
@@ -23,6 +33,8 @@ public sealed class NotificationsController(INotificationQueryService queries, I
     }
 
     [HttpGet("{notificationId:guid}")]
+    [ProducesResponseType<NotificationResource>(200)]
+    [ProducesResponseType<ProblemDetails>(404)]
     public async Task<IActionResult> Get(Guid notificationId, CancellationToken cancellationToken)
     {
         var result = await queries.Handle(new GetMyNotificationQuery(notificationId), cancellationToken);
@@ -30,6 +42,8 @@ public sealed class NotificationsController(INotificationQueryService queries, I
     }
 
     [HttpPatch("{notificationId:guid}/read")]
+    [ProducesResponseType<NotificationResource>(200)]
+    [ProducesResponseType<ProblemDetails>(404)]
     public async Task<IActionResult> Read(Guid notificationId, CancellationToken cancellationToken)
     {
         var result = await commands.Handle(new MarkNotificationAsReadCommand(notificationId), cancellationToken);

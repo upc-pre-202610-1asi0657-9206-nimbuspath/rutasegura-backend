@@ -43,6 +43,14 @@ public sealed class NotificationRabbitMqConsumer(NotificationRabbitMqConnection 
         var failed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var session = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var consumer = new AsyncEventingBasicConsumer(consumeChannel);
+        consumer.UnregisteredAsync += (_, _) =>
+        {
+            // basic.cancel puede llegar con conexion y canal abiertos (por ejemplo, cola retirada).
+            // Una sesion sin suscripcion no debe permanecer marcada como disponible indefinidamente.
+            _isConsuming = false;
+            failed.TrySetResult(new IOException("Suscripcion del consumidor cancelada."));
+            return Task.CompletedTask;
+        };
         consumer.ReceivedAsync += async (_, delivery) =>
         {
             try

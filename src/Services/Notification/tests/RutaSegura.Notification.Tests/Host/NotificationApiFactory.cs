@@ -29,8 +29,13 @@ internal sealed class NotificationApiFactory : WebApplicationFactory<notificatio
     public readonly DirectoryFake Directory = new();
     public readonly UnitOfWorkFake UnitOfWork = new();
 
-    public NotificationApiFactory()
+    private readonly Dictionary<string, string?> _settings;
+    private readonly Action<IServiceCollection>? _configureServices;
+
+    public NotificationApiFactory(Dictionary<string, string?>? settings = null, Action<IServiceCollection>? configureServices = null)
     {
+        _settings = settings ?? new();
+        _configureServices = configureServices;
         Directory.Students.Add(new(Organization, Guardian, Student));
         Directory.Operators.Add(new(Organization, Guardian));
     }
@@ -63,9 +68,13 @@ internal sealed class NotificationApiFactory : WebApplicationFactory<notificatio
             services.RemoveAll<IProcessedNotificationEventRepository>(); services.AddSingleton<IProcessedNotificationEventRepository>(Store);
             services.RemoveAll<IPushSubscriptionRepository>(); services.AddSingleton<IPushSubscriptionRepository>(Store);
             services.RemoveAll<INotificationDispatchQueue>(); services.AddSingleton<INotificationDispatchQueue>(Store);
+            services.RemoveAll<INotificationDispatchRepository>(); services.AddSingleton<INotificationDispatchRepository>(Store);
+            services.RemoveAll<INotificationDeliveryAdministrationRepository>(); services.AddSingleton<INotificationDeliveryAdministrationRepository>(Store);
+            services.RemoveAll<INotificationSubscriptionLock>(); // Este fixture usa persistencia en memoria, sin servidor MySQL.
             services.RemoveAll<IUnitOfWork>(); services.AddSingleton<IUnitOfWork>(UnitOfWork);
             services.RemoveAll<INotificationRecipientDirectory>(); services.AddSingleton<INotificationRecipientDirectory>(Directory);
             services.RemoveAll<ITripNotificationContext>(); services.AddSingleton<ITripNotificationContext>(Directory);
+            _configureServices?.Invoke(services);
         });
     }
 
@@ -74,6 +83,7 @@ internal sealed class NotificationApiFactory : WebApplicationFactory<notificatio
         var settings = new Dictionary<string, string?>
         {
             ["NotificationApi:Enabled"] = "true", ["NotificationRabbitMq:Enabled"] = "false", ["NotificationChannels:Enabled"] = "false",
+            ["Iam:AccountValidation:Enabled"] = "false", // IAM se sustituye explicitamente en los tests aislados.
             ["ConnectionStrings:NotificationDatabase"] = "Server=127.0.0.1;Port=1;Database=notification_api_test;UserID=unused",
             ["NotificationPersistence:PushTokenEncryptionKey"] = Convert.ToBase64String(new byte[32]), ["Jwt:Secret"] = Secret,
             ["Cors:AllowedOrigins:0"] = "https://web.test"
@@ -83,6 +93,7 @@ internal sealed class NotificationApiFactory : WebApplicationFactory<notificatio
             settings[$"NotificationDependencies:{name}:BaseUrl"] = "https://service.internal/";
             settings[$"NotificationDependencies:{name}:ServiceToken"] = new string('s', 32);
         }
+        foreach (var setting in _settings) settings[setting.Key] = setting.Value;
         builder.ConfigureHostConfiguration(config => config.AddInMemoryCollection(settings));
         return base.CreateHost(builder);
     }

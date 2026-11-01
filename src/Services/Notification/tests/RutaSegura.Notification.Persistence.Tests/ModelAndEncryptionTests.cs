@@ -37,15 +37,15 @@ public sealed class ModelAndEncryptionTests
         Should.Throw<ArgumentException>(() => new AesGcmPushTokenProtector(Convert.ToBase64String(new byte[bytes])));
 
     [Fact]
-    public void MySqlModelMatchesSnapshot_AndMigrationContainsAllSixTables()
+    public void MySqlModelMatchesSnapshot_AndMigrationsContainAllSevenTables()
     {
         using var context = new NotificationDbContext(new DbContextOptionsBuilder<NotificationDbContext>()
             .UseMySQL("Server=127.0.0.1;Database=notification_model_only;UserID=unused;Password=unused").Options, TestSecrets.Protector);
         context.Database.HasPendingModelChanges().ShouldBeFalse();
-        context.Database.GetMigrations().ShouldHaveSingleItem();
+        context.Database.GetMigrations().Count().ShouldBe(2);
         var sql = context.Database.GenerateCreateScript();
         foreach (var table in new[] { "notification_notifications", "notification_announcements", "notification_push_subscriptions",
-            "notification_processed_events", "notification_dispatch_jobs", "notification_deliveries" }) sql.ShouldContain(table);
+            "notification_processed_events", "notification_dispatch_jobs", "notification_deliveries", "notification_delivery_replays" }) sql.ShouldContain(table);
         sql.ShouldContain("token_ciphertext");
         sql.ShouldContain("ux_notification_source_recipient_subject");
         sql.ShouldContain("ux_processed_consumer_message");

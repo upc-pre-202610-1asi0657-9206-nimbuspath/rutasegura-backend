@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using RutaSegura.Notification.Infrastructure.Messaging.RabbitMq;
+using RutaSegura.Notification.Application.Internal.Diagnostics;
 
 namespace RutaSegura.Notification.Infrastructure.Messaging.Inbound;
 
@@ -21,6 +22,7 @@ public sealed class NotificationDeliveryCoordinator(INotificationMessageProcesso
         {
             await actions.ForwardAsync(null, "NOTIFICATION_INVALID_RETRY_HEADER", ct);
             await actions.AcknowledgeAsync(ct);
+            NotificationDiagnostics.Transferred(false);
             return;
         }
         var result = await processor.ProcessAsync(message, ct);
@@ -36,6 +38,7 @@ public sealed class NotificationDeliveryCoordinator(INotificationMessageProcesso
             ? "NOTIFICATION_RETRIES_EXHAUSTED" : result.Code;
         await actions.ForwardAsync(nextAttempt, code, ct); // publisher confirm + mandatory antes de soltar el original
         await actions.AcknowledgeAsync(ct);
+        NotificationDiagnostics.Transferred(nextAttempt is not null);
         logger.LogWarning("Mensaje {MessageId}: {Outcome}, intento {Attempt}, codigo {Code}",
             message.MessageId, nextAttempt is null ? "DLQ" : "retry", nextAttempt ?? attempt, code);
     }

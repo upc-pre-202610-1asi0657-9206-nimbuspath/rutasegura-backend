@@ -20,6 +20,25 @@ namespace RutaSegura.Notification.Messaging.Tests;
 public sealed class BrokerIntegrationTests : BrokerTestContext
 {
     [BrokerFact]
+    public async Task ConsumerResubscribesAfterServerCancellationWhileTheConnectionStaysOpen()
+    {
+        var connection = Services.GetRequiredService<RutaSegura.Notification.Infrastructure.Messaging.RabbitMq.NotificationRabbitMqConnection>();
+        var current = await connection.GetAsync(Ct);
+        await Channel.QueueDeleteAsync(Options.Queue, false, false, cancellationToken: Ct);
+        // El consumidor vuelve a declarar su topologia y a suscribirse sin depender de un corte TCP.
+        await Eventually(async () =>
+        {
+            await using var probe = await Broker.CreateChannelAsync(cancellationToken: Ct);
+            try { return (await probe.QueueDeclarePassiveAsync(Options.Queue, Ct)).ConsumerCount == 1; }
+            catch (RabbitMQ.Client.Exceptions.OperationInterruptedException) { return false; }
+        });
+        Worker.IsConsuming.ShouldBeTrue();
+        (await connection.GetAsync(Ct)).ShouldBeSameAs(current);
+        await Publish(MessageSamples.Message());
+        await Eventually(async () => { await using var db = OpenNotification(); return await db.ProcessedEvents.CountAsync(Ct) == 1; });
+    }
+
+    [BrokerFact]
     public async Task ConcurrentDuplicateConsumersReevaluateInCleanScopesAndPersistOnlyOneNotice()
     {
         var processor = Services.GetRequiredService<INotificationMessageProcessor>();

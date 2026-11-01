@@ -6,6 +6,7 @@ namespace RutaSegura.Notification.Application.QueryServices;
 
 public interface INotificationQueryService
 {
+    Task<Result<NotificationPageResult>> Handle(GetMyNotificationPageQuery query, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<PushSubscriptionResult>>> Handle(GetMyPushSubscriptionsQuery query, CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<NotificationResult>>> Handle(GetMyNotificationsQuery query, CancellationToken cancellationToken = default);
     Task<Result<NotificationResult>> Handle(GetMyNotificationQuery query, CancellationToken cancellationToken = default);

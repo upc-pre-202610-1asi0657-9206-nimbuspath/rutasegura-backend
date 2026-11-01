@@ -1,0 +1,13 @@
+# Opt-in: requiere credenciales REALES externas, nunca copiadas al contexto/imagen.
+services:
+  notification:
+    environment:
+      NotificationFcm__Enabled: "true"
+      NotificationFcm__ProjectId: ${NOTIFICATION_FCM_PROJECT_ID:?Configura tu proyecto Firebase}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-credentials
+    secrets:
+      - source: notification_firebase_credentials
+        target: firebase-credentials
+secrets:
+  notification_firebase_credentials:
+    file: ${NOTIFICATION_FCM_CREDENTIALS_FILE:?Ruta externa al archivo de identidad Firebase}

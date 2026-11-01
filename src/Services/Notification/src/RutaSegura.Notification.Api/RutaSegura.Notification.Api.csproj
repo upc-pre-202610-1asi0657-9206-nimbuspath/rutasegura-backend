@@ -13,5 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.12" />
     <!-- Pin del parche de la dependencia transitiva del backplane; no habilitamos el protocolo MessagePack. -->
     <PackageReference Include="MessagePack" Version="2.5.303" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.3-beta.1" />
   </ItemGroup>
 </Project>

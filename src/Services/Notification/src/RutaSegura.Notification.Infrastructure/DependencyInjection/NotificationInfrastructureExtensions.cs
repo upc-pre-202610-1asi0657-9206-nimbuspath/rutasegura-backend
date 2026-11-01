@@ -14,6 +14,8 @@ using RutaSegura.Notification.Infrastructure.Channels;
 using RutaSegura.Notification.Infrastructure.Channels.Fcm;
 using RutaSegura.Notification.Application.Internal.Policies;
 using RutaSegura.Notification.Application.DependencyInjection;
+using RutaSegura.Notification.Application.Internal.QueryServices;
+using RutaSegura.Notification.Infrastructure.Persistence.EntityFrameworkCore.Maintenance;
 
 namespace RutaSegura.Notification.Infrastructure.DependencyInjection;
 
@@ -36,6 +38,18 @@ public static class NotificationInfrastructureExtensions
             AddClient<INotificationRecipientDirectory, AdministrationRecipientDirectory>(services, dependencies.Administration);
             AddClient<ITripNotificationContext, TripNotificationContextClient>(services, dependencies.TripTracking);
             services.TryAddScoped<INotificationUserContext, BackgroundNotificationUserContext>();
+            var replayLimit = configuration.GetValue("NotificationReplay:MaxManualReplays", 3);
+            if (replayLimit is < 1 or > 10) throw new InvalidOperationException("NotificationReplay:MaxManualReplays debe estar entre 1 y 10.");
+            services.Replace(ServiceDescriptor.Singleton(new NotificationReplayPolicy(replayLimit)));
+            var retention = configuration.GetSection("NotificationRetention").Get<NotificationRetentionOptions>() ?? new();
+            retention.Validate();
+            if (retention.Enabled)
+            {
+                services.AddSingleton(retention);
+                services.TryAddSingleton(new MySqlDispatchLock(connection!));
+                services.AddScoped<NotificationRetentionStore>();
+                services.AddHostedService<NotificationRetentionWorker>();
+            }
             if (messaging) services.AddNotificationRabbitMq(configuration.GetSection(NotificationRabbitMqOptions.Section).Get<NotificationRabbitMqOptions>() ?? new());
             if (channels)
             {
@@ -50,7 +64,7 @@ public static class NotificationInfrastructureExtensions
                 services.AddNotificationChannelApplication(new NotificationChannelPolicy(fcmOptions.Enabled, channelOptions.MaxAttempts));
                 services.AddSingleton<IFcmTransport, FcmSdkTransport>();
                 services.AddSingleton<IPushNotificationSender, FcmPushNotificationSender>();
-                services.AddSingleton(new MySqlDispatchLock(connection!));
+                services.TryAddSingleton(new MySqlDispatchLock(connection!));
                 services.AddSingleton<NotificationChannelWorker>();
                 services.AddHostedService(provider => provider.GetRequiredService<NotificationChannelWorker>());
             }
@@ -76,7 +90,13 @@ public static class NotificationInfrastructureExtensions
     {
         NotificationDatabaseConnection.Validate(connectionString);
         var protector = new AesGcmPushTokenProtector(encryptionKey);
+        services.TryAddSingleton(TimeProvider.System);
+        services.Replace(ServiceDescriptor.Singleton(provider => new NotificationCursorCodec(
+            System.Security.Cryptography.HMACSHA256.HashData(Convert.FromBase64String(encryptionKey), System.Text.Encoding.UTF8.GetBytes("rutasegura.notification.cursor.v1")),
+            provider.GetRequiredService<TimeProvider>())));
         services.TryAddSingleton<IPushTokenProtector>(protector);
+        services.TryAddSingleton(new MySqlDispatchLock(connectionString));
+        services.TryAddSingleton<INotificationSubscriptionLock, NotificationSubscriptionLock>();
         services.AddDbContext<NotificationDbContext>(options => options.UseMySQL(connectionString)
             .EnableSensitiveDataLogging(false));
         services.AddScoped<IUnitOfWork, NotificationUnitOfWork>();
@@ -86,6 +106,7 @@ public static class NotificationInfrastructureExtensions
         services.AddScoped<IProcessedNotificationEventRepository, ProcessedNotificationEventRepository>();
         services.AddScoped<NotificationDispatchRepository>();
         services.AddScoped<INotificationDispatchRepository>(provider => provider.GetRequiredService<NotificationDispatchRepository>());
+        services.AddScoped<INotificationDeliveryAdministrationRepository>(provider => provider.GetRequiredService<NotificationDispatchRepository>());
         services.AddScoped<INotificationDispatchQueue>(provider => provider.GetRequiredService<NotificationDispatchRepository>());
         return services;
     }

@@ -17,6 +17,7 @@ namespace RutaSegura.Notification.Interfaces.Rest.Controllers;
 public sealed class PushSubscriptionsController(INotificationCommandService commands, INotificationQueryService queries) : NotificationControllerBase
 {
     [HttpGet]
+    [ProducesResponseType<PushSubscriptionResource[]>(200)]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
         var result = await queries.Handle(new GetMyPushSubscriptionsQuery(), cancellationToken);
@@ -24,6 +25,7 @@ public sealed class PushSubscriptionsController(INotificationCommandService comm
     }
 
     [HttpPut("{installationId:guid}")]
+    [ProducesResponseType<PushSubscriptionResource>(200)]
     public async Task<IActionResult> Register(Guid installationId, RegisterPushSubscriptionResource resource, CancellationToken cancellationToken)
     {
         var result = await commands.Handle(PushSubscriptionAssemblers.ToCommand(installationId, resource), cancellationToken);
@@ -31,6 +33,8 @@ public sealed class PushSubscriptionsController(INotificationCommandService comm
     }
 
     [HttpDelete("{subscriptionId:guid}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType<ProblemDetails>(404)]
     public async Task<IActionResult> Disable(Guid subscriptionId, CancellationToken cancellationToken)
     {
         var result = await commands.Handle(new DisablePushSubscriptionCommand(subscriptionId), cancellationToken);

@@ -34,7 +34,7 @@ public sealed class StructureTests
             .ShouldBe(new[] { typeof(ReceiveTripEventCommand), typeof(CreateAnnouncementCommand), typeof(MarkNotificationAsReadCommand),
                 typeof(RegisterPushSubscriptionCommand), typeof(DisablePushSubscriptionCommand) }, ignoreOrder: true);
         typeof(INotificationQueryService).GetMethods().Select(m => m.GetParameters()[0].ParameterType)
-            .ShouldBe(new[] { typeof(GetMyNotificationsQuery), typeof(GetMyNotificationQuery), typeof(GetMyPushSubscriptionsQuery) }, ignoreOrder: true);
+            .ShouldBe(new[] { typeof(GetMyNotificationsQuery), typeof(GetMyNotificationQuery), typeof(GetMyPushSubscriptionsQuery), typeof(GetMyNotificationPageQuery) }, ignoreOrder: true);
         typeof(CreateAnnouncementCommand).Assembly.ShouldBe(typeof(INotificationCommandService).Assembly);
     }
 

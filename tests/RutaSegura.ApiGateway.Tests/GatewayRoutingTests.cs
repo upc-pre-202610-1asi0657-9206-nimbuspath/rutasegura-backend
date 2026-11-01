@@ -191,6 +191,36 @@ public sealed class GatewayRoutingTests : IAsyncLifetime
         (await _gateway.Client().GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
     }
 
+    [Fact]
+    public async Task NotificationReadinessUsesItsReadinessEndpoint_AndDoesNotAcceptLivenessAsReadiness()
+    {
+        await using var gateway = new GatewayHost(new Dictionary<string, string?>
+        {
+            ["NotificationProxy:Enabled"] = "true", ["Jwt:Secret"] = "gateway-notification-tests-only-0123456789abcdef"
+        });
+        gateway.Network.Attach(Upstreams.Monolith, _monolith.Handler);
+        gateway.Network.Attach(Upstreams.TripTracking, _tripTracking.Handler);
+        using var notification = new NotificationHealthHandler();
+        gateway.Network.Attach(Upstreams.Notification, notification);
+        using var client = gateway.Client();
+        (await client.GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        notification.Ready = false;
+        (await client.GetAsync("/health/ready", Ct)).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        notification.LastPath.ShouldBe("/health/ready");
+        (await client.GetAsync("/health/live", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    private sealed class NotificationHealthHandler : HttpMessageHandler
+    {
+        public bool Ready { get; set; } = true;
+        public string? LastPath { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastPath = request.RequestUri!.AbsolutePath;
+            return Task.FromResult(new HttpResponseMessage(LastPath == "/health/live" || Ready ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable));
+        }
+    }
+
     private static async Task<string?> Code(HttpResponseMessage response)
     {
         response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");

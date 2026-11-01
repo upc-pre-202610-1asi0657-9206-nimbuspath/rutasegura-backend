@@ -47,23 +47,28 @@ Los tipos `*DomainAssembly` y `*ApplicationAssembly` de los módulos nuevos iden
 
 Las pruebas inspeccionan referencias de proyectos/paquetes y binarios compilados. También construyen fixtures con referencias prohibidas y accesos a otro módulo dentro de métodos para comprobar que el detector realmente los rechaza. La inspección de IL usa [Mono.Cecil](https://github.com/jbevain/cecil).
 
-## Probar todo en Docker (Monolito + Trip-Tracking)
+## Probar todo en Docker (Monolito + Trip-Tracking + Notifications)
 
-Requisitos: Docker Desktop encendido. `docker-compose.yml` (raíz) levanta MySQL, RabbitMQ, Redis, el monolito y Trip-Tracking, todos con el mismo secreto JWT, issuer y audience.
+Requisitos: Docker Desktop encendido. El unico `docker-compose.yml` principal levanta Gateway, monolito, Trip-Tracking, Notifications, sus migraciones, MySQL propio de Notifications, MySQL compartido, RabbitMQ y Redis. Los servicios usan el mismo secreto JWT, issuer y audience. Primero se generan los secretos locales; el inicializador conserva las claves existentes y no imprime sus valores.
 
 ```powershell
-docker compose up -d --build --wait                 # construye y espera a que todo esté sano
-docker compose --profile smoke run --rm smoke       # prueba de punta a punta (42 comprobaciones)
-docker compose logs -f monolith trip-tracking       # ver logs
-docker compose down                                 # apagar (agrega -v para borrar los datos)
+./scripts/Initialize-NotificationLocal.ps1
+docker compose --env-file .local/notification/compose.env up -d --build --wait
+docker compose --env-file .local/notification/compose.env --profile smoke run --rm smoke
+docker compose --env-file .local/notification/compose.env logs -f monolith trip-tracking notification
+docker compose --env-file .local/notification/compose.env down  # apaga conservando los datos
 ```
 
 | Servicio | URL |
 | :--- | :--- |
-| Monolito (Iam + Administration) | http://localhost:5000/swagger |
+| Gateway (entrada de las apps) | http://localhost:8000 |
+| Monolito (Iam + Administration + Stakeholder) | http://localhost:5000/swagger |
 | Trip-Tracking | http://localhost:5180/swagger |
-| RabbitMQ (guest/guest) | http://localhost:15672 |
+| Notifications (readiness; OpenAPI/metricas requieren secreto) | http://localhost:5182/health/ready |
+| RabbitMQ (rutasegura / secreto local generado) | http://localhost:15672 |
 | MySQL (rutasegura/rutasegura, root/root) | localhost:3307 |
+
+Notifications usa una instancia MySQL exclusiva sin puerto publicado, migraciones previas al arranque, secretos por archivos y rutas habilitadas en Gateway. No necesita otro Compose para el arranque normal. El archivo adicional de FCM es opcional. Los contratos de destinatarios del monolito y el contexto de padres sin organizacion siguen pendientes; el arranque saludable no acredita el flujo completo de avisos a familias. Instrucciones y pruebas especificas en [Notifications](src/Services/Notification/README.md#fase-5-integracion-y-cierre).
 
 La prueba de humo (`scripts/smoke/e2e.sh`) corre en un contenedor y no necesita nada instalado. Hace este recorrido:
 1. Verifica las colas y bindings de RabbitMQ.
@@ -76,7 +81,7 @@ La prueba de humo (`scripts/smoke/e2e.sh`) corre en un contenedor y no necesita 
 8. **Familias por el Gateway (Stakeholder):** el padre registra a su hija con foto y la inscribe con el código; la ruta crea la parada, el viaje ya programado la incluye, el padre ve el viaje y el conductor la ve con el teléfono del padre; luego la retira.
 9. Comprueba que las colas DLQ estén vacías.
 
-**Si un arranque falla a medias:** ejecuta `docker compose down -v` antes de reintentar, porque MySQL solo crea usuarios y bases con el volumen vacío.
+**Si un arranque falla a medias:** revisar los logs y el estado de migraciones/credenciales antes de reintentar; conservar volumenes y claves existentes. MySQL solo inicializa usuarios y bases con el volumen vacio. Borrar volumenes o regenerar la clave AES no es un procedimiento de recuperacion de datos.
 
 **Pruebas de integración de Trip-Tracking contra este Docker:** sin estas variables se omiten.
 ```powershell

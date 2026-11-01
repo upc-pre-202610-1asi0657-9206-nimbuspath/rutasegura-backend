@@ -243,10 +243,12 @@ app.UseRequestLocalization(localizationOptions);
 app.UseForwardedHeaders();
 
 var swaggerEnabled = app.Environment.IsDevelopment() || app.Configuration.GetValue("Swagger:Enabled", false);
+app.UseSwagger();
+app.UseSwaggerUI();
 if (swaggerEnabled)
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    //app.UseSwagger();
+    //app.UseSwaggerUI();
 }
 
 app.UseCors("AllowAllPolicy");

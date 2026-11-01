@@ -19,12 +19,12 @@ try {
         --label 'rutasegura.purpose=notification-persistence-tests' --publish '127.0.0.1::3306' `
         --tmpfs '/var/lib/mysql' --env "MYSQL_ROOT_PASSWORD=$taskPassword" --env 'MYSQL_ROOT_HOST=%' `
         --health-cmd $taskHealth --health-interval 2s --health-timeout 3s --health-retries 45 `
-        mysql:8.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+        mysql:8.0 --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el contenedor MySQL de pruebas.' }
     $taskContainerId = ($taskRunResult | Select-Object -Last 1).Trim()
     if ($taskContainerId -notmatch '^[0-9a-f]{64}$') { throw 'Identificador de contenedor inesperado.' }
 
-    Write-Output "Esperando MySQL 8.4 temporal: $taskContainerName"
+    Write-Output "Esperando MySQL 8.0 temporal: $taskContainerName"
     $taskDeadline = [DateTime]::UtcNow.AddSeconds(120)
     do {
         $taskHealthStatus = & $DockerExecutable inspect --format '{{.State.Health.Status}}' $taskContainerId

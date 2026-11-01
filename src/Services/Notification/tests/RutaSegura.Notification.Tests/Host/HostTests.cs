@@ -27,6 +27,18 @@ public sealed class HostTests
         factory.Services.GetService<INotificationRepository>().ShouldBeNull();
         factory.Services.GetService<INotificationDispatchQueue>().ShouldBeNull();
         factory.Services.GetService<IPushNotificationSender>().ShouldBeNull();
+        (await client.GetAsync("/health/ready", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(System.Net.HttpStatusCode.ServiceUnavailable);
+    }
+
+    [Fact]
+    public async Task ReadinessFailsWithUnreachableDatabaseWhileLivenessRemainsAvailable_WithoutLeakingConfiguration()
+    {
+        await using var factory = new NotificationApiFactory();
+        using var client = factory.CreateClient();
+        using var ready = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
+        ready.StatusCode.ShouldBe(System.Net.HttpStatusCode.ServiceUnavailable);
+        (await ready.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldBe("Unhealthy");
+        (await client.GetAsync("/health/live", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
     }
 
     [Fact]

@@ -25,7 +25,7 @@ public sealed class MySqlFactAttribute : FactAttribute
         : base(sourceFilePath, sourceLineNumber)
     {
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NOTIFICATION_TEST_MYSQL")))
-            Skip = "Configura NOTIFICATION_TEST_MYSQL con un servidor MySQL 8.4 LOCAL y permisos para crear bases temporales.";
+            Skip = "Configura NOTIFICATION_TEST_MYSQL con un servidor MySQL 8.0 LOCAL y permisos para crear bases temporales.";
     }
 }
 

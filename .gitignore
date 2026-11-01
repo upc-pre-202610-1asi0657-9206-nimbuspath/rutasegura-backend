@@ -25,6 +25,7 @@ artifacts/
 appsettings.Local.json
 appsettings.*.Local.json
 /secrets/
+/.local/
 *.pfx
 *.p12
 

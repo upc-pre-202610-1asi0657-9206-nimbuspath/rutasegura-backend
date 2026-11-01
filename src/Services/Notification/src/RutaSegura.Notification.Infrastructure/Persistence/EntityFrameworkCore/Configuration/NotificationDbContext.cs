@@ -19,6 +19,7 @@ public sealed class NotificationDbContext(DbContextOptions<NotificationDbContext
     public DbSet<ProcessedNotificationEvent> ProcessedEvents => Set<ProcessedNotificationEvent>();
     public DbSet<NotificationDispatchJob> DispatchJobs => Set<NotificationDispatchJob>();
     public DbSet<NotificationDelivery> Deliveries => Set<NotificationDelivery>();
+    public DbSet<NotificationDeliveryReplay> DeliveryReplays => Set<NotificationDeliveryReplay>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyNotificationConfiguration(tokenProtector);
 

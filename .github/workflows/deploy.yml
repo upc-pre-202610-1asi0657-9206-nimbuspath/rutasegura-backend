@@ -1,0 +1,39 @@
+name: Deploy Monolith to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - develop  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x' 
+
+    - name: Publish Monolith Project
+      run: dotnet publish src/Monolith/Monolith.csproj -c Release -o ./publish
+
+    - name: Generate Deployment Package
+      run: |
+        cd publish
+        zip -r ../deploy.zip .
+        cd ..
+
+    - name: Deploy to AWS Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v22
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: 'ruta-segura-api' 
+        environment_name: 'Ruta-segura-api-env' 
+        version_label: 'monolith-${{ github.sha }}'
+        region: 'us-east-1' # Tu región (Norte de Virginia)
+        deployment_package: deploy.zip

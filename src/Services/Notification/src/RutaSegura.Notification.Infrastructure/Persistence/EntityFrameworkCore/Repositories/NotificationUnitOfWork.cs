@@ -11,8 +11,11 @@ public sealed class NotificationUnitOfWork(NotificationDbContext context) : IUni
     {
         try
         {
-            // Un unico SaveChanges: EF confirma o revierte avisos, comunicados, Inbox y trabajo pendiente juntos.
+            // Transaccion explicita: tambien revierte INSERTs previos si un UPDATE posterior falla por concurrencia.
+            await using var transaction = context.Database.CurrentTransaction is null
+                ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
             await context.SaveChangesAsync(cancellationToken);
+            if (transaction is not null) await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException ex)
         {
