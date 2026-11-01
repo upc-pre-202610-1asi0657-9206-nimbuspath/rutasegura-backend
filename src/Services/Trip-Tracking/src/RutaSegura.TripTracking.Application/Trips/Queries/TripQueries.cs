@@ -164,7 +164,7 @@ internal sealed class GetTripSummaryQueryHandler(ITripRepository trips) : IQuery
 
 public sealed record DriverTripDto(
     Guid TripId, string RouteName, string Direction, DateTimeOffset ScheduledStart, string Status,
-    Guid VehicleId, int StopCount, int StudentCount, Guid RouteId = default);
+    Guid VehicleId, int StopCount, int StudentCount, Guid RouteId);
 
 public sealed record GetDriverAgendaQuery(Guid DriverId, DateTimeOffset From, DateTimeOffset To) : IQuery<IReadOnlyList<DriverTripDto>>;
 
