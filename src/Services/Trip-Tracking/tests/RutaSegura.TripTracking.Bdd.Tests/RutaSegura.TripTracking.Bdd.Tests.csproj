@@ -40,5 +40,8 @@
     <ReqnrollFeatureFiles Include="..\Features\us-12-reportar-incidencias.feature">
       <Link>Features\us-12-reportar-incidencias.feature</Link>
     </ReqnrollFeatureFiles>
+    <ReqnrollFeatureFiles Include="..\Features\us-13-alerta-sos.feature">
+    <Link>Features\us-13-alerta-sos.feature</Link>
+    </ReqnrollFeatureFiles>
   </ItemGroup>
 </Project>
