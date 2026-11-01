@@ -43,5 +43,8 @@
     <ReqnrollFeatureFiles Include="..\Features\us-13-alerta-sos.feature">
     <Link>Features\us-13-alerta-sos.feature</Link>
     </ReqnrollFeatureFiles>
+    <ReqnrollFeatureFiles Include="..\Features\us-14-finalizar-viaje.feature">
+    <Link>Features\us-14-finalizar-viaje.feature</Link>
+    </ReqnrollFeatureFiles>
   </ItemGroup>
 </Project>
