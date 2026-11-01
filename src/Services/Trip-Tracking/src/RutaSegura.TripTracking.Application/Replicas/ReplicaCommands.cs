@@ -81,9 +81,21 @@ internal sealed class UpsertRouteSnapshotCommandHandler(IRouteCatalogStore route
             new StopId(s.StopId), s.Sequence, s.Name, GeoPosition.Create(s.Latitude, s.Longitude))).ToList();
         var passengers = (route.Students ?? [])
             .Select(s => new TripPassengerDefinition(new StudentId(s.StudentId), new StopId(s.StopId))).ToList();
-        foreach (var trip in await trips.ListScheduledByRouteAsync(new RouteId(route.RouteId), cancellationToken))
-            trip.RefreshPlan(route.Name, new DriverId(route.DriverId), new VehicleId(route.VehicleId), stops, passengers);
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(route.TimeZoneId);
 
+        foreach (var trip in await trips.ListScheduledByRouteAsync(new RouteId(route.RouteId), cancellationToken))
+        {
+            var localDate = DateOnly.FromDateTime(
+                TimeZoneInfo.ConvertTime(trip.ScheduledStart, timeZone).DateTime);
+
+            trip.RefreshPlan(
+                route.Name,
+                new DriverId(route.DriverId),
+                new VehicleId(route.VehicleId),
+                route.ScheduledStartOn(localDate),
+                stops,
+                passengers);
+        }
         return Unit.Value;
     }
 }

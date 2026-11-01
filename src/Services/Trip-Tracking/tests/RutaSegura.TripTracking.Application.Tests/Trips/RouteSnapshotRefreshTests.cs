@@ -46,6 +46,30 @@ public class RouteSnapshotRefreshTests : TripTrackingTestContext
         started.HasPassenger(new StudentId(Lucia)).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Upsert_RefreshesScheduledTripDepartureTime_ButNotStartedTrip()
+    {
+        var scheduled = SeedScheduledTrip();
+        var started = SeedStartedTrip();
+        var originalStartedTime = started.ScheduledStart;
+
+        var store = new RecordingRouteStore();
+        var route = Route3() with
+        {
+            DepartureTime = new TimeOnly(7, 15)
+        };
+
+        var result = await new UpsertRouteSnapshotCommandHandler(store, Trips)
+            .HandleAsync(new UpsertRouteSnapshotCommand(route), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+
+        scheduled.ScheduledStart.ShouldBe(
+            new DateTimeOffset(2026, 10, 5, 7, 15, 0, Lima));
+
+        started.ScheduledStart.ShouldBe(originalStartedTime);
+    }
+
     private sealed class RecordingRouteStore : IRouteCatalogStore
     {
         public List<RouteSnapshot> Upserted { get; } = [];

@@ -123,6 +123,7 @@ public sealed class Trip : AggregateRoot<TripId>
         string routeName,
         DriverId driverId,
         VehicleId vehicleId,
+        DateTimeOffset scheduledStart,
         IReadOnlyCollection<TripStopDefinition> stops,
         IReadOnlyCollection<TripPassengerDefinition> passengers)
     {
@@ -145,6 +146,7 @@ public sealed class Trip : AggregateRoot<TripId>
         RouteName = routeName.Trim();
         DriverId = driverId;
         VehicleId = vehicleId;
+        ScheduledStart = scheduledStart;
 
         _stops.RemoveAll(existing => !stopIds.Contains(existing.StopId));
         foreach (var definition in stops)
