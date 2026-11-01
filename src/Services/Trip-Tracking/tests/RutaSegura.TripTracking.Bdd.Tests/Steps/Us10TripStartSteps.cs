@@ -153,15 +153,19 @@ public sealed class Us10TripStartSteps
             Driver,
             _state.ClientEventId,
             At(6, 40));
+
+        _state.RepeatOperation = () =>
+            _state.Trip.Start(
+                Driver,
+                _state.ClientEventId,
+                At(6, 41));
     }
 
     [When("se procesa nuevamente el mismo clientEventId")]
     public void WhenSameClientEventIdIsProcessedAgain()
     {
-        _state.OperationApplied = _state.Trip.Start(
-            Driver,
-            _state.ClientEventId,
-            At(6, 41));
+        _state.RepeatOperation.ShouldNotBeNull();
+        _state.OperationApplied = _state.RepeatOperation();
     }
 
     [Then("la segunda operación no debe aplicarse")]

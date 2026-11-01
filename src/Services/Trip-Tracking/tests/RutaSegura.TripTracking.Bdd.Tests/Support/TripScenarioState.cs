@@ -38,6 +38,9 @@ public sealed class TripScenarioState
     public static readonly StudentId Mateo =
         new(Guid.Parse("b0000000-0000-0000-0000-000000000002"));
 
+    public static readonly StudentId Stranger =
+        new(Guid.Parse("b0000000-0000-0000-0000-000000000099"));
+
     public static readonly StudentId Camila =
         new(Guid.Parse("b0000000-0000-0000-0000-000000000003"));
 
@@ -60,6 +63,12 @@ public sealed class TripScenarioState
     public GeoPosition? PreviousPosition { get; set; }
 
     public DateTimeOffset? PreviousPositionAt { get; set; }
+
+    public StudentId CurrentStudent { get; set; }
+
+    public GeoPosition? EventPosition { get; set; }
+
+    public Func<bool>? RepeatOperation { get; set; }
 
     public static Trip CreateScheduledTrip()
     {
@@ -111,6 +120,60 @@ public sealed class TripScenarioState
     public static Trip CreateStartedTrip()
     {
         var trip = CreateScheduledTrip();
+
+        trip.Start(
+            Driver,
+            ClientEventId.New(),
+            ScheduledStart);
+
+        trip.ClearDomainEvents();
+
+        return trip;
+    }
+
+    public static Trip CreateStartedReturnTrip()
+    {
+        var stops = new[]
+        {
+            new TripStopDefinition(
+                School,
+                1,
+                "Colegio San Agustín",
+                GeoPosition.Create(-12.0800, -77.0000)),
+
+            new TripStopDefinition(
+                Stop2,
+                2,
+                "Jr. Las Begonias 310",
+                GeoPosition.Create(-12.0900, -77.0000)),
+
+            new TripStopDefinition(
+                Stop1,
+                3,
+                "Av. Primavera 1240",
+                GeoPosition.Create(-12.1000, -77.0000))
+        };
+
+        var passengers = new[]
+        {
+            new TripPassengerDefinition(Valeria, Stop1),
+            new TripPassengerDefinition(Mateo, Stop1),
+            new TripPassengerDefinition(Camila, Stop2)
+        };
+
+        var trip = Trip.Schedule(
+            TripId.New(),
+            Route,
+            "Ruta 3",
+            TripDirection.Return,
+            Driver,
+            Vehicle,
+            ScheduledStart,
+            stops,
+            passengers,
+            ScheduledStart.AddHours(-12));
+
+        trip.ClearDomainEvents();
 
         trip.Start(
             Driver,

@@ -28,9 +28,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\RutaSegura.TripTracking.Domain\RutaSegura.TripTracking.Domain.csproj" />
   </ItemGroup>
-  <ItemGroup>
+    <ItemGroup>
     <ReqnrollFeatureFiles Include="..\Features\us-10-iniciar-viaje.feature">
-      <Link>Features\us-10-iniciar-viaje.feature</Link>
+        <Link>Features\us-10-iniciar-viaje.feature</Link>
     </ReqnrollFeatureFiles>
-  </ItemGroup>
+
+    <ReqnrollFeatureFiles Include="..\Features\us-11-registrar-abordaje-desembarque.feature">
+        <Link>Features\us-11-registrar-abordaje-desembarque.feature</Link>
+    </ReqnrollFeatureFiles>
+    </ItemGroup>
 </Project>
