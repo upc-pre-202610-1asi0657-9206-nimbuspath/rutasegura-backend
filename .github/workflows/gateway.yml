@@ -1,0 +1,61 @@
+name: Gateway CI
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'src/ApiGateway/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/gateway.yml'
+
+jobs:
+
+  build-and-push:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Gateway
+        run: |
+          docker build \
+            -f src/ApiGateway/Dockerfile \
+            -t gateway:latest .
+
+      - name: Tag Gateway
+        run: |
+          docker tag gateway:latest \
+          ${{ secrets.ECR_GATEWAY_REPOSITORY }}:latest
+
+      - name: Push Gateway
+        run: |
+          docker push \
+          ${{ secrets.ECR_GATEWAY_REPOSITORY }}:latest
+
+      - name: Deploy Gateway
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/rutasegura
+
+            aws ecr get-login-password --region us-east-1 | \
+            docker login \
+            --username AWS \
+            --password-stdin 737069837843.dkr.ecr.us-east-1.amazonaws.com
+
+            docker compose -f docker-compose.prod.yml pull gateway
+            docker compose -f docker-compose.prod.yml up -d gateway
