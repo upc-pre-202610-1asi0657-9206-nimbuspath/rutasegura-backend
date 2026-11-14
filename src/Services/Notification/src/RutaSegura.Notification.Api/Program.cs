@@ -51,6 +51,29 @@ if (migrateOnly)
 }
 
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<NotificationOpenApi>());
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title = "RutaSegura - Notifications API",
+        Version = "v1",
+        Description = "Bandeja persistente, lectura, comunicados ADMIN y suscripciones push."
+    });
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
+    {
+        In = Microsoft.OpenApi.ParameterLocation.Header,
+        Description = "Ingrese el token JWT",
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+        BearerFormat = "JWT",
+        Scheme = "bearer"
+    });
+    options.AddSecurityRequirement(document => new Microsoft.OpenApi.OpenApiSecurityRequirement
+    {
+        [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
 builder.Services.AddNotificationMonitoring(builder.Configuration);
 builder.Services.AddHealthChecks().AddCheck<NotificationReadinessCheck>("notification-ready", tags: ["ready"], timeout: TimeSpan.FromSeconds(3));
 var apiEnabled = builder.Configuration.GetValue<bool>("NotificationApi:Enabled");
@@ -98,7 +121,11 @@ app.Use(async (context, next) =>
     await next(context);
 });
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("NotificationOpenApi:Enabled"))
+{
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 if (app.Configuration.GetValue<bool>("NotificationMonitoring:Enabled")) app.MapPrometheusScrapingEndpoint();
 
 if (apiEnabled)
