@@ -34,7 +34,19 @@ if (migrateOnly)
         await scope.ServiceProvider.GetRequiredService<NotificationDbContext>().Database.MigrateAsync();
         Console.WriteLine("Migraciones de Notification aplicadas.");
     }
-    catch (Exception) { Console.Error.WriteLine("No se pudieron aplicar las migraciones de Notification. Revisa configuracion y disponibilidad de MySQL."); Environment.ExitCode = 1; }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(
+            $"No se pudieron aplicar las migraciones de Notification ({ex.GetType().Name}): {ex.Message}");
+    
+        if (ex.InnerException is not null)
+        {
+            Console.Error.WriteLine(
+                $"InnerException: {ex.InnerException.Message}");
+        }
+    
+        Environment.ExitCode = 1;
+    }
     return;
 }
 
