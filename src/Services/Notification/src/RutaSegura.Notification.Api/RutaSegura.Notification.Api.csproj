@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.15" />
     <!-- Pin del parche de la dependencia transitiva del backplane; no habilitamos el protocolo MessagePack. -->
     <PackageReference Include="MessagePack" Version="2.5.303" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />

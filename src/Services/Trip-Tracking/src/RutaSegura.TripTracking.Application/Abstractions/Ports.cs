@@ -80,6 +80,7 @@ public sealed record LivePositionUpdate(
 public interface IGuardianDirectory
 {
     Task<IReadOnlyCollection<StudentId>> GetStudentsOfGuardianAsync(GuardianId guardianId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<StudentId>> GetStudentsForOrganizationAsync(GuardianId guardianId, Guid organizationId, CancellationToken cancellationToken);
 }
 
 /// <summary>Escritura de la réplica tutor → alumno. La usan los consumidores de eventos (Etapa 4).</summary>
@@ -147,3 +148,5 @@ public sealed class PersistenceConflictException(string code, string message, Ex
 
     public string Code { get; } = code;
 }
+
+public sealed class GuardianDirectoryUnavailableException() : Exception("GUARDIAN_DIRECTORY_UNAVAILABLE");

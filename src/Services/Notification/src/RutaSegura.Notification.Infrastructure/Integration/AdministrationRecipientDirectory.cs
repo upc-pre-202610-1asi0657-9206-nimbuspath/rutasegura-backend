@@ -9,6 +9,19 @@ namespace RutaSegura.Notification.Infrastructure.Integration;
 /// <summary>Contrato interno a implementar por Administration/Roster; no consulta sus tablas ni inventa destinatarios.</summary>
 public sealed class AdministrationRecipientDirectory(HttpClient client) : INotificationRecipientDirectory
 {
+    public async Task<IReadOnlyCollection<Guid>> CurrentOrganizationIdsAsync(Guid userId, CancellationToken ct)
+    {
+        using var response = await client.PostAsJsonAsync("internal/v1/notifications/user-contexts", new { userId }, ct);
+        response.EnsureSuccessStatusCode();
+        UserContextsResponse? body;
+        try { body = await response.Content.ReadFromJsonAsync<UserContextsResponse>(cancellationToken: ct); }
+        catch (System.Text.Json.JsonException) { throw new HttpRequestException("NOTIFICATION_DIRECTORY_INVALID_RESPONSE"); }
+        if (body is null || body.UserId != userId || body.OrganizationIds is null || body.OrganizationIds.Length > 1000 || body.OrganizationIds.Any(id => id == Guid.Empty))
+            throw new HttpRequestException("NOTIFICATION_DIRECTORY_INVALID_RESPONSE");
+        return body.OrganizationIds.Distinct().ToArray();
+    }
+    private sealed record UserContextsResponse(Guid UserId, Guid[] OrganizationIds);
+
     public async Task<IReadOnlyList<NotificationRecipient>> ForStudentsAsync(Guid organizationId, IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken) =>
         await Recipients("students", new { organizationId, studentIds }, organizationId, cancellationToken);
 

@@ -72,6 +72,15 @@ public class UsersController(
                 IamResourceFromEntityAssembler.ToResourceFromEntity(user)));
     }
 
+    [HttpPost("parents")]
+    [Authorize(Policy = IamPolicies.OrganizationAdministrator)]
+    public async Task<IActionResult> RegisterParentAccount(RegisterDriverAccountResource resource, CancellationToken ct)
+    {
+        var result = await commandService.Handle(new SignUpCommand(resource.FirstName, resource.LastName, resource.Email, resource.Password, null), ct);
+        return IamActionResultAssembler.ToActionResult(this, result, problemDetailsFactory,
+            user => StatusCode(201, IamResourceFromEntityAssembler.ToResourceFromEntity(user)));
+    }
+
     [HttpGet("me")]
     [Authorize(Policy = IamPolicies.Account)]
     [SwaggerOperation(Summary = "My account", OperationId = "GetMyAccount")]

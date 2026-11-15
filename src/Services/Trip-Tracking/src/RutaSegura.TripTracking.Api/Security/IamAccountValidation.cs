@@ -36,7 +36,7 @@ public sealed class IamAccountValidationOptions
     public string AccountPath { get; set; } = "/api/v1/users/me";
 
     /// <summary>Cuánto se recuerda la respuesta de Iam por token. Es el retraso máximo para que una cuenta revocada pierda acceso.</summary>
-    public TimeSpan CacheDuration { get; set; } = TimeSpan.FromSeconds(60);
+    public TimeSpan CacheDuration { get; set; } = TimeSpan.Zero;
 
     /// <summary>Cuánto se recuerda que Iam no respondió, para no golpearlo en cada request durante una caída.</summary>
     public TimeSpan UnavailableCacheDuration { get; set; } = TimeSpan.FromSeconds(5);
@@ -83,6 +83,7 @@ public sealed record IamAccountCheck(IamAccountState State, string Reason)
 public interface IIamAccountVerifier
 {
     Task<IamAccountCheck> VerifyAsync(string accessToken, IamTokenIdentity identity, CancellationToken cancellationToken);
+    Task<IamAccountCheck> VerifyFreshAsync(string accessToken, IamTokenIdentity identity, CancellationToken ct) => VerifyAsync(accessToken, identity, ct);
 }
 
 /// <summary>
@@ -109,6 +110,8 @@ internal sealed class HttpIamAccountVerifier(
         if (duration > TimeSpan.Zero) cache.Set(cacheKey, check, duration);
         return check;
     }
+
+    public Task<IamAccountCheck> VerifyFreshAsync(string accessToken, IamTokenIdentity identity, CancellationToken ct) => AskIamAsync(accessToken, identity, options.Value.AccountValidation, ct);
 
     private async Task<IamAccountCheck> AskIamAsync(string accessToken, IamTokenIdentity identity,
         IamAccountValidationOptions settings, CancellationToken cancellationToken)

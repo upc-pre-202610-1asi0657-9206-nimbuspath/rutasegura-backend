@@ -1,3 +1,5 @@
+> Actualizacion 15/11/2026: consultar [contratos y autorizacion del Sprint 3](../../../docs/SPRINT3-CONTRATOS-AUTORIZACION.md). El registro/inscripcion de un alumno no concede seguimiento; requiere revision ADMIN. El padron se valida por operacion y ORS conserva geometria con control de concurrencia.
+
 # Stakeholder — RutaSegura Monolith
 
 Bounded context de las **familias**: el padre (rol `PARENT`) registra a sus hijos (nombre, datos del colegio, foto y dirección de recojo) y los inscribe en las rutas que crea la empresa de transporte. La inscripción **actualiza la planificación de la ruta**: Route Planning (Administration) coloca al niño en la parada de su dirección y, si no hay una cerca, crea una.

@@ -21,7 +21,7 @@ public sealed class RouteAggregatePersistenceTests : IDisposable
         var route = await admin.AddTwoStopsAsync(routeId);
         var first = route.StopId(0);
         var second = route.StopId(1);
-        var student = Guid.NewGuid();
+        var student = await admin.RegisterStudentAsync();
 
         // Insert a stop at position 1 in an already persisted route (new child after load).
         var withThird = await admin.PostJson($"/api/v1/routes/{routeId}/stops",

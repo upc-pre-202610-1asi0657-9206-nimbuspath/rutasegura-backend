@@ -64,7 +64,10 @@ public record RouteResource(
     IReadOnlyList<RouteStopResource> Stops,
     DateTimeOffset? ActivatedAt,
     DateTimeOffset? CreatedAt,
-    string? EnrollmentCode = null);
+    string? EnrollmentCode = null,
+    RouteItineraryResource? Itinerary = null);
+
+public record RouteItineraryResource(System.Text.Json.JsonElement Geometry, double DistanceMeters, double DurationSeconds, DateTimeOffset CalculatedAt);
 
 public record ActiveRouteQuotaResource(
     string PlanCode,

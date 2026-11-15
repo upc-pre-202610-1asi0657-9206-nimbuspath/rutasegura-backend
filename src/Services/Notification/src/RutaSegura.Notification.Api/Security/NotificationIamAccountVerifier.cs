@@ -56,7 +56,7 @@ public sealed class NotificationIamAccountVerifier(HttpClient client) : INotific
             var account = json.RootElement;
             return account.ValueKind == JsonValueKind.Object &&
                 account.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String && id.TryGetGuid(out var actualUser) && actualUser == userId &&
-                account.TryGetProperty("organizationId", out var org) && org.ValueKind == JsonValueKind.String && org.TryGetGuid(out var actualOrg) && actualOrg == organizationId &&
+                account.TryGetProperty("organizationId", out var org) && ((role == "PARENT" && organizationId == Guid.Empty && org.ValueKind == JsonValueKind.Null) || (org.ValueKind == JsonValueKind.String && org.TryGetGuid(out var actualOrg) && actualOrg == organizationId)) &&
                 account.TryGetProperty("roleTier", out var tier) && tier.ValueKind == JsonValueKind.String && tier.GetString() == role
                 ? NotificationIamAccountState.Active : NotificationIamAccountState.Rejected;
         }

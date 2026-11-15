@@ -67,14 +67,10 @@ public sealed class StakeholderEndToEndTests : IDisposable
         routeStop.GetProperty("latitude").GetDouble().ShouldBe(Primavera.Lat);
         routeStop.GetProperty("studentIds")[0].GetGuid().ShouldBe(valeria.Id());
 
-        // Trip & Tracking learns the guardian → student link (outbox of stakeholder.events).
-        var messages = await _app.WithDbAsync(db =>
-            db.Set<StakeholderOutboxMessage>().OrderBy(m => m.CreatedAt).ToListAsync());
-        messages.Select(m => m.MessageType).ShouldBe(
-            ["stakeholder.guardian-student-linked", "stakeholder.student-enrolled"], ignoreOrder: false);
-        var link = JsonDocument.Parse(messages[0].Payload).RootElement;
-        link.GetProperty("studentId").GetGuid().ShouldBe(valeria.Id());
-        link.GetProperty("guardianId").GetGuid().ShouldNotBe(Guid.Empty);
+        // Capturing a child and enrolling it never grant tracking permission without administrative review.
+        var messages = await _app.WithDbAsync(db => db.Set<StakeholderOutboxMessage>().ToListAsync());
+        messages.ShouldHaveSingleItem().MessageType.ShouldBe("stakeholder.student-enrolled");
+
     }
 
     [Fact]

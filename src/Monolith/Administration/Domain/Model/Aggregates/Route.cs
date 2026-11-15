@@ -83,6 +83,14 @@ public partial class Route : IHasDomainEvents
     /// <summary>Stops ordered by sequence.</summary>
     public IReadOnlyList<RouteStop> Stops => _stops.OrderBy(stop => stop.Sequence).ToList();
 
+    public Guid GeometryVersion { get; private set; } = Guid.NewGuid();
+
+    public RouteItinerary? Itinerary { get; private set; }
+
+    public void SetItinerary(RouteItinerary itinerary) => Itinerary = itinerary;
+
+    private void InvalidateItinerary() { Itinerary = null; GeometryVersion = Guid.NewGuid(); }
+
     public int StudentCount => _stops.Sum(stop => stop.Students.Count);
 
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
@@ -159,6 +167,7 @@ public partial class Route : IHasDomainEvents
         var stop = new RouteStop(index + 1, name, address, location, origin);
         ordered.Insert(index, stop);
         _stops.Add(stop);
+        InvalidateItinerary();
         Resequence(ordered);
         RecordDetailsChanged();
         return stop;
@@ -170,6 +179,7 @@ public partial class Route : IHasDomainEvents
         var stop = GetStop(stopId);
         EnsureLocationIsFree(location, stopId);
         stop.Update(name, address, location);
+        InvalidateItinerary();
         RecordDetailsChanged();
     }
 
@@ -185,6 +195,7 @@ public partial class Route : IHasDomainEvents
                 "An active route must keep at least one stop.");
 
         _stops.Remove(stop);
+        InvalidateItinerary();
         Resequence(Stops.ToList());
         RecordDetailsChanged();
     }
@@ -198,6 +209,7 @@ public partial class Route : IHasDomainEvents
             throw new ArgumentException("The new order must include every stop of the route exactly once.",
                 nameof(orderedStopIds));
 
+        InvalidateItinerary();
         Resequence(orderedStopIds.Select(GetStop).ToList());
         RecordDetailsChanged();
     }

@@ -8,6 +8,30 @@ namespace RutaSegura.Notification.Tests.Host;
 public sealed class NotificationApiTests
 {
     [Fact]
+    public async Task ParentWithoutTenantCanUseVerifiedContextButCannotChooseForeignOperation()
+    {
+        await using var factory = new NotificationApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.Token(includeTenant: false));
+        (await client.GetAsync("/api/v1/notifications/contexts", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.GetAsync("/api/v1/notifications", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        client.DefaultRequestHeaders.Add("X-Organization-Id", Guid.NewGuid().ToString());
+        (await client.GetAsync("/api/v1/notifications", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+    [Fact]
+    public async Task MultipleVerifiedOperationsRequireExplicitValidatedSelection()
+    {
+        await using var factory = new NotificationApiFactory();
+        var second = Guid.NewGuid();
+        factory.Directory.Students.Add(new(second, factory.Guardian, Guid.NewGuid()));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", factory.Token(includeTenant: false));
+        (await client.GetAsync("/api/v1/notifications", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        client.DefaultRequestHeaders.Add("X-Organization-Id", second.ToString());
+        (await client.GetAsync("/api/v1/notifications", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task SignedAdminTokenIsInsufficientWhenCurrentOperatorMembershipWasRevoked()
     {
         await using var factory = new NotificationApiFactory();
@@ -53,7 +77,6 @@ public sealed class NotificationApiTests
     [InlineData("missing")]
     [InlineData("expired")]
     [InlineData("foreign-signature")]
-    [InlineData("no-tenant")]
     [InlineData("unknown-role")]
     [InlineData("empty-user")]
     public async Task InvalidIdentityNeverReachesUseCases(string scenario)
@@ -63,7 +86,7 @@ public sealed class NotificationApiTests
         var token = scenario switch
         {
             "expired" => factory.Token(expired: true), "foreign-signature" => factory.Token(secret: new string('x', 40)),
-            "no-tenant" => factory.Token(includeTenant: false), "unknown-role" => factory.Token(role: "ROOT"),
+            "unknown-role" => factory.Token(role: "ROOT"),
             "empty-user" => factory.Token(user: Guid.Empty), _ => null
         };
         if (token is not null) client.DefaultRequestHeaders.Authorization = new("Bearer", token);

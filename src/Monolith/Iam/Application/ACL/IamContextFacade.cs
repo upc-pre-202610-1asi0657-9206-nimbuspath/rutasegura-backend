@@ -12,6 +12,9 @@ public class IamContextFacade(
     IOrganizationRepository organizationRepository,
     IIamCommandService commandService) : IIamContextFacade
 {
+    public async Task<IReadOnlyList<Guid>> FetchOrganizationAdministratorIdsAsync(Guid organizationId, CancellationToken ct) =>
+        (await userRepository.FindAllByOrganizationIdAsync(new OrganizationId(organizationId), ct)).Where(u => u.Role.Value == "ADMIN").Select(u => u.Id.Identifier).ToArray();
+
     public async Task<IamUserAccount?> FetchUserAccountAsync(Guid userId, CancellationToken cancellationToken)
     {
         if (userId == Guid.Empty) return null;

@@ -112,7 +112,7 @@ internal sealed class NotifyAbsenceCommandHandler(ITripRepository trips, IGuardi
         if (loaded.IsFailure) return loaded.FirstError;
 
         // Un tutor solo puede avisar por sus propios hijos (AC-01).
-        var children = await guardians.GetStudentsOfGuardianAsync(new GuardianId(command.GuardianId), cancellationToken);
+        var children = await guardians.GetStudentsForOrganizationAsync(new GuardianId(command.GuardianId), loaded.Value.OrganizationId.Value, cancellationToken);
         var studentId = new StudentId(command.StudentId);
         if (!children.Contains(studentId)) return ApplicationErrors.TripAccessDenied;
 

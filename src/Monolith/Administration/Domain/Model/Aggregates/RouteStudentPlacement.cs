@@ -132,6 +132,7 @@ public partial class Route
         if (!stop.IsDisposable || !_stops.Contains(stop)) return;
         if (IsActive() && _stops.Count == 1) return;
         _stops.Remove(stop);
+        InvalidateItinerary();
         Resequence(Stops.ToList());
     }
 

@@ -48,7 +48,8 @@ public static class AdministrationResourceFromEntityAssembler
             route.Stops.Select(ToResourceFromEntity).ToList(),
             route.ActivatedAt,
             route.CreatedAt,
-            route.EnrollmentCode.Value);
+            route.EnrollmentCode.Value,
+            route.Itinerary is null ? null : new RouteItineraryResource(System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(route.Itinerary.GeometryGeoJson), route.Itinerary.DistanceMeters, route.Itinerary.DurationSeconds, route.Itinerary.CalculatedAt));
 
     public static RouteStopResource ToResourceFromEntity(RouteStop stop) =>
         new(stop.Id.Identifier,

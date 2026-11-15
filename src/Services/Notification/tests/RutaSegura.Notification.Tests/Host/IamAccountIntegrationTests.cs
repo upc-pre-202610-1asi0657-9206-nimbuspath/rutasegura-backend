@@ -18,6 +18,18 @@ public sealed class IamAccountIntegrationTests
     private const string Issuer = "rutasegura-iam", Audience = "rutasegura-api";
 
     [Fact]
+    public async Task IamParentWithNullOrganizationUsesItsVerifiedOperationContext()
+    {
+        using var iam = new IamHandler();
+        await using var factory = Factory(iam);
+        iam.Account = new { id = factory.Guardian, organizationId = (Guid?)null, roleTier = "PARENT" };
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Token(factory, "no-tenant"));
+        (await client.GetAsync("/api/v1/notifications", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        iam.Calls.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task OriginalIamJwtIsDelegatedAndRevocationBlocksTheNextRequest_WithNoPositiveCache()
     {
         using var iam = new IamHandler();
@@ -78,7 +90,6 @@ public sealed class IamAccountIntegrationTests
     [InlineData("foreign-issuer")]
     [InlineData("foreign-audience")]
     [InlineData("multiple-roles")]
-    [InlineData("no-tenant")]
     public async Task InvalidTokensAreRejectedBeforeContactingIam(string invalid)
     {
         using var iam = new IamHandler();

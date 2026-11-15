@@ -17,6 +17,8 @@ public static class AdministrationActionResultAssembler
             AdministrationError.StudentNotOnRoute or
             AdministrationError.AlertNotFound => StatusCodes.Status404NotFound,
 
+        AdministrationError.MapProviderUnavailable => StatusCodes.Status503ServiceUnavailable,
+
         AdministrationError.InvalidAdministrationData => StatusCodes.Status400BadRequest,
 
         AdministrationError.DriverAccountNotValid or

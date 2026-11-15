@@ -41,8 +41,8 @@ public sealed class AdministrationEndToEndTests : IDisposable
         // Route Planning
         var routeId = await admin.CreateRouteAsync();
         var route = await admin.AddTwoStopsAsync(routeId);
-        var mateo = Guid.NewGuid();
-        var lucia = Guid.NewGuid();
+        var mateo = await admin.RegisterStudentAsync();
+        var lucia = await admin.RegisterStudentAsync();
         await admin.PutJson($"/api/v1/routes/{routeId}/stops/{route.StopId(0)}/students/{mateo}")
             .ExpectAsync(HttpStatusCode.OK);
         await admin.PutJson($"/api/v1/routes/{routeId}/stops/{route.StopId(1)}/students/{lucia}")
@@ -134,7 +134,7 @@ public sealed class AdministrationEndToEndTests : IDisposable
             await admin.RegisterVehicleAsync(capacity: 2), students: 2);
         var route = await admin.Get($"/api/v1/routes/{routeId}").ExpectAsync(HttpStatusCode.OK);
 
-        var problem = await admin.PutJson($"/api/v1/routes/{routeId}/stops/{route.StopId(1)}/students/{Guid.NewGuid()}")
+        var problem = await admin.PutJson($"/api/v1/routes/{routeId}/stops/{route.StopId(1)}/students/{await admin.RegisterStudentAsync()}")
             .ExpectAsync(HttpStatusCode.Conflict);
 
         problem.Code().ShouldBe("VehicleCapacityExceeded");

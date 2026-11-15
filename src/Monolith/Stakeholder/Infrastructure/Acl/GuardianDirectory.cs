@@ -6,6 +6,8 @@ namespace Monolith.Stakeholder.Infrastructure.Acl;
 /// <summary>Anti-Corruption Layer towards Iam (its published facade only).</summary>
 public class GuardianDirectory(IIamContextFacade iam) : IGuardianDirectory
 {
+    public Task<IReadOnlyList<Guid>> FindOrganizationOperatorsAsync(Guid organizationId, CancellationToken ct) => iam.FetchOrganizationAdministratorIdsAsync(organizationId, ct);
+
     public async Task<GuardianAccount?> FindAccountAsync(Guid userId, CancellationToken cancellationToken)
     {
         var account = await iam.FetchUserAccountAsync(userId, cancellationToken);

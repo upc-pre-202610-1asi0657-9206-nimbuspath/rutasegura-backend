@@ -120,6 +120,14 @@ public static class ModelBuilderExtensions
                 .HasConversion(code => code.Value, value => new RouteEnrollmentCode(value, false))
                 .HasMaxLength(RouteEnrollmentCode.MaxLength).IsRequired();
 
+            route.Property(r => r.GeometryVersion).IsConcurrencyToken();
+            route.ComplexProperty(r => r.Itinerary, itinerary =>
+            {
+                itinerary.Property(i => i.GeometryGeoJson).HasColumnName("GeometryGeoJson").HasColumnType("longtext");
+                itinerary.Property(i => i.DistanceMeters).HasColumnName("DistanceMeters");
+                itinerary.Property(i => i.DurationSeconds).HasColumnName("DurationSeconds");
+                itinerary.Property(i => i.CalculatedAt).HasColumnName("ItineraryCalculatedAt");
+            });
             route.ComplexProperty(r => r.Schedule, schedule =>
             {
                 schedule.IsRequired();

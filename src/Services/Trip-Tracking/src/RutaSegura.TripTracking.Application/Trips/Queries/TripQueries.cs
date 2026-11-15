@@ -54,7 +54,7 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
         switch (query.Requester.Role)
         {
             case RequesterRole.Guardian:
-                var children = await guardians.GetStudentsOfGuardianAsync(new GuardianId(query.Requester.UserId), cancellationToken);
+                var children = await guardians.GetStudentsForOrganizationAsync(new GuardianId(query.Requester.UserId), trip.OrganizationId.Value, cancellationToken);
                 if (!GuardianAccessPolicy.CanViewTrip(trip, children)) return ApplicationErrors.TripAccessDenied;
                 visiblePassengers = GuardianAccessPolicy.VisiblePassengers(trip, children);
                 break;
@@ -76,9 +76,9 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
             trip.ScheduledStart,
             trip.StartedAt,
             BuildPosition(trip, clock.GetUtcNow()),
-            BuildNextStop(trip),
-            trip.PassengersOnBoard.Count(),
-            trip.Passengers.Count,
+            BuildNextStop(trip, query.Requester.Role == RequesterRole.Guardian ? visiblePassengers : null),
+            visiblePassengers.Count(p => p.Status == PassengerStatus.Boarded),
+            visiblePassengers.Count,
             trip.ActiveSos is not null,
             visiblePassengers.Select(ToDto).ToList(),
             VisibleStops(trip, query.Requester.Role, visiblePassengers));
@@ -112,9 +112,9 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
             trip.LastSpeedKmh, trip.LastHeadingDegrees, age);
     }
 
-    private static NextStopDto? BuildNextStop(Trip trip)
+    private static NextStopDto? BuildNextStop(Trip trip, IReadOnlyList<TripPassenger>? visiblePassengers = null)
     {
-        var next = trip.NextStop;
+        var next = visiblePassengers is null ? trip.NextStop : trip.Stops.Where(s => visiblePassengers.Any(p => p.StopId == s.StopId) && s.ReachedAt is null).OrderBy(s => s.Sequence).FirstOrDefault();
         if (next is null || !trip.IsActive) return null;
 
         double? distance = trip.LastPosition is null ? null : Math.Round(next.Position.DistanceMetersTo(trip.LastPosition));

@@ -1,3 +1,4 @@
+using Monolith.Administration.Infrastructure.Maps;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monolith.Administration.Application.CommandServices;
 using Monolith.Administration.Application.Internal.CommandServices;
@@ -33,6 +34,19 @@ public static class AdministrationServiceCollectionExtensions
         services.AddScoped<IRouteRepository, RouteRepository>();
         services.AddScoped<IOperationalAlertRepository, OperationalAlertRepository>();
         services.AddScoped<ITripRecordRepository, TripRecordRepository>();
+
+        services.AddScoped<IRouteItineraryStore, RouteItineraryStore>();
+        services.AddScoped<IRouteItineraryCommandService, RouteItineraryCommandService>();
+        services.Configure<OpenRouteServiceOptions>(configuration.GetSection("Administration:Maps"));
+        services.AddHttpClient<IMapProvider, OpenRouteServiceAdapter>((provider, client) =>
+        {
+            var maps = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenRouteServiceOptions>>().Value;
+            if (!Uri.TryCreate(maps.BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0)
+                throw new InvalidOperationException("Administration:Maps:BaseUrl must be an HTTPS base URL.");
+            client.BaseAddress = uri;
+            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(maps.TimeoutSeconds, 1, 30));
+            client.MaxResponseContentBufferSize = 2_000_000;
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 
         // Application services
         services.AddScoped<IRosterCommandService, RosterCommandService>();

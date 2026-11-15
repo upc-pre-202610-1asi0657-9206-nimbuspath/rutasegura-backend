@@ -27,6 +27,9 @@ public static class StakeholderServiceCollectionExtensions
     {
         services.TryAddSingleton(TimeProvider.System);
 
+        services.AddScoped<IGuardianAccessQueryService, GuardianAccessQueryService>();
+        services.AddScoped<IGuardianAccessRepository, GuardianAccessRepository>();
+        services.AddScoped<IGuardianAccessCommandService, GuardianAccessCommandService>();
         services.AddScoped<IStudentRepository, StudentRepository>();
         services.AddScoped<IGuardianProfileRepository, GuardianProfileRepository>();
         services.AddScoped<IStudentPhotoStore, EfStudentPhotoStore>();

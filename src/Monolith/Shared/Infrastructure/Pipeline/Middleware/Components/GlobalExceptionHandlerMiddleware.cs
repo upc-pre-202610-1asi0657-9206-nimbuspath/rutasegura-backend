@@ -42,6 +42,22 @@ public class GlobalExceptionHandlerMiddleware(
        {
            await next(context);
        }
+       catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is MySql.Data.MySqlClient.MySqlException { Number: 1062 })
+       {
+           context.Response.StatusCode = StatusCodes.Status409Conflict;
+           await context.Response.WriteAsJsonAsync(new ProblemDetails { Status = 409, Title = "El registro ya existe.", Extensions = { ["code"] = "RESOURCE_ALREADY_EXISTS" } }, cancellationToken: context.RequestAborted);
+       }
+       catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+       {
+           context.Response.StatusCode = StatusCodes.Status409Conflict;
+           context.Response.Headers.CacheControl = "no-store";
+           await context.Response.WriteAsJsonAsync(new ProblemDetails
+           {
+               Status = 409, Title = "El recurso cambió durante la operación.",
+               Detail = "Actualiza los datos antes de volver a intentarlo.",
+               Extensions = { ["code"] = "RESOURCE_CONCURRENT_UPDATE" }
+           }, options: (JsonSerializerOptions?)null, contentType: "application/problem+json", cancellationToken: context.RequestAborted);
+       }
        catch (OperationCanceledException ex)
        {
            logger.LogWarning(ex, "Request was cancelled: {Message}", ex.Message);

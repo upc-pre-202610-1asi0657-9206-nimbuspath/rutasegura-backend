@@ -170,6 +170,8 @@ builder.Services.AddScoped<IRoutePlanningContextFacade, RoutePlanningContextFaca
 // Stakeholder bounded context (parents and their children): students, photo, pickup address, enrollments in the
 // routes of a company (placed on stops through the Route Planning facade) and stakeholder.events for Trip & Tracking.
 builder.Services.AddStakeholderBoundedContext(builder.Configuration);
+builder.Services.AddScoped<Monolith.Stakeholder.Interfaces.ACL.IStakeholderRosterContextFacade, Monolith.Stakeholder.Interfaces.ACL.StakeholderRosterContextFacade>();
+builder.Services.AddScoped<Monolith.Administration.Application.Internal.OutboundServices.IStudentRosterDirectory, Monolith.Integration.Infrastructure.StudentRosterDirectory>();
 
 
 // ---------------------------------------------------------------------------

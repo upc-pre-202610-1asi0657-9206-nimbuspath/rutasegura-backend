@@ -155,7 +155,7 @@ internal sealed class RouteCatalog(TripTrackingDbContext db, TimeProvider clock)
 }
 
 /// <summary>Réplica local de vínculos tutor → alumno.</summary>
-internal sealed class GuardianDirectory(TripTrackingDbContext db, TimeProvider clock) : IGuardianDirectory, IGuardianDirectoryStore
+internal sealed class GuardianDirectory(TripTrackingDbContext db, TimeProvider clock) : IGuardianDirectoryStore
 {
     public async Task<IReadOnlyCollection<StudentId>> GetStudentsOfGuardianAsync(GuardianId guardianId, CancellationToken cancellationToken)
     {

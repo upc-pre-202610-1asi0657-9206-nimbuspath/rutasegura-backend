@@ -90,6 +90,17 @@ public static class AdministrationApi
         route.GetProperty("stops")[index].GetProperty("id").GetGuid();
 
     /// <summary>Route with two stops, the given students on the first stop and resources assigned (still DRAFT).</summary>
+    public static async Task<Guid> RegisterStudentAsync(this HttpClient admin)
+    {
+        await admin.PostJson("/api/v1/stakeholders/administration/guardians", new { guardianUserId = SeedAccounts.Parent, phoneNumber = "999999999" }).ExpectAsync(HttpStatusCode.OK);
+        var result = await admin.PostJson("/api/v1/stakeholders/administration/students", new
+        {
+            guardianUserId = SeedAccounts.Parent,
+            student = new { firstName = "Alumno", lastName = Guid.NewGuid().ToString("N")[..8], pickupLocation = new { address = "Surco", latitude = -12.11234, longitude = -76.98567 } }
+        }).ExpectAsync(HttpStatusCode.Created);
+        return result.GetProperty("studentId").GetGuid();
+    }
+
     public static async Task<Guid> ReadyRouteAsync(this HttpClient admin, Guid driverId, Guid vehicleId,
         string name = "Ruta 3 - Colegio San Agustin", string departure = "06:45:00", string arrival = "07:50:00",
         int students = 2)
@@ -97,7 +108,7 @@ public static class AdministrationApi
         var routeId = await admin.CreateRouteAsync(name, departure, arrival);
         var route = await admin.AddTwoStopsAsync(routeId);
         for (var i = 0; i < students; i++)
-            await admin.PutJson($"/api/v1/routes/{routeId}/stops/{route.StopId(0)}/students/{Guid.NewGuid()}")
+            await admin.PutJson($"/api/v1/routes/{routeId}/stops/{route.StopId(0)}/students/{await admin.RegisterStudentAsync()}")
                 .ExpectAsync(HttpStatusCode.OK);
         await admin.PutJson($"/api/v1/routes/{routeId}/assignment", new { driverId, vehicleId })
             .ExpectAsync(HttpStatusCode.OK);

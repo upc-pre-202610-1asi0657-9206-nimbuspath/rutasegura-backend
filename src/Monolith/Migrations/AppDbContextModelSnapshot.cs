@@ -265,6 +265,11 @@ namespace Monolith.Migrations
                         .HasColumnType("varchar(12)")
                         .HasColumnName("enrollment_code");
 
+                    b.Property<Guid>("GeometryVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("geometry_version");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -298,6 +303,26 @@ namespace Monolith.Migrations
                             b1.Property<Guid>("VehicleId")
                                 .HasColumnType("char(36)")
                                 .HasColumnName("assigned_vehicle_id");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Itinerary", "Monolith.Administration.Domain.Model.Aggregates.Route.Itinerary#RouteItinerary", b1 =>
+                        {
+                            b1.Property<DateTime>("CalculatedAt")
+                                .HasColumnType("datetime(6)")
+                                .HasColumnName("itinerary_calculated_at");
+
+                            b1.Property<double>("DistanceMeters")
+                                .HasColumnType("double")
+                                .HasColumnName("distance_meters");
+
+                            b1.Property<double>("DurationSeconds")
+                                .HasColumnType("double")
+                                .HasColumnName("duration_seconds");
+
+                            b1.Property<string>("GeometryGeoJson")
+                                .IsRequired()
+                                .HasColumnType("longtext")
+                                .HasColumnName("geometry_geo_json");
                         });
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Schedule", "Monolith.Administration.Domain.Model.Aggregates.Route.Schedule#RouteSchedule", b1 =>
@@ -669,6 +694,57 @@ namespace Monolith.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.GuardianAccessGrant", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("GuardianUserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("guardian_user_id");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("requested_at");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("VerificationReference")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)")
+                        .HasColumnName("verification_reference");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("OrganizationId", "GuardianUserId", "StudentId")
+                        .HasName("p_k_stakeholder_guardian_access_grants");
+
+                    b.HasIndex("GuardianUserId", "Status")
+                        .HasDatabaseName("i_x_stakeholder_guardian_access_grants_guardian_user_id_status");
+
+                    b.ToTable("stakeholder_guardian_access_grants", (string)null);
+                });
+
             modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.GuardianProfile", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -698,6 +774,33 @@ namespace Monolith.Migrations
                         .HasName("p_k_stakeholder_guardian_profiles");
 
                     b.ToTable("stakeholder_guardian_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.OrganizationGuardian", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("document_number");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("phone_number");
+
+                    b.HasKey("OrganizationId", "UserId")
+                        .HasName("p_k_stakeholder_organization_guardians");
+
+                    b.ToTable("stakeholder_organization_guardians", (string)null);
                 });
 
             modelBuilder.Entity("Monolith.Stakeholder.Domain.Model.Aggregates.Student", b =>

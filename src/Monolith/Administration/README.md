@@ -1,3 +1,5 @@
+> Actualizacion 15/11/2026: consultar [contratos y autorizacion del Sprint 3](../../../docs/SPRINT3-CONTRATOS-AUTORIZACION.md). El registro/inscripcion de un alumno no concede seguimiento; requiere revision ADMIN. El padron se valida por operacion y ORS conserva geometria con control de concurrencia.
+
 # Administration — RutaSegura Monolith
 
 Bounded Context **Administration** del monolito (reemplaza al microservicio `src/Services/Administration`, que se eliminó). Agrupa dos módulos:

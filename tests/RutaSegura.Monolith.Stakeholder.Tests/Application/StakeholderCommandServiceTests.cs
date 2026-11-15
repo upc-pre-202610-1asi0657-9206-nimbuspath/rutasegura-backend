@@ -14,15 +14,14 @@ public sealed class StakeholderCommandServiceTests
     private readonly StakeholderFixture _fixture = new();
 
     [Fact]
-    public async Task Register_SavesTheChild_AndEnqueuesTheGuardianLink()
+    public async Task Register_SavesTheChild_WithoutGrantingTrackingAccess()
     {
         var result = await _fixture.Commands.Handle(new RegisterStudentCommand(Guardian, "Valeria", "Quispe",
             new DateOnly(2017, 5, 14), "3.° de primaria", null, "Av. Primavera 1240", null, -12.11, -76.98), Ct);
 
         result.IsSuccess.ShouldBeTrue(result.Message);
         _fixture.Students.Items.ShouldHaveSingleItem();
-        var linked = _fixture.Outbox.Events.ShouldHaveSingleItem();
-        linked.MessageType.ShouldBe("stakeholder.guardian-student-linked");
+        _fixture.Outbox.Events.ShouldBeEmpty();
         _fixture.UnitOfWork.Commits.ShouldBe(1);
     }
 

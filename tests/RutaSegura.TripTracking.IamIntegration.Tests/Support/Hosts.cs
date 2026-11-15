@@ -181,6 +181,8 @@ public sealed class SwitchableHandler : DelegatingHandler
 /// <summary>Reemplaza a los casos de uso de Trip &amp; Tracking: registra lo que llega y responde éxito vacío.</summary>
 public sealed class RecordingDispatcher : IDispatcher
 {
+    public bool DenyQueries { get; set; }
+    public RutaSegura.TripTracking.Application.Trips.Queries.TripLiveStatusDto? LiveStatus { get; set; }
     public ConcurrentQueue<object> Received { get; } = new();
 
     public T Last<T>() => Received.OfType<T>().Last();
@@ -194,7 +196,8 @@ public sealed class RecordingDispatcher : IDispatcher
     public Task<Result<TResponse>> QueryAsync<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
     {
         Received.Enqueue(query);
-        return Task.FromResult(Result<TResponse>.Success(default!));
+        if (DenyQueries) return Task.FromResult(Result<TResponse>.Failure(RutaSegura.BuildingBlocks.Application.Results.Error.Forbidden("TRIP_ACCESS_DENIED", "Revoked")));
+        return Task.FromResult(Result<TResponse>.Success(LiveStatus is TResponse value ? value : default!));
     }
 }
 

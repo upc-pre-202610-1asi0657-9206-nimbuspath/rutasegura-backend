@@ -27,7 +27,8 @@ public class StakeholderCommandService(
     IGuardianDirectory directory,
     IStakeholderEventOutbox outbox,
     IUnitOfWork unitOfWork,
-    TimeProvider clock) : IStakeholderCommandService
+    TimeProvider clock,
+    IGuardianAccessRepository? accessGrants = null) : IStakeholderCommandService
 {
     // ── Children ─────────────────────────────────────────────────────────────
 
@@ -168,6 +169,8 @@ public class StakeholderCommandService(
             if (!placement.Succeeded)
                 return Result<EnrollmentPlacement>.Failure(placement.Error, placement.Message ?? "");
 
+            if (accessGrants is not null && await accessGrants.FindAsync(route.OrganizationId, command.GuardianUserId, student.Id.Identifier, cancellationToken) is null)
+                accessGrants.Add(new GuardianAccessGrant(route.OrganizationId, command.GuardianUserId, student.Id.Identifier, clock.GetUtcNow()));
             await SaveAsync(student, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return Result<EnrollmentPlacement>.Success(new EnrollmentPlacement(student, enrollment,

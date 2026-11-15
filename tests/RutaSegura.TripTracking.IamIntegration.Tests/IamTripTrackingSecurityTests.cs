@@ -50,7 +50,7 @@ public sealed class IamTripTrackingSecurityTests : IDisposable
 
         _tripTracking.Dispatcher.Last<GetDriverAgendaQuery>().DriverId.ShouldBe(SeedAccounts.Driver);
         _tripTracking.Dispatcher.Last<RaiseSosCommand>().DriverId.ShouldBe(SeedAccounts.Driver);
-        _tripTracking.IamLink.Calls.ShouldBe(1, "Iam confirma la cuenta una vez y la respuesta queda en caché");
+        _tripTracking.IamLink.Calls.ShouldBe(2, "Cada operación revalida la cuenta sin caché positiva por defecto");
     }
 
     [Fact]

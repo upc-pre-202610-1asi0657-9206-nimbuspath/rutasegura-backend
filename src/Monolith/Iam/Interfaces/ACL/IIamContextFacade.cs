@@ -7,6 +7,8 @@ namespace Monolith.Iam.Interfaces.ACL;
 /// </summary>
 public interface IIamContextFacade
 {
+    Task<IReadOnlyList<Guid>> FetchOrganizationAdministratorIdsAsync(Guid organizationId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Guid>>([]);
+
     /// <summary>Account data other contexts may rely on, or null when the user does not exist.</summary>
     Task<IamUserAccount?> FetchUserAccountAsync(Guid userId, CancellationToken cancellationToken);
 

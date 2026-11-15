@@ -161,6 +161,11 @@ internal sealed class MemoryStore : INotificationRepository, IAnnouncementReposi
 
 internal sealed class DirectoryFake : INotificationRecipientDirectory, ITripNotificationContext
 {
+    public Task<IReadOnlyCollection<Guid>> CurrentOrganizationIdsAsync(Guid userId, CancellationToken ct)
+    {
+        if (Unavailable) throw new TimeoutException("Directory unavailable");
+        return Task.FromResult<IReadOnlyCollection<Guid>>(Students.Where(r => r.UserId == userId).Select(r => r.OrganizationId).Distinct().ToArray());
+    }
     public List<NotificationRecipient> Students { get; } = [];
     public List<NotificationRecipient> Operators { get; } = [];
     public List<NotificationRecipient> AnnouncementRecipients { get; } = [];

@@ -134,3 +134,7 @@ Después de actualizar el repositorio, comprobar `dotnet --version` desde la ra�
 Si la restauración informa proyectos inexistentes, comprobar las rutas de `RutaSegura.slnx` y los `ProjectReference`: es necesario integrar los proyectos faltantes o corregir las referencias según la estructura acordada. La restauración de NuGet no crea esos proyectos.
 
 Detalle y evidencia: [docs/SPRINT1-ETAPA1.md](docs/SPRINT1-ETAPA1.md).
+
+## Contratos del Sprint 3
+
+La verificacion de familias, los directorios internos, los contextos de Notifications y el calculo ORS estan documentados en [contratos y autorizacion](docs/SPRINT3-CONTRATOS-AUTORIZACION.md). Revisar especialmente la migracion a vinculos PENDING antes de actualizar un entorno existente.

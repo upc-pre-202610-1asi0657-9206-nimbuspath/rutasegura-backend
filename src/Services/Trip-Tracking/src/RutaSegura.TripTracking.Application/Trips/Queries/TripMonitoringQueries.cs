@@ -36,14 +36,16 @@ internal sealed class GetGuardianTripsQueryHandler(ITripRepository trips, IGuard
 
         var list = await trips.ListByStudentsAsync(children, query.From, query.To, cancellationToken);
 
-        IReadOnlyList<GuardianTripDto> result = list
-            .Where(t => t.Status != TripStatus.Cancelled && GuardianAccessPolicy.CanViewTrip(t, children))
-            .OrderBy(t => t.ScheduledStart)
-            .Select(t => new GuardianTripDto(
-                t.Id.Value, t.RouteName, t.Direction.ToString(), t.Status.ToString(), t.ScheduledStart, t.StartedAt,
-                GuardianAccessPolicy.CanSeeLivePosition(t),
-                GuardianAccessPolicy.VisiblePassengers(t, children).Select(GetTripLiveStatusQueryHandler.ToDto).ToList()))
-            .ToList();
+        var result = new List<GuardianTripDto>();
+        var scoped = new Dictionary<Guid, IReadOnlyCollection<StudentId>>();
+        foreach (var trip in list.Where(t => t.Status != TripStatus.Cancelled).OrderBy(t => t.ScheduledStart))
+        {
+            if (!scoped.TryGetValue(trip.OrganizationId.Value, out var permitted))
+                scoped[trip.OrganizationId.Value] = permitted = await guardians.GetStudentsForOrganizationAsync(new GuardianId(query.GuardianId), trip.OrganizationId.Value, cancellationToken);
+            if (!GuardianAccessPolicy.CanViewTrip(trip, permitted)) continue;
+            result.Add(new GuardianTripDto(trip.Id.Value, trip.RouteName, trip.Direction.ToString(), trip.Status.ToString(), trip.ScheduledStart, trip.StartedAt,
+                GuardianAccessPolicy.CanSeeLivePosition(trip), GuardianAccessPolicy.VisiblePassengers(trip, permitted).Select(GetTripLiveStatusQueryHandler.ToDto).ToList()));
+        }
 
         return Result<IReadOnlyList<GuardianTripDto>>.Success(result);
     }
@@ -134,7 +136,7 @@ internal sealed class GetTripPositionQueryHandler(
 
         var allowed = query.Requester.Role == RequesterRole.Guardian
             ? GuardianAccessPolicy.CanViewTrip(trip,
-                await guardians.GetStudentsOfGuardianAsync(new GuardianId(query.Requester.UserId), cancellationToken))
+                await guardians.GetStudentsForOrganizationAsync(new GuardianId(query.Requester.UserId), trip.OrganizationId.Value, cancellationToken))
             : query.Requester.CanOperateAsStaff(trip);
         if (!allowed) return ApplicationErrors.TripAccessDenied;
 
@@ -142,6 +144,24 @@ internal sealed class GetTripPositionQueryHandler(
         if (!GuardianAccessPolicy.CanSeeLivePosition(trip))
             return new TripPositionDto(trip.Id.Value, trip.Status.ToString(), null, null, null, null);
 
+        if (query.Requester.Role == RequesterRole.Guardian)
+        {
+            // The cache's next stop can be another family's address. Use the scoped projection instead.
+            var live = await new GetTripLiveStatusQueryHandler(trips, guardians, clock).HandleAsync(new GetTripLiveStatusQuery(query.TripId, query.Requester), cancellationToken);
+            if (live.IsFailure) return live.FirstError;
+            var newest = await cache.GetAsync(trip.Id, cancellationToken);
+            if (newest is not null && (trip.LastPositionAt is null || newest.RecordedAt >= trip.LastPositionAt))
+            {
+                var ownStop = trip.Stops.FirstOrDefault(s => s.StopId.Value == live.Value.NextStop?.StopId);
+                double? ownDistance = ownStop is null ? null : Math.Round(ownStop.Position.DistanceMetersTo(GeoPosition.Create(newest.Latitude, newest.Longitude)));
+                var sameStop = live.Value.NextStop is not null && live.Value.NextStop.StopId == newest.NextStopId;
+                return new TripPositionDto(trip.Id.Value, trip.Status.ToString(),
+                    new LivePositionDto(newest.Latitude, newest.Longitude, newest.RecordedAt, newest.SpeedKmh, newest.HeadingDegrees, (int)Math.Max(0, (now - newest.RecordedAt).TotalSeconds)),
+                    live.Value.NextStop?.StopId, sameStop ? newest.NextStopDistanceMeters : ownDistance,
+                    sameStop ? newest.NextStopEtaMinutes : ownDistance is null ? null : EtaEstimator.EstimateMinutes(ownDistance.Value, newest.SpeedKmh));
+            }
+            return new TripPositionDto(trip.Id.Value, trip.Status.ToString(), live.Value.Position, live.Value.NextStop?.StopId, live.Value.NextStop?.DistanceMeters, live.Value.NextStop?.EtaMinutes);
+        }
         var cached = await cache.GetAsync(trip.Id, cancellationToken);
         if (cached is not null && (trip.LastPositionAt is null || cached.RecordedAt >= trip.LastPositionAt))
         {

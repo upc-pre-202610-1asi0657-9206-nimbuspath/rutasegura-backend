@@ -1,3 +1,5 @@
+> Actualizacion 15/11/2026: consultar [contratos y autorizacion del Sprint 3](../../../docs/SPRINT3-CONTRATOS-AUTORIZACION.md). El registro/inscripcion de un alumno no concede seguimiento; requiere revision ADMIN. El padron se valida por operacion y ORS conserva geometria con control de concurrencia.
+
 # Trip & Tracking Service
 
 Microservicio del bounded context **Trip & Tracking** (fusión de Trip Execution + Tracking, ADR de la It. 1).
@@ -103,7 +105,7 @@ Trip & Tracking es un *resource server* de Iam: no tiene usuarios propios.
 2. **Políticas equivalentes a `IamPolicies`.** `driver` y `admin` exigen `organizationId`; `guardian` es `PARENT`;
    `trip-viewer` cualquiera de los tres roles. La identidad (conductor, tutor, empresa) sale siempre del token.
 3. **Cuenta vigente en Iam.** `ActiveIamAccountRequirement` reenvía el token a `GET /api/v1/users/me` del monolito,
-   donde Iam aplica su `ActiveIamAccountHandler`; la respuesta se guarda 60 s por token
+   donde Iam aplica su `ActiveIamAccountHandler`; por defecto no se guarda una respuesta positiva de la cuenta (CacheDuration=0)
    (`Security/IamAccountValidation.cs`). Una organización suspendida o una cuenta eliminada pierde el acceso.
 4. **Si Iam se cae**, por defecto basta el JWT ya validado (`WhenUnavailable=Allow`), para que un SOS o el envío de
    posiciones no dependan del monolito; con `Deny` responde 503.

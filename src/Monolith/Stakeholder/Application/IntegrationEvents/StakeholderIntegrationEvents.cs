@@ -26,7 +26,7 @@ public static class StakeholderMessageTypes
 }
 
 /// <summary>Same contract Trip &amp; Tracking already consumes (<c>GuardianStudentLinkV1</c>).</summary>
-public sealed record GuardianStudentLinkV1(Guid GuardianId, Guid StudentId);
+public sealed record GuardianStudentLinkV1(Guid GuardianId, Guid StudentId, Guid? OrganizationId = null, long? AuthorizationVersion = null);
 
 /// <param name="Status">ACTIVE when enrolled; WITHDRAWN or CANCELLED when it ended.</param>
 public sealed record StudentEnrollmentV1(
@@ -49,11 +49,7 @@ public static class StakeholderIntegrationEventMapper
         foreach (var domainEvent in domainEvents)
             switch (domainEvent)
             {
-                case StudentRegisteredEvent registered:
-                    result.Add(new StakeholderIntegrationEvent(registered.EventId,
-                        StakeholderMessageTypes.GuardianStudentLinked, SchemaVersion, registered.OccurredAt,
-                        new GuardianStudentLinkV1(registered.GuardianUserId, registered.StudentId.Identifier)));
-                    break;
+                // Registration captures personal data; only an explicit administrative review grants tracking access.
                 case StudentRemovedEvent removed:
                     result.Add(new StakeholderIntegrationEvent(removed.EventId,
                         StakeholderMessageTypes.GuardianStudentUnlinked, SchemaVersion, removed.OccurredAt,

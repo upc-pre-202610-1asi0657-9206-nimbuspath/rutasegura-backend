@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RutaSegura.TripTracking.Infrastructure.Integration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,6 +44,15 @@ public static class TripTrackingInfrastructureExtensions
         services.AddOptions<DemoSeedOptions>().Bind(configuration.GetSection(DemoSeedOptions.Section));
 
         AddPersistence(services, configuration);
+        services.AddHttpClient<IGuardianDirectory, VerifiedGuardianDirectory>(client =>
+        {
+            var address = configuration["GuardianAccess:BaseUrl"] ?? configuration["Iam:BaseUrl"] ?? "https://directory.invalid/";
+            if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && !(uri.Scheme == "http" && configuration.GetValue("GuardianAccess:AllowInsecureHttp", false))) || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0)
+                throw new InvalidOperationException("Configure GuardianAccess:BaseUrl HTTPS (local HTTP requires AllowInsecureHttp).");
+            client.BaseAddress = uri; client.Timeout = TimeSpan.FromSeconds(3); client.MaxResponseContentBufferSize = 128 * 1024;
+            var token = configuration["GuardianAccess:ServiceToken"];
+            if (!string.IsNullOrWhiteSpace(token)) client.DefaultRequestHeaders.Add("X-Service-Token", token);
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         AddCaching(services, configuration);
         var messagingEnabled = configuration.GetValue<bool>($"{RabbitMqOptions.Section}:{nameof(RabbitMqOptions.Enabled)}");
         AddMessaging(services, messagingEnabled);
@@ -78,7 +88,6 @@ public static class TripTrackingInfrastructureExtensions
         services.AddScoped<IRouteCatalog>(sp => sp.GetRequiredService<RouteCatalog>());
         services.AddScoped<IRouteCatalogStore>(sp => sp.GetRequiredService<RouteCatalog>());
         services.AddScoped<GuardianDirectory>();
-        services.AddScoped<IGuardianDirectory>(sp => sp.GetRequiredService<GuardianDirectory>());
         services.AddScoped<IGuardianDirectoryStore>(sp => sp.GetRequiredService<GuardianDirectory>());
     }
 

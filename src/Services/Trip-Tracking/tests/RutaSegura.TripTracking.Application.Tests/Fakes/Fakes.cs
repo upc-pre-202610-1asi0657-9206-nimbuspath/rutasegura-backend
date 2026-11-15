@@ -77,6 +77,8 @@ internal sealed class FakeGuardianDirectory : IGuardianDirectory
         return this;
     }
 
+    public Task<IReadOnlyCollection<StudentId>> GetStudentsForOrganizationAsync(GuardianId guardianId, Guid organization, CancellationToken ct) => GetStudentsOfGuardianAsync(guardianId, ct);
+
     public Task<IReadOnlyCollection<StudentId>> GetStudentsOfGuardianAsync(GuardianId guardianId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyCollection<StudentId>>(_links.TryGetValue(guardianId, out var set) ? set.ToList() : []);
 }

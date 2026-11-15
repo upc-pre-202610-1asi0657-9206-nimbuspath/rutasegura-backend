@@ -71,8 +71,16 @@ public sealed class NotificationRealtimeSessions(IServiceScopeFactory scopes, IC
                 if (valid && configuration.GetValue("Iam:AccountValidation:Enabled", true))
                 {
                     await using var scope = scopes.CreateAsyncScope();
+                    var signedClaims = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(session.Token).Claims;
+                    var originalOrganization = Guid.TryParse(signedClaims.FirstOrDefault(c => c.Type == "organizationId")?.Value, out var signedOrg) ? signedOrg : Guid.Empty;
                     valid = await scope.ServiceProvider.GetRequiredService<INotificationIamAccountVerifier>()
-                        .VerifyAsync(session.Token, session.User, session.Org, session.Role, token) == NotificationIamAccountState.Active;
+                        .VerifyAsync(session.Token, session.User, originalOrganization, session.Role, token) == NotificationIamAccountState.Active;
+                }
+                if (valid && session.Role == "PARENT")
+                {
+                    await using var scope = scopes.CreateAsyncScope();
+                    valid = (await scope.ServiceProvider.GetRequiredService<RutaSegura.Notification.Application.Internal.OutboundServices.INotificationRecipientDirectory>()
+                        .CurrentStudentLinksAsync(session.Org, session.User, token)).Count > 0;
                 }
                 if (!valid) { Remove(session.Id); session.Abort(); }
             }

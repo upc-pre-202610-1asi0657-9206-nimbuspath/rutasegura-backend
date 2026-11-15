@@ -40,6 +40,7 @@ builder.Services.AddRateLimiter(options =>
         _ => new SlidingWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6 }));
 });
 
+builder.Services.AddSingleton<TripRealtimeSubscriptions>();
 builder.Services.AddSingleton<ILiveUpdateSink, SignalRLiveUpdateSink>();
 builder.Services.AddTripTrackingApplication();
 builder.Services.AddTripTrackingInfrastructure(builder.Configuration);
@@ -78,7 +79,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapControllers();
-app.MapHub<TripTrackingHub>(SecurityExtensions.HubPath);
+app.MapHub<TripTrackingHub>(SecurityExtensions.HubPath, options => options.CloseOnAuthenticationExpiration = true);
 
 // Liveness: el proceso responde. Readiness: MySQL + RabbitMQ (+ Redis como Degraded).
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });

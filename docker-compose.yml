@@ -81,6 +81,9 @@ services:
       TokenSettings__Secret: *jwt-secret
       TokenSettings__Issuer: *jwt-issuer
       TokenSettings__Audience: *jwt-audience
+      InternalServices__NotificationToken: ${NOTIFICATION_SERVICE_TOKEN:?Ejecuta Initialize-NotificationLocal.ps1}
+      InternalServices__TripTrackingToken: ${NOTIFICATION_SERVICE_TOKEN:?Ejecuta Initialize-NotificationLocal.ps1}
+      Administration__Maps__ApiKey: ${ORS_API_KEY:-}
       Iam__Provisioning__ApiKey: "local-docker-provisioning-key-0123456789abcdef"
       Administration__Messaging__Enabled: "true"
       Administration__Messaging__HostName: rabbitmq
@@ -105,6 +108,9 @@ services:
       Jwt__Issuer: *jwt-issuer
       Jwt__Audience: *jwt-audience
       # Seguridad de Iam: Trip-Tracking confirma en Iam que la cuenta del token sigue vigente (GET /api/v1/users/me).
+      GuardianAccess__BaseUrl: http://monolith:8080
+      GuardianAccess__AllowInsecureHttp: "true"
+      GuardianAccess__ServiceToken: ${NOTIFICATION_SERVICE_TOKEN:?Ejecuta Initialize-NotificationLocal.ps1}
       Iam__BaseUrl: http://monolith:8080
       Iam__AccountValidation__Enabled: "true"
       Persistence__MigrateOnStartup: "true"

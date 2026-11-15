@@ -133,6 +133,22 @@ public static class ModelBuilderExtensions
             message.HasIndex(m => new { m.ProcessedAt, m.NextAttemptAt });
         });
 
+        builder.Entity<GuardianAccessGrant>(grant =>
+        {
+            grant.ToTable("StakeholderGuardianAccessGrants");
+            grant.HasKey(g => new { g.OrganizationId, g.GuardianUserId, g.StudentId });
+            grant.Property(g => g.Status).HasMaxLength(12);
+            grant.Property(g => g.VerificationReference).HasMaxLength(300);
+            grant.Property(g => g.Version).IsConcurrencyToken();
+            grant.HasIndex(g => new { g.GuardianUserId, g.Status });
+        });
+        builder.Entity<OrganizationGuardian>(guardian =>
+        {
+            guardian.ToTable("StakeholderOrganizationGuardians");
+            guardian.HasKey(g => new { g.OrganizationId, g.UserId });
+            guardian.Property(g => g.PhoneNumber).HasMaxLength(20);
+            guardian.Property(g => g.DocumentNumber).HasMaxLength(30);
+        });
         StoreInstantsAsUtc(builder);
     }
 

@@ -130,9 +130,13 @@ public class RoutesController(
     [SwaggerOperation(Summary = "Set the stop of a student (moves it if it was on another stop)",
         OperationId = "AssignStudentToStop")]
     public async Task<IActionResult> AssignStudentToStop(Guid routeId, Guid stopId, Guid studentId,
-        CancellationToken cancellationToken) =>
-        Respond(await commandService.Handle(
-            new AssignStudentToStopCommand(OrganizationId, routeId, stopId, studentId), cancellationToken));
+        [FromServices] Monolith.Administration.Application.Internal.OutboundServices.IStudentRosterDirectory students,
+        CancellationToken cancellationToken)
+    {
+        if (!await students.BelongsToOperationAsync(OrganizationId, studentId, cancellationToken))
+            return AdministrationActionResultAssembler.NotFound(this, ProblemDetails, AdministrationError.StudentNotOnRoute, "Student was not found in this operation.");
+        return Respond(await commandService.Handle(new AssignStudentToStopCommand(OrganizationId, routeId, stopId, studentId), cancellationToken));
+    }
 
     [HttpDelete("{routeId:guid}/students/{studentId:guid}")]
     [SwaggerOperation(Summary = "Remove a student from the route", OperationId = "UnassignStudentFromRoute")]

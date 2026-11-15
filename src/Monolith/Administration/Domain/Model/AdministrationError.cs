@@ -10,6 +10,8 @@ namespace Monolith.Administration.Domain.Model;
 public enum AdministrationError
 {
     None,
+    MapProviderUnavailable,
+    RouteItineraryChanged,
 
     // ── Roster: drivers ──────────────────────────────────────────────────────
     DriverNotFound,
