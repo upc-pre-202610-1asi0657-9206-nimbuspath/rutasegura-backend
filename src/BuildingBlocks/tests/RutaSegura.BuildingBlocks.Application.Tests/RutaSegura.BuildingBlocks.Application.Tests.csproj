@@ -25,7 +25,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\RutaSegura.BuildingBlocks.Application\RutaSegura.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\RutaSegura.BuildingBlocks.Application\RutaSegura.BuildingBlocks.Application.csproj" Condition="'$(UseBuildingBlockPackages)' != 'true'" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Application" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="../../RutaSegura.BuildingBlocks.Testing/RutaSegura.BuildingBlocks.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Testing" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
 </Project>

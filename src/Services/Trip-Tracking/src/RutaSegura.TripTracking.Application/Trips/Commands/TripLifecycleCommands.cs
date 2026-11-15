@@ -10,9 +10,10 @@ using RutaSegura.TripTracking.Domain.Trips;
 namespace RutaSegura.TripTracking.Application.Trips.Commands;
 
 // ───────────────────────── Programar viaje del día ─────────────────────────
-// Lo invoca el job diario (Etapa 4) o el consumidor del evento RoutePublished de Administration.
+// Lo invoca el programador diario (TripSchedulingWorker) o un administrador desde la API.
+// OrganizationId: empresa del administrador que lo pide; null = proceso interno del sistema.
 
-public sealed record ScheduleTripCommand(Guid RouteId, DateOnly ServiceDate) : ICommand<Guid>;
+public sealed record ScheduleTripCommand(Guid RouteId, DateOnly ServiceDate, Guid? OrganizationId = null) : ICommand<Guid>;
 
 internal sealed class ScheduleTripCommandHandler(
     IRouteCatalog routes,
@@ -23,6 +24,8 @@ internal sealed class ScheduleTripCommandHandler(
     {
         var route = await routes.GetAsync(new RouteId(command.RouteId), cancellationToken);
         if (route is null) return ApplicationErrors.RouteNotFound(command.RouteId);
+        if (command.OrganizationId is { } org && route.OrganizationId != Guid.Empty && route.OrganizationId != org)
+            return ApplicationErrors.RouteNotFound(command.RouteId); // no se revela la existencia de rutas ajenas
         if (!route.OperatesOn(command.ServiceDate)) return ApplicationErrors.RouteNotOperating(command.ServiceDate);
 
         var scheduledStart = route.ScheduledStartOn(command.ServiceDate);
@@ -42,7 +45,8 @@ internal sealed class ScheduleTripCommandHandler(
             route.Stops.Select(s => new TripStopDefinition(
                 new StopId(s.StopId), s.Sequence, s.Name, GeoPosition.Create(s.Latitude, s.Longitude))).ToList(),
             route.Students.Select(s => new TripPassengerDefinition(new StudentId(s.StudentId), new StopId(s.StopId))).ToList(),
-            clock.GetUtcNow());
+            clock.GetUtcNow(),
+            new OrganizationId(route.OrganizationId));
 
         trips.Add(trip);
         return trip.Id.Value;
@@ -87,7 +91,7 @@ internal sealed class CompleteTripCommandHandler(ITripRepository trips, TimeProv
 
 // ───────────────────────── Cancelar viaje (empresa) ─────────────────────────
 
-public sealed record CancelTripCommand(Guid TripId, string Reason) : ICommand<Unit>;
+public sealed record CancelTripCommand(Guid TripId, string Reason, Guid? OrganizationId = null) : ICommand<Unit>;
 
 internal sealed class CancelTripCommandValidator : IValidator<CancelTripCommand>
 {
@@ -105,7 +109,7 @@ internal sealed class CancelTripCommandHandler(ITripRepository trips, TimeProvid
 {
     public async Task<Result<Unit>> HandleAsync(CancelTripCommand command, CancellationToken cancellationToken)
     {
-        var loaded = await trips.LoadAsync(command.TripId, cancellationToken);
+        var loaded = await trips.LoadForOrganizationAsync(command.TripId, command.OrganizationId, cancellationToken);
         if (loaded.IsFailure) return loaded.FirstError;
 
         loaded.Value.Cancel(command.Reason, clock.GetUtcNow());

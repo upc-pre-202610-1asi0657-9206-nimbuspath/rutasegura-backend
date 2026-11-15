@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RutaSegura · Prueba de notificaciones</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/firebase-config.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">RUTASEGURA · PRUEBA LOCAL</p>
+    <h1>Recibe una notificación en este navegador</h1>
+    <p class="intro">Esta página obtiene el token que Firebase necesita para enviarte una notificación de prueba.</p>
+    <section aria-labelledby="setup-title">
+      <h2 id="setup-title">1. Permite las notificaciones</h2>
+      <p>Abre esta dirección en Chrome o Edge y pulsa el botón. Acepta «Permitir» cuando te lo pida el navegador.</p>
+      <p class="project">Proyecto: <strong id="project">Cargando…</strong></p>
+      <label for="vapid">Clave pública VAPID del proyecto</label>
+      <input id="vapid" type="text" autocomplete="off" spellcheck="false" aria-describedby="vapid-help">
+      <p id="vapid-help" class="help">Ya está configurada con la clave que proporcionaste. Puedes corregirla si cambias de proyecto.</p>
+      <button id="generate" type="button">Obtener token</button>
+      <p id="status" role="status" aria-live="polite">Listo para empezar.</p>
+    </section>
+    <section aria-labelledby="token-title">
+      <h2 id="token-title">2. Copia el token FCM</h2>
+      <p>El token identifica esta instalación del navegador. No es el JWT de inicio de sesión.</p>
+      <label class="sr-only" for="token">Token de registro FCM</label>
+      <textarea id="token" readonly rows="5" spellcheck="false" placeholder="El token aparecerá aquí después de permitir las notificaciones."></textarea>
+      <button id="copy" class="secondary" type="button" disabled>Copiar token</button>
+      <p class="help">La página no registra este token en RutaSegura ni lo guarda en archivos del servidor.</p>
+    </section>
+    <section aria-labelledby="receive-title">
+      <h2 id="receive-title">3. Comprueba la recepción</h2>
+      <p>Para una notificación emergente, deja esta pestaña en segundo plano y envía un mensaje de prueba desde Firebase al token obtenido.</p>
+      <p>Si la página está al frente, el mensaje aparecerá en el registro de abajo. El sistema operativo también debe permitir notificaciones del navegador.</p>
+      <ul id="messages" aria-live="polite"><li id="empty">Todavía no se recibieron mensajes.</li></ul>
+      <p class="help">Recibir un mensaje enviado desde Firebase verifica el navegador y FCM. El envío desde el backend se verifica después, por separado.</p>
+    </section>
+  </main>
+</body>
+</html>

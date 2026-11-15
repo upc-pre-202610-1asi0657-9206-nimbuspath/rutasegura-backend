@@ -6,7 +6,8 @@ public enum ErrorType
     NotFound,
     Forbidden,
     Conflict,
-    BusinessRule
+    BusinessRule,
+    Unauthorized
 }
 
 /// <summary>Error esperado de un caso de uso. La API lo traduce a ProblemDetails (code en extensions).</summary>
@@ -16,6 +17,7 @@ public sealed record Error(string Code, string Message, ErrorType Type)
     public static Error NotFound(string code, string message) => new(code, message, ErrorType.NotFound);
     public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
+    public static Error Unauthorized(string code, string message) => new(code, message, ErrorType.Unauthorized);
 }
 
 public readonly record struct Unit
@@ -37,7 +39,7 @@ public sealed class Result<T>
     private Result(IReadOnlyList<Error> errors)
     {
         if (errors.Count == 0) throw new ArgumentException("Un resultado fallido necesita al menos un error.", nameof(errors));
-        Errors = errors;
+        Errors = Array.AsReadOnly(errors.ToArray());
     }
 
     public bool IsSuccess => Errors.Count == 0;

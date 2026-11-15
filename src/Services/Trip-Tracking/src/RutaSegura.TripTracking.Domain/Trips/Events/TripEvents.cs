@@ -5,7 +5,7 @@ using RutaSegura.TripTracking.Domain.Tracking;
 namespace RutaSegura.TripTracking.Domain.Trips.Events;
 
 // Domain events del agregado Trip. En la Etapa 4 se mapean 1:1 a eventos de integración
-// publicados en ActiveMQ (topic "trip-tracking.events") a través del Outbox.
+// publicados en RabbitMQ (topic "trip-tracking.events") a través del Outbox.
 // Consumidores principales: Notification Service (push a tutores/empresa) y Administration (reportes).
 
 public sealed record TripScheduled(
@@ -49,6 +49,10 @@ public sealed record SosResolved(TripId TripId, Guid ResolvedBy, DateTimeOffset 
 
 public sealed record TripCompleted(
     TripId TripId, RouteId RouteId, IReadOnlyList<StudentId> DeliveredStudents, IReadOnlyList<StudentId> AbsentStudents,
-    int IncidentCount, DateTimeOffset StartedAt, DateTimeOffset OccurredOn) : DomainEvent(OccurredOn);
+    int IncidentCount, DateTimeOffset StartedAt, DateTimeOffset OccurredOn) : DomainEvent(OccurredOn)
+{
+    // Solo entregas nuevas confirmadas por este cierre; no incluye desembarques ya notificados.
+    public IReadOnlyList<StudentId> SchoolDeliveredStudents { get; init; } = [];
+}
 
 public sealed record TripCancelled(TripId TripId, string Reason, DateTimeOffset OccurredOn) : DomainEvent(OccurredOn);

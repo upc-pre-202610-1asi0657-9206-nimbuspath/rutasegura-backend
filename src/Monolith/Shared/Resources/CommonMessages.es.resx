@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <data name="GenericError" xml:space="preserve">
+   <value>Ocurri&#243; un error.</value>
+ </data>
+    <data name="OperationCancelled" xml:space="preserve">
+   <value>La operaci&#243;n fue cancelada.</value>
+ </data>
+    <data name="InternalServerError" xml:space="preserve">
+   <value>Error interno del servidor.</value>
+ </data>
+</root>

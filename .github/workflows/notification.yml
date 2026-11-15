@@ -1,0 +1,58 @@
+name: Notification CI
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'src/Services/Notification/**'
+      - 'src/BuildingBlocks/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/notification.yml'
+
+jobs:
+
+  build-and-push:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Notification
+        run: |
+          docker build \
+            -f src/Services/Notification/Dockerfile \
+            -t notification:latest .
+
+      - name: Tag Notification
+        run: |
+          docker tag notification:latest \
+          ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}:latest
+
+      - name: Push Notification
+        run: |
+          docker push \
+          ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}:latest
+
+      - name: Deploy Notification
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/rutasegura
+
+            docker compose -f docker-compose.prod.yml pull notification
+
+            docker compose -f docker-compose.prod.yml up -d notification

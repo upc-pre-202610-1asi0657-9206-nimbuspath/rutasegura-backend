@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de contrato entre Administration (monolito) y Trip & Tracking (microservicio).
+    Solo este proyecto de pruebas referencia a ambos lados: el código de producción de cada uno
+    mantiene su propia copia de los contratos (Published Language) y no se referencian entre sí.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>RutaSegura.Monolith.Administration.ContractTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Monolith/Monolith.csproj" />
+    <ProjectReference Include="../../src/Services/Trip-Tracking/src/RutaSegura.TripTracking.Infrastructure/RutaSegura.TripTracking.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

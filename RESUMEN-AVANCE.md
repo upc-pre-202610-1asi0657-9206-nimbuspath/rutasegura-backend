@@ -1,7 +1,9 @@
 # RutaSegura – Resumen de avance del backend
 
+> Revisión documental 2026-10-04: RabbitMQ es el broker vigente. El catálogo de historias y la selección del Sprint 1 se encuentran en las secciones 3.2, 3.4 y 5.3.1 del informe AV2 de la raíz. El core existente no acredita endpoints, persistencia ni mensajería implementados. Administration conserva Roster, Route Planning y Subscription; suscripción, interfaces completas y otras capacidades posteriores no se incorporan automáticamente al Sprint 1 por existir código de dominio.
+
 > Última actualización: 2026-10-03 · Responsable: Rommel Hurtado Balcazar
-> Stack (C-01): ASP.NET Core / .NET 10 (C#), MySQL 8.4, ActiveMQ, Docker.
+> Stack (C-01): ASP.NET Core / .NET 10 (C#), MySQL 8.4, RabbitMQ, Docker.
 
 ## 1. Qué hemos hecho
 
@@ -25,7 +27,7 @@ src/
 ```
 
 Arquitectura hexagonal: `Api → Infrastructure → Application → Domain`.
-El dominio y la aplicación no conocen MySQL, ActiveMQ ni ASP.NET.
+El dominio y la aplicación no conocen MySQL, RabbitMQ ni ASP.NET.
 
 ### 1.2 BuildingBlocks (código técnico compartido por los 4 microservicios)
 
@@ -99,16 +101,18 @@ dotnet test src/BuildingBlocks/tests/RutaSegura.BuildingBlocks.Application.Tests
 | 11 | **Pipeline de casos de uso (BuildingBlocks)** | `DispatcherPipelineTests.SendAsync_ValidCommand_RunsThroughAllDecoratorsAndCommits` | Un comando pasa por Logging → Validation → Transaction y se confirma una vez. |
 | | | `DecoratorTests.TransactionDecorator_FailedCommand_DoesNotCommit` | Si el caso de uso falla, no se guarda nada en la BD. |
 
-## 3. Próximas etapas
+## 3. Etapas 3, 4 y 5 (completadas el 2026-10-23)
 
 | Etapa | Contenido |
 |---|---|
-| 3 | Infrastructure: EF Core + MySQL 8.4, `TripDbContext` como `IUnitOfWork`, tabla `track_points`, Outbox |
-| 4 | ActiveMQ: eventos en `trip-tracking.events`, posiciones en vivo en `trip-tracking.live-positions`, consumidores idempotentes (rutas, vínculos tutor-alumno) |
-| 5 | API REST + JWT + hub en tiempo real, ProblemDetails, docker-compose y pruebas de integración |
+| 3 | EF Core 10 + MySQL 8.4: `TripTrackingDbContext`, migración `InitialCreate`, `EfUnitOfWork` (agregado + `track_points` + Outbox en una transacción, concurrencia optimista por agregado → 409 `CONCURRENCY_CONFLICT`) |
+| 4 | RabbitMQ: `OutboxProcessor` (publisher confirms, `FOR UPDATE SKIP LOCKED`, backoff) → `trip-tracking.events`; consumidor idempotente con Inbox y DLQ para rutas y vínculos tutor-alumno; canal en vivo `trip-tracking.live`; Redis `trip:{id}:position`; programador diario de viajes |
+| 5 | API REST `/api/v1` (conductor, tutor, empresa) con JWT de IAM, ProblemDetails, SignalR `/hubs/trip-tracking`, `/health/ready`, OpenAPI + Swagger UI, Dockerfile y docker-compose, 17 pruebas de integración contra MySQL/RabbitMQ reales |
+
+Detalle en `src/Services/Trip-Tracking/README.md`. Pruebas del servicio: 89 dominio + 72 aplicación + 17 integración.
 
 ## 4. Pendientes y notas
 
 - La carpeta `src/Services/Trip-Tracking/_to_delete/` contiene la plantilla vieja del API: se puede borrar.
 - BuildingBlocks vive dentro de la solución; el plan de 5.1.3 (paquete NuGet aparte) queda para cuando esté estable.
-- Por decidir antes de la Etapa 4: cómo reciben los padres el movimiento en tiempo real (hub SignalR alimentado por ActiveMQ, que es lo recomendado, o conexión directa al broker).
+- Por decidir antes de la Etapa 4: cómo reciben los padres el movimiento en tiempo real (hub SignalR alimentado por RabbitMQ, que es lo recomendado, o conexión directa al broker).

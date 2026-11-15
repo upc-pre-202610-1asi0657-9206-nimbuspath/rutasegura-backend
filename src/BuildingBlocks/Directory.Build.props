@@ -1,0 +1,14 @@
+<Project>
+  <Import Project="../../Directory.Build.props" />
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'RutaSegura.BuildingBlocks.Domain' Or '$(MSBuildProjectName)' == 'RutaSegura.BuildingBlocks.Application' Or '$(MSBuildProjectName)' == 'RutaSegura.BuildingBlocks.Messaging' Or '$(MSBuildProjectName)' == 'RutaSegura.BuildingBlocks.Testing'">
+    <IsPackable>true</IsPackable>
+    <PackageId>$(MSBuildProjectName)</PackageId>
+    <Version>$(BuildingBlocksVersion)</Version>
+    <Authors>RutaSegura - NimbusPath</Authors>
+    <Description>Componentes técnicos compartidos de RutaSegura; sin reglas de negocio de los bounded contexts.</Description>
+    <PackageReadmeFile>PACKAGE-README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)PACKAGE-README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>

@@ -28,6 +28,9 @@ public sealed class TripPassenger
         StopId = definition.StopId;
     }
 
+    /// <summary>Solo antes de iniciar el viaje: el alumno cambió de parada (nueva dirección de recojo).</summary>
+    internal void MoveTo(StopId stopId) => StopId = stopId;
+
     internal void Board(DateTimeOffset at, GeoPosition? position)
     {
         if (Status is not (PassengerStatus.Pending or PassengerStatus.Absent))

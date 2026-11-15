@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Núcleo del hexágono: solo depende de BuildingBlocks.Domain. Sin EF, sin ActiveMQ, sin ASP.NET. -->
+  <!-- Núcleo del hexágono: solo depende de BuildingBlocks.Domain. Sin EF, sin RabbitMQ, sin ASP.NET. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -9,11 +9,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\BuildingBlocks\RutaSegura.BuildingBlocks.Domain\RutaSegura.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\RutaSegura.BuildingBlocks.Domain\RutaSegura.BuildingBlocks.Domain.csproj" Condition="'$(UseBuildingBlockPackages)' != 'true'" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="RutaSegura.TripTracking.Domain.Tests" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Domain" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
 </Project>

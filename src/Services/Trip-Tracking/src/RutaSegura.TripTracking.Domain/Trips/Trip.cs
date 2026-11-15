@@ -28,6 +28,9 @@ public sealed class Trip : AggregateRoot<TripId>
     private readonly HashSet<ClientEventId> _processedClientEvents = [];
 
     public RouteId RouteId { get; private set; }
+
+    /// <summary>Empresa de transporte dueña de la ruta. Vacío en viajes creados antes de existir el dato.</summary>
+    public OrganizationId OrganizationId { get; private set; }
     public string RouteName { get; private set; } = string.Empty;
     public TripDirection Direction { get; private set; }
     public DriverId DriverId { get; private set; }
@@ -70,7 +73,8 @@ public sealed class Trip : AggregateRoot<TripId>
         DateTimeOffset scheduledStart,
         IReadOnlyCollection<TripStopDefinition> stops,
         IReadOnlyCollection<TripPassengerDefinition> passengers,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        OrganizationId organizationId = default)
     {
         if (string.IsNullOrWhiteSpace(routeName))
             throw Invalid("El viaje debe tener el nombre de la ruta.");
@@ -92,6 +96,7 @@ public sealed class Trip : AggregateRoot<TripId>
         {
             Id = id,
             RouteId = routeId,
+            OrganizationId = organizationId,
             RouteName = routeName.Trim(),
             Direction = direction,
             DriverId = driverId,
@@ -106,6 +111,61 @@ public sealed class Trip : AggregateRoot<TripId>
         return trip;
 
         static DomainException Invalid(string message) => new(TripErrors.InvalidDefinition, message);
+    }
+
+    /// <summary>
+    /// Actualiza un viaje que aún no empezó con la planificación vigente de la ruta (Route Planning cambió paradas,
+    /// alumnos inscritos por sus padres, conductor o vehículo). Los alumnos que siguen en la ruta conservan su
+    /// estado (p. ej. una ausencia avisada por el tutor); los nuevos entran como pendientes.
+    /// </summary>
+    /// <returns><c>false</c> si el viaje ya no está programado (en curso o terminado conserva su copia).</returns>
+    public bool RefreshPlan(
+        string routeName,
+        DriverId driverId,
+        VehicleId vehicleId,
+        DateTimeOffset scheduledStart,
+        IReadOnlyCollection<TripStopDefinition> stops,
+        IReadOnlyCollection<TripPassengerDefinition> passengers)
+    {
+        if (Status != TripStatus.Scheduled) return false;
+        if (string.IsNullOrWhiteSpace(routeName))
+            throw new DomainException(TripErrors.InvalidDefinition, "El viaje debe tener el nombre de la ruta.");
+        if (driverId.Value == Guid.Empty || vehicleId.Value == Guid.Empty)
+            throw new DomainException(TripErrors.InvalidDefinition, "El viaje necesita un conductor y un vehículo asignados.");
+        if (stops.Count == 0)
+            throw new DomainException(TripErrors.InvalidDefinition, "La ruta debe tener al menos una parada.");
+        if (stops.Select(s => s.StopId).Distinct().Count() != stops.Count ||
+            stops.Select(s => s.Sequence).Distinct().Count() != stops.Count)
+            throw new DomainException(TripErrors.InvalidDefinition, "Las paradas no pueden repetir identificador ni orden.");
+        if (passengers.Select(p => p.StudentId).Distinct().Count() != passengers.Count)
+            throw new DomainException(TripErrors.InvalidDefinition, "Un alumno no puede figurar dos veces en el mismo viaje.");
+        var stopIds = stops.Select(s => s.StopId).ToHashSet();
+        if (passengers.Any(p => !stopIds.Contains(p.StopId)))
+            throw new DomainException(TripErrors.InvalidDefinition, "Todos los alumnos deben estar asignados a una parada de la ruta.");
+
+        RouteName = routeName.Trim();
+        DriverId = driverId;
+        VehicleId = vehicleId;
+        ScheduledStart = scheduledStart;
+
+        _stops.RemoveAll(existing => !stopIds.Contains(existing.StopId));
+        foreach (var definition in stops)
+        {
+            var existing = _stops.FirstOrDefault(s => s.StopId == definition.StopId);
+            if (existing is null) _stops.Add(new TripStop(definition));
+            else existing.Redefine(definition);
+        }
+
+        var studentIds = passengers.Select(p => p.StudentId).ToHashSet();
+        _passengers.RemoveAll(existing => !studentIds.Contains(existing.StudentId));
+        foreach (var definition in passengers)
+        {
+            var existing = _passengers.FirstOrDefault(p => p.StudentId == definition.StudentId);
+            if (existing is null) _passengers.Add(new TripPassenger(definition));
+            else existing.MoveTo(definition.StopId);
+        }
+
+        return true;
     }
 
     // ───────────────────────────── Ciclo de vida ─────────────────────────────
@@ -151,6 +211,8 @@ public sealed class Trip : AggregateRoot<TripId>
         if (pending > 0)
             throw new DomainException(TripErrors.HasPendingStudents, $"Faltan registrar {pending} alumno(s).");
 
+        var schoolDeliveredStudents = Direction == TripDirection.Pickup
+            ? PassengersOnBoard.Select(passenger => passenger.StudentId).ToList() : new List<StudentId>();
         if (Direction == TripDirection.Pickup)
         {
             // Recojo: al llegar al colegio todos los que van a bordo quedan entregados.
@@ -173,7 +235,7 @@ public sealed class Trip : AggregateRoot<TripId>
             _passengers.Where(p => p.Status == PassengerStatus.Absent).Select(p => p.StudentId).ToList(),
             _incidents.Count,
             StartedAt!.Value,
-            now));
+            now) { SchoolDeliveredStudents = schoolDeliveredStudents });
 
         MarkProcessed(clientEventId);
         return true;
@@ -455,6 +517,9 @@ public sealed class Trip : AggregateRoot<TripId>
     // ───────────────────────────── Reglas auxiliares ─────────────────────────────
 
     public bool IsOperatedBy(DriverId driverId) => DriverId == driverId;
+
+    /// <summary>Un viaje sin empresa registrada no se restringe; uno con empresa solo lo ve esa empresa.</summary>
+    public bool BelongsTo(OrganizationId organizationId) => OrganizationId.IsEmpty || OrganizationId == organizationId;
 
     public bool HasPassenger(StudentId studentId) => _passengers.Any(p => p.StudentId == studentId);
 

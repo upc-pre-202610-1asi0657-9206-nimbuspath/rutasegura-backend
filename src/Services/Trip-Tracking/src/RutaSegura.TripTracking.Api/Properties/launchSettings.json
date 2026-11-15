@@ -10,6 +10,18 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "http-demo-sin-iam": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5180",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Seed__Demo": "true",
+        "DevTokens__Enabled": "true",
+        "Iam__AccountValidation__Enabled": "false"
+      }
+    },
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,

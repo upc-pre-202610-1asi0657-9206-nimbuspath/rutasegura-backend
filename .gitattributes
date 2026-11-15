@@ -1,0 +1,2 @@
+# El script se monta en un contenedor Linux; CRLF rompe las continuaciones de linea del shell.
+scripts/smoke/*.sh text eol=lf

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de integración del Trip & Tracking Service contra MySQL REAL (y RabbitMQ si está disponible).
+    Cadena de conexión: variable TRIPTRACKING_IT_MYSQL (por defecto localhost:3306, usuario rutasegura).
+    Si MySQL no responde las pruebas se marcan como omitidas (no fallan): levanta el docker-compose del servicio.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RutaSegura.TripTracking.Api\RutaSegura.TripTracking.Api.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' != 'true'">
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\RutaSegura.BuildingBlocks.Testing\RutaSegura.BuildingBlocks.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Testing" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
+
+</Project>

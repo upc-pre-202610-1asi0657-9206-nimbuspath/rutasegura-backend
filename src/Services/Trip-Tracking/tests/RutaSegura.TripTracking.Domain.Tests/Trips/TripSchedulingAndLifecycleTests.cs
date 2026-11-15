@@ -154,6 +154,19 @@ public class TripStartTests
 public class TripCompletionTests
 {
     [Fact]
+    public void CompletionNotifiesOnlyStudentsDeliveredInThisTransition_NotEarlierAlightings()
+    {
+        var trip = new TripBuilder().BuildStarted();
+        foreach (var student in new[] { Valeria, Mateo, Camila })
+            trip.RecordBoarding(Driver, student, ClientEventId.New(), null, null, At(6, 50));
+        trip.RecordAlighting(Driver, Valeria, ClientEventId.New(), null, null, At(7, 10));
+        trip.Complete(Driver, ClientEventId.New(), At(7, 50));
+        var completed = trip.DomainEvents.OfType<TripCompleted>().ShouldHaveSingleItem();
+        completed.DeliveredStudents.ShouldBe([Valeria, Mateo, Camila], ignoreOrder: true);
+        completed.SchoolDeliveredStudents.ShouldBe([Mateo, Camila], ignoreOrder: true);
+    }
+
+    [Fact]
     public void Complete_PickupWithEveryoneRegistered_DeliversBoardedStudentsAndRaisesTripCompleted()
     {
         var trip = new TripBuilder().BuildStarted();
@@ -169,6 +182,7 @@ public class TripCompletionTests
         trip.Passengers.Count(p => p.Status == PassengerStatus.Alighted).ShouldBe(2);
         var evt = trip.DomainEvents.OfType<TripCompleted>().ShouldHaveSingleItem();
         evt.DeliveredStudents.ShouldBe(new[] { Valeria, Mateo }, ignoreOrder: true);
+        evt.SchoolDeliveredStudents.ShouldBe(new[] { Valeria, Mateo }, ignoreOrder: true);
         evt.AbsentStudents.ShouldHaveSingleItem().ShouldBe(Camila);
         evt.IncidentCount.ShouldBe(1);
         evt.StartedAt.ShouldBe(ScheduledStart);

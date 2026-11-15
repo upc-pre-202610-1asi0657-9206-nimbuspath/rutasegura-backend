@@ -14,6 +14,8 @@ namespace RutaSegura.TripTracking.Application.Trips.Queries;
 public sealed record LivePositionDto(
     double Latitude, double Longitude, DateTimeOffset RecordedAt, double? SpeedKmh, double? HeadingDegrees, int AgeSeconds);
 
+public sealed record StopDto(Guid StopId, string Name, int Sequence, double Latitude, double Longitude, DateTimeOffset? ReachedAt);
+
 public sealed record NextStopDto(Guid StopId, string Name, int Sequence, int TotalStops, double? DistanceMeters, int? EtaMinutes);
 
 public sealed record PassengerDto(
@@ -32,7 +34,8 @@ public sealed record TripLiveStatusDto(
     int StudentsOnBoard,
     int TotalStudents,
     bool HasActiveSos,
-    IReadOnlyList<PassengerDto> Passengers);
+    IReadOnlyList<PassengerDto> Passengers,
+    IReadOnlyList<StopDto>? Stops = null);
 
 // ───────────────────────── Viaje en vivo (tutor / conductor / empresa) ─────────────────────────
 
@@ -51,16 +54,15 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
         switch (query.Requester.Role)
         {
             case RequesterRole.Guardian:
-                var children = await guardians.GetStudentsOfGuardianAsync(new GuardianId(query.Requester.UserId), cancellationToken);
+                var children = await guardians.GetStudentsForOrganizationAsync(new GuardianId(query.Requester.UserId), trip.OrganizationId.Value, cancellationToken);
                 if (!GuardianAccessPolicy.CanViewTrip(trip, children)) return ApplicationErrors.TripAccessDenied;
                 visiblePassengers = GuardianAccessPolicy.VisiblePassengers(trip, children);
                 break;
             case RequesterRole.Driver:
-                if (!trip.IsOperatedBy(new DriverId(query.Requester.UserId))) return ApplicationErrors.TripAccessDenied;
-                visiblePassengers = trip.Passengers;
-                break;
             case RequesterRole.Admin:
-                visiblePassengers = trip.Passengers; // TODO Etapa 5: acotar a la empresa del admin (claim company_id)
+                // Conductor: solo su viaje. Admin: solo viajes de su empresa (claim organizationId).
+                if (!query.Requester.CanOperateAsStaff(trip)) return ApplicationErrors.TripAccessDenied;
+                visiblePassengers = trip.Passengers;
                 break;
             default:
                 return ApplicationErrors.TripAccessDenied;
@@ -74,11 +76,30 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
             trip.ScheduledStart,
             trip.StartedAt,
             BuildPosition(trip, clock.GetUtcNow()),
-            BuildNextStop(trip),
-            trip.PassengersOnBoard.Count(),
-            trip.Passengers.Count,
+            BuildNextStop(trip, query.Requester.Role == RequesterRole.Guardian ? visiblePassengers : null),
+            visiblePassengers.Count(p => p.Status == PassengerStatus.Boarded),
+            visiblePassengers.Count,
             trip.ActiveSos is not null,
-            visiblePassengers.Select(ToDto).ToList());
+            visiblePassengers.Select(ToDto).ToList(),
+            VisibleStops(trip, query.Requester.Role, visiblePassengers));
+    }
+
+    /// <summary>
+    /// El conductor y la empresa ven todas las paradas. El tutor solo la parada de su(s) hijo(s):
+    /// las demás paradas son domicilios de otras familias (AC-01).
+    /// </summary>
+    private static IReadOnlyList<StopDto> VisibleStops(Trip trip, RequesterRole role, IReadOnlyList<TripPassenger> visiblePassengers)
+    {
+        var stops = trip.Stops.AsEnumerable();
+        if (role == RequesterRole.Guardian)
+        {
+            var own = visiblePassengers.Select(p => p.StopId).ToHashSet();
+            stops = stops.Where(s => own.Contains(s.StopId));
+        }
+
+        return stops
+            .Select(s => new StopDto(s.StopId.Value, s.Name, s.Sequence, s.Position.Latitude, s.Position.Longitude, s.ReachedAt))
+            .ToList();
     }
 
     private static LivePositionDto? BuildPosition(Trip trip, DateTimeOffset now)
@@ -91,15 +112,17 @@ internal sealed class GetTripLiveStatusQueryHandler(ITripRepository trips, IGuar
             trip.LastSpeedKmh, trip.LastHeadingDegrees, age);
     }
 
-    private static NextStopDto? BuildNextStop(Trip trip)
+    private static NextStopDto? BuildNextStop(Trip trip, IReadOnlyList<TripPassenger>? visiblePassengers = null)
     {
-        var next = trip.NextStop;
+        var next = visiblePassengers is null ? trip.NextStop : trip.Stops.Where(s => visiblePassengers.Any(p => p.StopId == s.StopId) && s.ReachedAt is null).OrderBy(s => s.Sequence).FirstOrDefault();
         if (next is null || !trip.IsActive) return null;
 
         double? distance = trip.LastPosition is null ? null : Math.Round(next.Position.DistanceMetersTo(trip.LastPosition));
         int? eta = distance is null ? null : EtaEstimator.EstimateMinutes(distance.Value, trip.LastSpeedKmh);
         return new NextStopDto(next.StopId.Value, next.Name, next.Sequence, trip.Stops.Count, distance, eta);
     }
+
+    internal static LivePositionDto? PositionFor(Trip trip, DateTimeOffset now) => BuildPosition(trip, now);
 
     internal static PassengerDto ToDto(TripPassenger p) => new(
         p.StudentId.Value, p.StopId.Value, p.Status.ToString(), p.BoardedAt, p.AlightedAt,
@@ -125,9 +148,7 @@ internal sealed class GetTripSummaryQueryHandler(ITripRepository trips) : IQuery
         if (loaded.IsFailure) return loaded.FirstError;
         var trip = loaded.Value;
 
-        var allowed = query.Requester.Role == RequesterRole.Admin ||
-                      (query.Requester.Role == RequesterRole.Driver && trip.IsOperatedBy(new DriverId(query.Requester.UserId)));
-        if (!allowed) return ApplicationErrors.TripAccessDenied;
+        if (!query.Requester.CanOperateAsStaff(trip)) return ApplicationErrors.TripAccessDenied;
 
         return new TripSummaryDto(
             trip.Id.Value, trip.RouteName, trip.Direction.ToString(), trip.Status.ToString(),
@@ -143,7 +164,7 @@ internal sealed class GetTripSummaryQueryHandler(ITripRepository trips) : IQuery
 
 public sealed record DriverTripDto(
     Guid TripId, string RouteName, string Direction, DateTimeOffset ScheduledStart, string Status,
-    Guid VehicleId, int StopCount, int StudentCount);
+    Guid VehicleId, int StopCount, int StudentCount, Guid RouteId);
 
 public sealed record GetDriverAgendaQuery(Guid DriverId, DateTimeOffset From, DateTimeOffset To) : IQuery<IReadOnlyList<DriverTripDto>>;
 
@@ -158,7 +179,7 @@ internal sealed class GetDriverAgendaQueryHandler(ITripRepository trips) : IQuer
             .OrderBy(t => t.ScheduledStart)
             .Select(t => new DriverTripDto(
                 t.Id.Value, t.RouteName, t.Direction.ToString(), t.ScheduledStart, t.Status.ToString(),
-                t.VehicleId.Value, t.Stops.Count, t.Passengers.Count(p => p.Status != PassengerStatus.Absent)))
+                t.VehicleId.Value, t.Stops.Count, t.Passengers.Count(p => p.Status != PassengerStatus.Absent), t.RouteId.Value))
             .ToList();
 
         return Result<IReadOnlyList<DriverTripDto>>.Success(agenda);

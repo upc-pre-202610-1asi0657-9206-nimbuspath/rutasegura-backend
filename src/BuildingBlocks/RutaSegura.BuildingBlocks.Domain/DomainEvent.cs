@@ -2,7 +2,7 @@ namespace RutaSegura.BuildingBlocks.Domain;
 
 /// <summary>
 /// Hecho de negocio que ya ocurrió dentro de un agregado.
-/// La infraestructura lo traduce a evento de integración y lo publica en ActiveMQ vía Outbox.
+/// La infraestructura lo traduce a evento de integración y lo publica en RabbitMQ vía Outbox.
 /// </summary>
 public interface IDomainEvent
 {

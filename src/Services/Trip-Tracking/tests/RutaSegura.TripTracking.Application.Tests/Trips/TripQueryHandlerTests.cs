@@ -36,8 +36,8 @@ public class GetTripLiveStatusQueryHandlerTests : TripTrackingTestContext
         dto.NextStop.ShouldNotBeNull();
         dto.NextStop.StopId.ShouldBe(Stop1);
         dto.NextStop.EtaMinutes.ShouldBe(2);
-        dto.StudentsOnBoard.ShouldBe(1);
-        dto.TotalStudents.ShouldBe(3);
+        dto.StudentsOnBoard.ShouldBe(0);
+        dto.TotalStudents.ShouldBe(1);
         dto.Passengers.ShouldHaveSingleItem().StudentId.ShouldBe(Valeria); // nunca ve a Mateo (AC-01)
     }
 

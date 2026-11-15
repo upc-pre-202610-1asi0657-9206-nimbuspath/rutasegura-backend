@@ -18,7 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RutaSegura.BuildingBlocks.Domain\RutaSegura.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\RutaSegura.BuildingBlocks.Domain\RutaSegura.BuildingBlocks.Domain.csproj" Condition="'$(UseBuildingBlockPackages)' != 'true'" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UseBuildingBlockPackages)' == 'true'">
+    <PackageReference Include="RutaSegura.BuildingBlocks.Domain" Version="$(BuildingBlocksVersion)" />
+  </ItemGroup>
 </Project>

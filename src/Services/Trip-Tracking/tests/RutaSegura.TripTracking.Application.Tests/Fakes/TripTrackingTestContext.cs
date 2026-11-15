@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Time.Testing;
 using RutaSegura.TripTracking.Application.Abstractions;
+using RutaSegura.TripTracking.Application.Common;
 using RutaSegura.TripTracking.Domain.Common;
 using RutaSegura.TripTracking.Domain.Tracking;
 using RutaSegura.TripTracking.Domain.Trips;
@@ -31,17 +32,24 @@ public abstract class TripTrackingTestContext
     protected static readonly Guid GuardianOfValeria = Guid.Parse("c0000000-0000-0000-0000-000000000001");
     protected static readonly Guid UnrelatedGuardian = Guid.Parse("c0000000-0000-0000-0000-000000000099");
 
+    protected static readonly Guid SantaRosa = Guid.Parse("0a000000-0000-0000-0000-000000000001");
+    protected static readonly Guid OtherCompany = Guid.Parse("0b000000-0000-0000-0000-000000000002");
+    protected static readonly Guid AdminId = Guid.Parse("0a000000-0000-0000-0000-0000000000ad");
+
     internal InMemoryTripRepository Trips { get; } = new();
     internal InMemoryTrackPointRepository TrackPoints { get; } = new();
     internal RecordingLivePositionPublisher LivePublisher { get; } = new();
     internal FakeGuardianDirectory Guardians { get; } = new FakeGuardianDirectory()
         .Link(new GuardianId(GuardianOfValeria), new StudentId(Valeria));
     internal FakeRouteCatalog Routes { get; } = new();
+    internal InMemoryLastPositionCache LastPositions { get; } = new();
     protected FakeTimeProvider Clock { get; } = new(ScheduledStart);
 
     protected static DateTimeOffset At(int hour, int minute, int second = 0) => new(2026, 10, 5, hour, minute, second, Lima);
 
-    protected static RouteSnapshot Route3(TripDirection direction = TripDirection.Pickup) => new(
+    protected static Requester AdminOf(Guid organizationId) => new(AdminId, RequesterRole.Admin, organizationId);
+
+    protected static RouteSnapshot Route3(TripDirection direction = TripDirection.Pickup, Guid organizationId = default) => new(
         RouteId, "Ruta 3", direction, DriverId, VehicleId, new TimeOnly(6, 40), "America/Lima",
         [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday],
         [
@@ -53,10 +61,11 @@ public abstract class TripTrackingTestContext
             new RouteStudentSnapshot(Valeria, Stop1),
             new RouteStudentSnapshot(Mateo, Stop1),
             new RouteStudentSnapshot(Camila, Stop2)
-        ]);
+        ],
+        organizationId);
 
     /// <summary>Guarda en el repositorio un viaje programado (sin eventos pendientes).</summary>
-    protected Trip SeedScheduledTrip(TripDirection direction = TripDirection.Pickup)
+    protected Trip SeedScheduledTrip(TripDirection direction = TripDirection.Pickup, Guid? organizationId = null)
     {
         var route = Route3(direction);
         var stops = route.Stops.Select(s => new TripStopDefinition(new StopId(s.StopId),
@@ -64,16 +73,17 @@ public abstract class TripTrackingTestContext
         var trip = Trip.Schedule(TripId.New(), new RouteId(RouteId), route.Name, direction,
             new DriverId(DriverId), new VehicleId(VehicleId), ScheduledStart, stops,
             route.Students.Select(s => new TripPassengerDefinition(new StudentId(s.StudentId), new StopId(s.StopId))).ToList(),
-            ScheduledStart.AddHours(-12));
+            ScheduledStart.AddHours(-12),
+            new OrganizationId(organizationId ?? Guid.Empty));
         trip.ClearDomainEvents();
         Trips.Add(trip);
         return trip;
     }
 
     /// <summary>Guarda un viaje ya iniciado a las 06:40 (sin eventos pendientes).</summary>
-    protected Trip SeedStartedTrip(TripDirection direction = TripDirection.Pickup)
+    protected Trip SeedStartedTrip(TripDirection direction = TripDirection.Pickup, Guid? organizationId = null)
     {
-        var trip = SeedScheduledTrip(direction);
+        var trip = SeedScheduledTrip(direction, organizationId);
         trip.Start(new DriverId(DriverId), ClientEventId.New(), ScheduledStart);
         trip.ClearDomainEvents();
         return trip;

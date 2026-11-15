@@ -1,0 +1,11 @@
+namespace Monolith.Stakeholder.Interfaces.Rest.Resources;
+public sealed record RegisterOperationGuardianResource(Guid GuardianUserId, string PhoneNumber, string? DocumentNumber);
+public sealed record RegisterOperationStudentResource(Guid GuardianUserId, RegisterStudentResource Student);
+public sealed record ReviewGuardianAccessResource(string Reference);
+public sealed record GuardianAccessResource(Guid OrganizationId, Guid GuardianUserId, Guid StudentId, string Status, DateTimeOffset RequestedAt, Guid? ReviewedBy, DateTimeOffset? ReviewedAt, string? Reference, long Version);
+public sealed record DirectoryStudentsRequest(Guid OrganizationId, IReadOnlyList<Guid> StudentIds);
+public sealed record DirectoryOrganizationRequest(Guid OrganizationId);
+public sealed record DirectoryAnnouncementRequest(Guid OrganizationId, Guid? RouteId);
+public sealed record DirectoryUserRequest(Guid OrganizationId, Guid UserId);
+public sealed record DirectoryContextsRequest(Guid UserId);
+public sealed record DirectoryGuardianRequest(Guid UserId, Guid? OrganizationId);
