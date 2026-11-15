@@ -20,6 +20,10 @@ namespace RutaSegura.Monolith.Administration.IntegrationTests.Support;
 ///     The real monolith host (Program.cs: controllers, Iam security, Administration, EF Core) on an in-memory SQLite
 ///     database built from the same EF model and seeded with the Iam demo accounts. One instance per test.
 /// </summary>
+/// <remarks>
+///     The active-route limit of organizations without a paid plan comes from the default plan (BASIC) of the
+///     Subscription catalog; <c>maxActiveRoutes</c> sets it in the test database.
+/// </remarks>
 public sealed class MonolithApp : WebApplicationFactory<Program>
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -30,21 +34,25 @@ public sealed class MonolithApp : WebApplicationFactory<Program>
     /// <summary>Secrets of the test environment (the real ones are never in appsettings.json).</summary>
     public const string TestTokenSecret = "integration-tests-secret-0123456789-abcdefghijklmnop";
     public const string TestProvisioningKey = "integration-tests-provisioning-key-0123456789";
+    public const string TestPaymentWebhookSecret = "integration-tests-payment-webhook-secret-0123456789";
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    private readonly int _maxActiveRoutes;
     private readonly Dictionary<string, string?> _settings;
 
     public MonolithApp(int maxActiveRoutes = 2, IDictionary<string, string?>? settings = null)
     {
         _connection.Open();
+        _maxActiveRoutes = maxActiveRoutes;
         _settings = new Dictionary<string, string?>
         {
             ["Database:MigrateOnStartup"] = "false",
             ["ConnectionStrings:DefaultConnection"] = "Server=unused-in-tests",
             ["TokenSettings:Secret"] = TestTokenSecret,
             ["Iam:Provisioning:ApiKey"] = TestProvisioningKey,
-            ["Administration:Plans:Default:PlanCode"] = "BASIC",
-            ["Administration:Plans:Default:MaxActiveRoutes"] = maxActiveRoutes.ToString(),
+            ["Subscription:PaymentGateway:Provider"] = "Sandbox",
+            ["Subscription:PaymentGateway:WebhookSecret"] = TestPaymentWebhookSecret,
+            ["Subscription:PaymentGateway:AllowSimulatedPayments"] = "true",
             ["Administration:Messaging:Enabled"] = "false"
         };
         foreach (var (key, value) in settings ?? new Dictionary<string, string?>()) _settings[key] = value;
@@ -101,6 +109,9 @@ public sealed class MonolithApp : WebApplicationFactory<Program>
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         context.Database.EnsureCreated();
+        // EnsureCreated seeds the plan catalog of the migration; the tests choose the limit of the default plan.
+        context.Database.ExecuteSql(
+            $"UPDATE subscription_plans SET max_active_routes = {_maxActiveRoutes} WHERE is_default = 1");
         IamSeeder.SeedAsync(context, scope.ServiceProvider.GetRequiredService<IHashingService>())
             .GetAwaiter().GetResult();
         return host;

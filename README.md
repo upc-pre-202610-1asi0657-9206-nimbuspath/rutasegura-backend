@@ -6,6 +6,8 @@ Backend .NET 10 del proyecto refactorizado. El catálogo de historias y el Sprin
 
 **Stakeholder** (nuevo) es el bounded context de las familias: el padre registra a sus hijos (nombre, foto, dirección de recojo) y los inscribe con el código que comparte la empresa; Route Planning crea o reutiliza la parada de cada dirección. Ver [src/Monolith/Stakeholder/README.md](src/Monolith/Stakeholder/README.md). Pruebas en `tests/RutaSegura.Monolith.Stakeholder.Tests` y `StakeholderEndToEndTests`.
 
+**Subscription** (nuevo) es el bounded context de los planes B2B (US-07): catálogo de planes, el contrato de cada empresa y los cambios de plan pagados por la pasarela de pagos (Mercado Pago Checkout Pro en modo prueba, y un adaptador sandbox para desarrollo y demos). Route Planning obtiene de su fachada el límite de rutas activas, que antes venía de `Administration:Plans`. Ver [src/Monolith/Subscription/README.md](src/Monolith/Subscription/README.md). Pruebas en `tests/RutaSegura.Monolith.Subscription.Tests` y `SubscriptionEndToEndTests`.
+
 IAM y Administration ya no son microservicios: viven como bounded contexts dentro de `src/Monolith` (carpetas `Iam/` y `Administration/`, cada una con Domain, Application, Infrastructure e Interfaces). El microservicio `src/Services/Administration` se eliminó. Administration (Roster + Route Planning) tiene implementadas sus cuatro capas, con la seguridad de Iam integrada; ver [src/Monolith/Administration/README.md](src/Monolith/Administration/README.md). Sus pruebas están en `tests/RutaSegura.Monolith.Administration.Tests`, `.IntegrationTests` y `.ContractTests`.
 
 ## Sprint 1 — Etapa 1 (T01–T04)

@@ -56,6 +56,9 @@ public sealed class GatewayRoutingTests : IAsyncLifetime
     [InlineData("GET", "/api/v1/stakeholders/route-offers/K7QM4P2X", "monolith")]
     [InlineData("GET", "/api/v1/stakeholders/drivers/me/students", "monolith")]
     [InlineData("GET", "/api/v1/stakeholders/students/7b1d3c55-1111-4c3b-9a5b-000000000001/photo", "monolith")]
+    [InlineData("GET", "/api/v1/subscription/plans", "monolith")]
+    [InlineData("POST", "/api/v1/subscription/plan-changes", "monolith")]
+    [InlineData("POST", "/api/v1/subscription/payments/notifications", "monolith")]
     // Trip & Tracking
     [InlineData("GET", "/api/v1/drivers/me/trips", "trip-tracking")]
     [InlineData("GET", "/api/v1/guardians/me/trips", "trip-tracking")]
