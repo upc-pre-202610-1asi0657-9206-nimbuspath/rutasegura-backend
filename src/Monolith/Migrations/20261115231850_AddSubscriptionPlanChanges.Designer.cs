@@ -12,8 +12,8 @@ using Monolith.Shared.Infrastructure.Persistence.EFC.Configuration;
 namespace Monolith.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261115231850_AddSubscriptionPlanChanges")]
-    partial class AddSubscriptionPlanChanges
+    [Migration("20261115234500_EnsureSubscriptionSchemaAndSeed")]
+    partial class EnsureSubscriptionSchemaAndSeed
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
