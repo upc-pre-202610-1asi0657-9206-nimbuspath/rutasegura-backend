@@ -1384,7 +1384,7 @@ namespace Monolith.Migrations
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("f_k_subscription_plan_changes_subscription_tenants_organization_~");
+                        .HasConstraintName("fk_subscription_plan_changes_organization_id");
                 });
 
             modelBuilder.Entity("Monolith.Administration.Domain.Model.Aggregates.Route", b =>
