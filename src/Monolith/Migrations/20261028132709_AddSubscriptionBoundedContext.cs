@@ -13,6 +13,13 @@ namespace Monolith.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // A first version of this migration failed on MySQL after creating the first tables (its FK name had
+            // 65 characters, over the 64 MySQL allows). They are empty and the migration was never recorded, so they
+            // are dropped and created again; on a database that never ran it this does nothing.
+            migrationBuilder.Sql(
+                "DROP TABLE IF EXISTS `subscription_plan_changes`, `subscription_tenants`, " +
+                "`subscription_plans`, `subscription_payment_events`;");
+
             migrationBuilder.CreateTable(
                 name: "subscription_payment_events",
                 columns: table => new
@@ -90,7 +97,7 @@ namespace Monolith.Migrations
                 {
                     table.PrimaryKey("p_k_subscription_plan_changes", x => x.id);
                     table.ForeignKey(
-                        name: "f_k_subscription_plan_changes_subscription_tenants_organization_~",
+                        name: "fk_subscription_plan_changes_organization_id",
                         column: x => x.organization_id,
                         principalTable: "subscription_tenants",
                         principalColumn: "organization_id",

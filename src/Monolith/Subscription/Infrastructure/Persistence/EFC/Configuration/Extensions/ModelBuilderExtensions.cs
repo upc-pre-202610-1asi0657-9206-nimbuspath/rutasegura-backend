@@ -58,7 +58,9 @@ public static class ModelBuilderExtensions
             subscription.Property(s => s.PaidUntil).HasConversion(NullableUtcDateTimeConverter);
             subscription.Property(s => s.Version).IsConcurrencyToken();
             subscription.Ignore(s => s.PendingChange);
+            // MySQL identifiers are limited to 64 characters: the generated FK name would be 65.
             subscription.HasMany(s => s.PlanChanges).WithOne().HasForeignKey("OrganizationId").IsRequired()
+                .HasConstraintName("fk_subscription_plan_changes_organization_id")
                 .OnDelete(DeleteBehavior.Cascade);
             subscription.Navigation(s => s.PlanChanges).UsePropertyAccessMode(PropertyAccessMode.Field)
                 .HasField("_planChanges");
