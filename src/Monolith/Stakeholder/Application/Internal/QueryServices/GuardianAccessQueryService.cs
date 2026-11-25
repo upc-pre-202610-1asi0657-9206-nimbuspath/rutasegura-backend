@@ -6,11 +6,18 @@ namespace Monolith.Stakeholder.Application.Internal.QueryServices;
 public sealed class GuardianAccessQueryService(IGuardianAccessRepository grants, IStudentRepository students, IGuardianDirectory directory, IRoutePlanningService routes, IGuardianProfileRepository profiles) : IGuardianAccessQueryService
 {
     public Task<IReadOnlyList<Domain.Model.Aggregates.GuardianAccessGrant>> ForGuardianAsync(Guid guardian, CancellationToken ct) => grants.ForGuardianAsync(guardian, ct);
-    public async Task<IReadOnlyList<Domain.Model.Aggregates.Student>> RosterAsync(Guid organization, CancellationToken ct)
+    public Task<IReadOnlyList<Domain.Model.Aggregates.Student>> RosterAsync(Guid organization, CancellationToken ct)
+        => ReadRosterAsync(organization, null, ct);
+
+    public Task<IReadOnlyList<Domain.Model.Aggregates.Student>> RosterAsync(Guid organization, IReadOnlyCollection<Guid> studentIds, CancellationToken ct)
+        => ReadRosterAsync(organization, studentIds.ToHashSet(), ct);
+
+    private async Task<IReadOnlyList<Domain.Model.Aggregates.Student>> ReadRosterAsync(Guid organization, HashSet<Guid>? requested, CancellationToken ct)
     {
         var result = new List<Domain.Model.Aggregates.Student>();
         foreach (var id in (await grants.ForOrganizationAsync(organization, ct)).Select(g => g.StudentId).Distinct())
         {
+            if (requested is not null && !requested.Contains(id)) continue;
             var student = await students.FindByStudentIdAsync(new StudentId(id), ct);
             if (student is not null && !student.IsRemoved()) result.Add(student);
         }

@@ -60,7 +60,7 @@ SubscribeToTrip y UnsubscribeFromTrip conservan nombre y argumentos. Las actuali
 
 ## OpenRouteService
 
-Configurar Administration:Maps:ApiKey en el servidor; Compose usa ORS_API_KEY. BaseUrl por defecto https://api.openrouteservice.org/, perfil driving-car; admite driving-hgv, timeout acotado y respuestas limitadas. La clave viaja en Authorization del servidor al proveedor, nunca en la web ni en una URL. La integración envía [longitud,latitud] y transforma la respuesta GeoJSON y su resumen; véase la [documentación oficial de ORS](https://github.com/GIScience/openrouteservice/blob/main/docs/api-reference/endpoints/directions/requests-and-return-types.md).
+Configurar Administration:Maps:ApiKey en el servidor; Compose usa ORS_API_KEY. BaseUrl por defecto https://api.heigit.org/openrouteservice/, perfil driving-car; admite driving-hgv, timeout acotado y respuestas limitadas. La clave viaja en Authorization del servidor al proveedor, nunca en la web ni en una URL. La integración envía [longitud,latitud] y transforma la respuesta GeoJSON y su resumen; véase la [documentación oficial de ORS](https://github.com/GIScience/openrouteservice/blob/main/docs/api-reference/endpoints/directions/requests-and-return-types.md).
 
 Se requieren al menos dos paradas ordenadas. No configura ni optimiza automáticamente sus horarios. Si no hay clave, hay timeout, cuota agotada o respuesta inválida, se devuelve 503 con un código controlado. No se fabrica una ruta vial con Haversine. Al cambiar o reordenar paradas se invalida itinerary; geometryVersion impide guardar un cálculo sobre una versión anterior. El ETA en vivo de Tracking sigue siendo una estimación independiente, no una promesa ni un cálculo ORS con tráfico.
 

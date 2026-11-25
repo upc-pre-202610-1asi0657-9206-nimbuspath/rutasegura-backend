@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `subscription_plan_changes` (
     `price_in_cents` bigint NOT NULL,
     `price_currency` varchar(3) NOT NULL,
     CONSTRAINT `p_k_subscription_plan_changes` PRIMARY KEY (`id`),
-    CONSTRAINT `f_k_subscription_plan_changes_subscription_tenants_organization_~` FOREIGN KEY (`organization_id`) REFERENCES `subscription_tenants` (`organization_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_subscription_plan_changes_organization_id` FOREIGN KEY (`organization_id`) REFERENCES `subscription_tenants` (`organization_id`) ON DELETE CASCADE,
     INDEX `i_x_subscription_plan_changes_organization_id` (`organization_id`),
     UNIQUE INDEX `i_x_subscription_plan_changes_payment_reference` (`payment_reference`)
 ) CHARACTER SET=utf8mb4;");

@@ -6,7 +6,7 @@ using Monolith.Administration.Domain.Model.ValueObjects;
 namespace Monolith.Administration.Infrastructure.Maps;
 public sealed class OpenRouteServiceOptions
 {
-    public string BaseUrl { get; set; } = "https://api.openrouteservice.org/";
+    public string BaseUrl { get; set; } = "https://api.heigit.org/openrouteservice/";
     public string ApiKey { get; set; } = "";
     public string Profile { get; set; } = "driving-car";
     public int TimeoutSeconds { get; set; } = 10;

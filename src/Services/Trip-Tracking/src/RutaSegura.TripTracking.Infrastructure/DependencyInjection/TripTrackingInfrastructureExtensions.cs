@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RutaSegura.BuildingBlocks.Application.Persistence;
 using RutaSegura.BuildingBlocks.Messaging;
 using RutaSegura.TripTracking.Application.Abstractions;
+using RutaSegura.TripTracking.Application.Trips.Queries;
 using RutaSegura.TripTracking.Infrastructure.Health;
 using RutaSegura.TripTracking.Infrastructure.LiveUpdates;
 using RutaSegura.TripTracking.Infrastructure.Messaging.Inbound;
@@ -44,15 +45,8 @@ public static class TripTrackingInfrastructureExtensions
         services.AddOptions<DemoSeedOptions>().Bind(configuration.GetSection(DemoSeedOptions.Section));
 
         AddPersistence(services, configuration);
-        services.AddHttpClient<IGuardianDirectory, VerifiedGuardianDirectory>(client =>
-        {
-            var address = configuration["GuardianAccess:BaseUrl"] ?? configuration["Iam:BaseUrl"] ?? "https://directory.invalid/";
-            if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && !(uri.Scheme == "http" && configuration.GetValue("GuardianAccess:AllowInsecureHttp", false))) || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0)
-                throw new InvalidOperationException("Configure GuardianAccess:BaseUrl HTTPS (local HTTP requires AllowInsecureHttp).");
-            client.BaseAddress = uri; client.Timeout = TimeSpan.FromSeconds(3); client.MaxResponseContentBufferSize = 128 * 1024;
-            var token = configuration["GuardianAccess:ServiceToken"];
-            if (!string.IsNullOrWhiteSpace(token)) client.DefaultRequestHeaders.Add("X-Service-Token", token);
-        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+        ConfigureDirectoryClient(services.AddHttpClient<IGuardianDirectory, VerifiedGuardianDirectory>(), configuration, 128 * 1024);
+        ConfigureDirectoryClient(services.AddHttpClient<ITripOperationsDirectory, TripOperationsDirectory>(), configuration, 8 * 1024 * 1024);
         AddCaching(services, configuration);
         var messagingEnabled = configuration.GetValue<bool>($"{RabbitMqOptions.Section}:{nameof(RabbitMqOptions.Enabled)}");
         AddMessaging(services, messagingEnabled);
@@ -69,6 +63,21 @@ public static class TripTrackingInfrastructureExtensions
             health.AddCheck<RabbitMqHealthCheck>("rabbitmq", HealthStatus.Unhealthy, [ReadinessTag]);
 
         return services;
+    }
+
+    private static void ConfigureDirectoryClient(IHttpClientBuilder builder, IConfiguration configuration, int maxResponseBytes)
+    {
+        builder.ConfigureHttpClient(client =>
+        {
+            var address = configuration["GuardianAccess:BaseUrl"] ?? configuration["Iam:BaseUrl"] ?? "https://directory.invalid/";
+            if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && !(uri.Scheme == "http" && configuration.GetValue("GuardianAccess:AllowInsecureHttp", false))) || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0)
+                throw new InvalidOperationException("Configure GuardianAccess:BaseUrl HTTPS (local HTTP requires AllowInsecureHttp).");
+            client.BaseAddress = uri;
+            client.Timeout = TimeSpan.FromSeconds(3);
+            client.MaxResponseContentBufferSize = maxResponseBytes;
+            var token = configuration["GuardianAccess:ServiceToken"];
+            if (!string.IsNullOrWhiteSpace(token)) client.DefaultRequestHeaders.Add("X-Service-Token", token);
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
     }
 
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)

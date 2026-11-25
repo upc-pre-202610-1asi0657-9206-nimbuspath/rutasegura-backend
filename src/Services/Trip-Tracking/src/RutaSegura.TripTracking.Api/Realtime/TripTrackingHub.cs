@@ -96,7 +96,7 @@ internal sealed class SignalRLiveUpdateSink(IHubContext<TripTrackingHub, ITripTr
         await Parallel.ForEachAsync(subscriptions.ForTrip(update.TripId), new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = ct }, async (session, token) =>
         {
             var snapshot = await Authorized(session, token);
-            if (snapshot?.Position is null || snapshot.Status != "InProgress" || update.RecordedAt < snapshot.Position.RecordedAt) return;
+            if (snapshot?.Position is null || snapshot.Status is not ("InProgress" or "Delayed") || update.RecordedAt < snapshot.Position.RecordedAt) return;
             var scoped = update with { NextStopId = snapshot.NextStop?.StopId, NextStopDistanceMeters = snapshot.NextStop?.DistanceMeters,
                 NextStopEtaMinutes = snapshot.NextStop?.EtaMinutes, StudentsOnBoard = snapshot.StudentsOnBoard };
             try { await hub.Clients.Client(session.ConnectionId).PositionUpdated(scoped).WaitAsync(token); }

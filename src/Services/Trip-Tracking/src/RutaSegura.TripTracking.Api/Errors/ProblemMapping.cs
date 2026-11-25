@@ -76,6 +76,7 @@ internal sealed class TripTrackingExceptionHandler(IProblemDetailsService proble
         var (status, code, detail) = exception switch
         {
             RutaSegura.TripTracking.Application.Abstractions.GuardianDirectoryUnavailableException => (StatusCodes.Status503ServiceUnavailable, "GUARDIAN_DIRECTORY_UNAVAILABLE", "No se pudo verificar el vínculo autorizado."),
+            RutaSegura.TripTracking.Application.Trips.Queries.TripOperationsDirectoryUnavailableException => (StatusCodes.Status503ServiceUnavailable, "TRIP_OPERATIONS_DIRECTORY_UNAVAILABLE", "No se pudo consultar el padrón y el itinerario del viaje."),
             DomainException { Code: "TRIP_DRIVER_MISMATCH" } ex => (StatusCodes.Status403Forbidden, ex.Code, ex.Message),
             DomainException ex => (StatusCodes.Status422UnprocessableEntity, ex.Code, ex.Message),
             PersistenceConflictException ex => (StatusCodes.Status409Conflict, ex.Code, ex.Message),

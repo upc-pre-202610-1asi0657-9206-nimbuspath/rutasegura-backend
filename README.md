@@ -85,6 +85,22 @@ La prueba de humo (`scripts/smoke/e2e.sh`) corre en un contenedor y no necesita 
 
 **Si un arranque falla a medias:** revisar los logs y el estado de migraciones/credenciales antes de reintentar; conservar volumenes y claves existentes. MySQL solo inicializa usuarios y bases con el volumen vacio. Borrar volumenes o regenerar la clave AES no es un procedimiento de recuperacion de datos.
 
+### Cargar datos de demostración para la web y la app
+
+Para configurar el cálculo vial en producción, sigue la [guía de OpenRouteService en EC2](docs/DEPLOY-ORS-EC2.md).
+
+Con el Compose principal iniciado, ejecuta desde la raíz del repositorio en PowerShell 7:
+
+```powershell
+.\scripts\Initialize-DemoOperation.ps1
+```
+
+Ingresa la contraseña local de `admin@saferoute.pe` cuando se solicite. El script usa el Gateway en `localhost:8000` y la organización demo que crea IAM. Carga dos perfiles de conductor, dos vehículos, dos tutores y cuatro alumnos ficticios. `parent@saferoute.pe` puede consultar a Lucía Demo y Mateo Demo en **Mis estudiantes**. El conductor puede consultar su perfil desde la app.
+
+En **Rutas escolares** quedan dos rutas en borrador con paradas en Lima y alumnos ubicados en ellas. Para operar una ruta, asigna un conductor y un vehículo y actívala. El planificador de Tracking gestiona los viajes después de la activación. Para cargar solo el padrón y la flota, ejecuta el script con `-SkipRoutes`.
+
+Puedes volver a ejecutarlo para completar datos faltantes. El script reutiliza los registros demo que encuentra y conserva vínculos revocados, conductores suspendidos y rutas publicadas. Los nombres de los colegios y alumnos son ficticios, y las coordenadas se usan como referencias de mapa.
+
 **Pruebas de integración de Trip-Tracking contra este Docker:** sin estas variables se omiten.
 ```powershell
 $env:TRIPTRACKING_IT_MYSQL="server=localhost;port=3307;user=root;password=root"

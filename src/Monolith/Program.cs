@@ -38,6 +38,7 @@ using Monolith.Shared.Infrastructure.Pipeline.Middleware.Extensions;
 using Monolith.Shared.Interfaces.Rest.ProblemDetails;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddKeyPerFile("/run/secrets", optional: true);
 // ---------------------------------------------------------------------------
 // Routing & Controllers
 // ---------------------------------------------------------------------------
@@ -47,7 +48,11 @@ builder.Services.AddControllers(options => options.Conventions.Add(new KebabCase
     .AddDataAnnotationsLocalization();
 
 builder.Services.AddProblemDetails();
-builder.Services.AddHealthChecks();
+var databaseInitialized = !builder.Configuration.GetValue("Database:MigrateOnStartup", true);
+builder.Services.AddHealthChecks().AddCheck("database-startup", () =>
+    databaseInitialized
+        ? Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy()
+        : Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("Database initialization failed."));
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -227,6 +232,7 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
             var hashingService = services.GetRequiredService<IHashingService>();
             await IamSeeder.SeedAsync(context, hashingService);
             startupLogger.LogInformation("Seed data ensured.");
+            databaseInitialized = true;
         }
         catch (Exception ex)
         {

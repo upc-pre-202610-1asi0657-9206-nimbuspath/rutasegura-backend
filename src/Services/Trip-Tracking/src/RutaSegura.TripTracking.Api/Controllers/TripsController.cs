@@ -71,6 +71,13 @@ public sealed class TripsController(IDispatcher dispatcher, TimeProvider clock) 
     public Task<IActionResult> GetLiveStatus(Guid tripId, CancellationToken ct) =>
         Query(new GetTripLiveStatusQuery(tripId, CurrentRequester), ct);
 
+    /// <summary>Padrón e itinerario para el personal autorizado de este viaje.</summary>
+    [HttpGet("{tripId:guid}/operational-details")]
+    [Authorize(Policy = Policies.Staff)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public Task<IActionResult> GetOperationalDetails(Guid tripId, CancellationToken ct) =>
+        Query(new GetTripOperationalDetailsQuery(tripId, CurrentRequester), ct);
+
     /// <summary>Solo la posición (desde Redis). Respaldo del canal SignalR para el mapa.</summary>
     [HttpGet("{tripId:guid}/position")]
     [Authorize(Policy = Policies.TripViewer)]

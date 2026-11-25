@@ -11,8 +11,10 @@ using RutaSegura.TripTracking.IamIntegration.Tests.Support;
 namespace RutaSegura.TripTracking.IamIntegration.Tests;
 public sealed class RealtimeRevocationTests
 {
-    [Fact]
-    public async Task ExistingSubscriptionStopsReceivingGpsImmediatelyWhenAuthorizationIsRevoked()
+    [Theory]
+    [InlineData("InProgress")]
+    [InlineData("Delayed")]
+    public async Task ExistingSubscriptionStopsReceivingGpsImmediatelyWhenAuthorizationIsRevoked(string activeStatus)
     {
         await using var iam = new IamHost();
         var token = await iam.SignInAsync(SeedAccounts.ParentEmail, SeedAccounts.ParentPassword);
@@ -21,13 +23,13 @@ public sealed class RealtimeRevocationTests
         await using var customized = host.WithWebHostBuilder(builder => builder.ConfigureTestServices(s => s.AddSingleton<IHubContext<TripTrackingHub, ITripTrackingClient>>(new HubContext(clients))));
         _ = customized.CreateClient();
         var trip = Guid.NewGuid(); var now = DateTimeOffset.UtcNow;
-        host.Dispatcher.LiveStatus = new TripLiveStatusDto(trip, "Ruta", "Pickup", "InProgress", now, now,
+        host.Dispatcher.LiveStatus = new TripLiveStatusDto(trip, "Ruta", "Pickup", activeStatus, now, now,
             new(-12, -77, now, 20, null, 0), null, 0, 1, false, []);
         var subscriptions = customized.Services.GetRequiredService<TripRealtimeSubscriptions>();
         var aborted = false;
         subscriptions.Add(new("open-connection", trip, new Requester(SeedAccounts.Parent, RequesterRole.Guardian, SeedAccounts.Organization), token, now.AddMinutes(5), () => aborted = true));
         var sink = customized.Services.GetRequiredService<ILiveUpdateSink>();
-        var update = new LivePositionUpdate(trip, Guid.NewGuid(), Guid.NewGuid(), "InProgress", -12, -77, now, 20, null, null, null, null, 0);
+        var update = new LivePositionUpdate(trip, Guid.NewGuid(), Guid.NewGuid(), activeStatus, -12, -77, now, 20, null, null, null, null, 0);
         await sink.PositionAsync(update, TestContext.Current.CancellationToken);
         clients.Delivered.ShouldBe(1); aborted.ShouldBeFalse();
         host.Dispatcher.DenyQueries = true;
