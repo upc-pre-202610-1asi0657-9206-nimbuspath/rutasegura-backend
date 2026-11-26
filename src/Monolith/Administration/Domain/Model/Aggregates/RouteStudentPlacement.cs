@@ -40,10 +40,14 @@ public partial class Route
                 "The route is inactive and does not accept new students.");
 
         var current = _stops.FirstOrDefault(stop => stop.HasStudent(studentId));
+        // Children are not picked up at the destination, unless their address is too close to it for another stop.
         var nearest = _stops
             .Select(stop => (Stop: stop, Distance: stop.Location.DistanceInMetersTo(pickupLocation)))
-            .Where(candidate => candidate.Distance <= JoinStopRadiusMeters)
-            .OrderBy(candidate => candidate.Distance)
+            .Where(candidate => candidate.Distance <= (candidate.Stop.Origin.IsDestination()
+                ? MinimumDistanceBetweenStopsMeters
+                : JoinStopRadiusMeters))
+            .OrderBy(candidate => candidate.Stop.Origin.IsDestination())
+            .ThenBy(candidate => candidate.Distance)
             .Select(candidate => candidate.Stop)
             .FirstOrDefault();
 
@@ -92,38 +96,32 @@ public partial class Route
     public RouteStop? StopOf(StudentId studentId) => _stops.FirstOrDefault(stop => stop.HasStudent(studentId));
 
     /// <summary>
-    ///     1-based position that adds the fewest meters to the route (cheapest insertion). The administrator can
-    ///     always reorder the stops afterwards.
+    ///     1-based position that adds the fewest meters to the route (cheapest insertion), without going past the
+    ///     destination. The administrator can always reorder the stops afterwards.
     /// </summary>
     private int CheapestInsertionPosition(GeoLocation location)
     {
         var ordered = Stops;
         if (ordered.Count == 0) return 1;
 
-        var bestPosition = ordered.Count + 1;
-        var bestCost = ordered[^1].Location.DistanceInMetersTo(location);
+        var first = ordered[0].Origin.IsDestination() && !Direction.IsPickup() ? 2 : 1;
+        var last = ordered[^1].Origin.IsDestination() && Direction.IsPickup() ? ordered.Count : ordered.Count + 1;
 
-        var firstCost = location.DistanceInMetersTo(ordered[0].Location);
-        if (firstCost < bestCost)
+        double Cost(int position)
         {
-            bestCost = firstCost;
-            bestPosition = 1;
+            if (position == 1) return location.DistanceInMetersTo(ordered[0].Location);
+            if (position > ordered.Count) return ordered[^1].Location.DistanceInMetersTo(location);
+            var previous = ordered[position - 2].Location;
+            var next = ordered[position - 1].Location;
+            return previous.DistanceInMetersTo(location) + location.DistanceInMetersTo(next) -
+                   previous.DistanceInMetersTo(next);
         }
 
-        for (var i = 1; i < ordered.Count; i++)
-        {
-            var previous = ordered[i - 1].Location;
-            var next = ordered[i].Location;
-            var cost = previous.DistanceInMetersTo(location) + location.DistanceInMetersTo(next) -
-                       previous.DistanceInMetersTo(next);
-            if (cost < bestCost)
-            {
-                bestCost = cost;
-                bestPosition = i + 1;
-            }
-        }
-
-        return bestPosition;
+        // Ties favour the end of the route, then its start.
+        return new[] { ordered.Count + 1, 1 }
+            .Concat(Enumerable.Range(2, ordered.Count - 1))
+            .Where(position => position >= first && position <= last)
+            .MinBy(Cost);
     }
 
     /// <summary>An automatic stop is removed with its last student (an active route keeps at least one stop).</summary>

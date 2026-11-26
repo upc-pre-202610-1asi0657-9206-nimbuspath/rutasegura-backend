@@ -29,5 +29,8 @@ public interface IRouteRepository : IBaseRepository<Route>
     /// <summary>Routes with the given ids (any organization); used by the published facade.</summary>
     Task<IEnumerable<Route>> FindAllByIdsAsync(IReadOnlyCollection<RouteId> routeIds, CancellationToken cancellationToken);
 
+    /// <summary>Routes of every organization that are not being retired (DRAFT or ACTIVE).</summary>
+    Task<IEnumerable<Route>> FindAllNotInactiveAsync(CancellationToken cancellationToken);
+
     Task<bool> ExistsByNameAsync(OrganizationId organizationId, RouteName name, CancellationToken cancellationToken);
 }

@@ -37,6 +37,19 @@ public sealed class StakeholderCommandServiceTests
     }
 
     [Fact]
+    public async Task OpenRouteOffers_ListTheCodes_OnlyForActiveOrganizations()
+    {
+        var route = _fixture.RoutePlanning.AddRoute("K7QM4P2X", Route() with { EnrollmentCode = "K7QM4P2X" });
+
+        var open = await _fixture.Queries.Handle(new GetOpenRouteOffersQuery(), Ct);
+        _fixture.Directory.OrganizationActive = false;
+        var closed = await _fixture.Queries.Handle(new GetOpenRouteOffersQuery(), Ct);
+
+        open.ShouldHaveSingleItem().Route.EnrollmentCode.ShouldBe(route.EnrollmentCode);
+        closed.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Enroll_PlacesTheChildAtItsPickupPoint_InOneCommittedTransaction()
     {
         var student = _fixture.AddStudent();

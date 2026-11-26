@@ -17,6 +17,10 @@ public class RoutePlanningService(IRoutePlanningContextFacade facade) : IRoutePl
         return route is null ? null : ToRouteInfo(route);
     }
 
+    public async Task<IReadOnlyList<RouteInfo>> FindRoutesOpenForEnrollmentAsync(
+        CancellationToken cancellationToken) =>
+        (await facade.FindRoutesOpenForEnrollmentAsync(cancellationToken)).Select(ToRouteInfo).ToList();
+
     public async Task<IReadOnlyList<RouteInfo>> FindRoutesAsync(IReadOnlyCollection<Guid> routeIds,
         CancellationToken cancellationToken) =>
         routeIds.Count == 0
@@ -72,5 +76,6 @@ public class RoutePlanningService(IRoutePlanningContextFacade facade) : IRoutePl
     private static RouteInfo ToRouteInfo(RouteSummary route) =>
         new(route.RouteId, route.OrganizationId, route.Name, route.Direction, route.Status, route.DepartureTime,
             route.EstimatedArrivalTime, route.TimeZoneId, route.OperatingDays, route.StudentCount,
-            route.SeatingCapacity, route.AcceptsEnrollments);
+            route.SeatingCapacity, route.AcceptsEnrollments, route.EnrollmentCode, route.DestinationName,
+            route.DestinationAddress);
 }

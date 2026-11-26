@@ -66,7 +66,8 @@ public static class StakeholderResourceAssembler
     public static RouteOfferResource ToResource(RouteOffer offer) =>
         new(offer.Route.RouteId, offer.Route.Name, offer.OrganizationName, offer.Route.Direction, offer.Route.Status,
             offer.Route.DepartureTime, offer.Route.EstimatedArrivalTime, offer.Route.TimeZoneId,
-            offer.Route.OperatingDays, offer.Route.AvailableSeats, offer.Route.AcceptsEnrollments);
+            offer.Route.OperatingDays, offer.Route.AvailableSeats, offer.Route.AcceptsEnrollments,
+            offer.Route.DestinationName, offer.Route.DestinationAddress, offer.Route.EnrollmentCode);
 
     public static RouteStudentResource ToResource(RouteStudentDetails details, bool includeGuardianEmail)
     {

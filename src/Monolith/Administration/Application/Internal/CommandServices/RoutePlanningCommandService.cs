@@ -43,10 +43,19 @@ public class RoutePlanningCommandService(
                 new RouteSchedule(command.DepartureTime, command.EstimatedArrivalTime, command.TimeZoneId,
                     command.OperatingDays));
 
+            if (command.Destination is { } destination)
+                route.SetDestination(destination.Name, destination.Address,
+                    new GeoLocation(destination.Latitude, destination.Longitude));
+
             await routeRepository.AddAsync(route, cancellationToken);
             await SaveAsync(route, null, cancellationToken);
             return Result<Route>.Success(route);
         });
+
+    public Task<Result<Route>> Handle(SetRouteDestinationCommand command, CancellationToken cancellationToken) =>
+        ChangeRouteAsync(command.OrganizationId, command.RouteId,
+            route => route.SetDestination(command.Destination.Name, command.Destination.Address,
+                new GeoLocation(command.Destination.Latitude, command.Destination.Longitude)), cancellationToken);
 
     public Task<Result<Route>> Handle(RenameRouteCommand command, CancellationToken cancellationToken) =>
         AdministrationOperation.ExecuteAsync<Route>(async () =>

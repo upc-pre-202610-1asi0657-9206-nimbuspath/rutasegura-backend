@@ -81,7 +81,10 @@ public record RouteOfferResource(
     string TimeZoneId,
     IReadOnlyList<string> OperatingDays,
     int? AvailableSeats,
-    bool AcceptsEnrollments);
+    bool AcceptsEnrollments,
+    string? DestinationName,
+    string? DestinationAddress,
+    string? EnrollmentCode);
 
 /// <summary>Contact of the parent. The e-mail is only shown to the administrator.</summary>
 public record GuardianContactResource(Guid UserId, string? FullName, string? PhoneNumber, string? Email);

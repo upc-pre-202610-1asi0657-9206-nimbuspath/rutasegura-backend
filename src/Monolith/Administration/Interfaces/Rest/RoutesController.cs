@@ -39,7 +39,7 @@ public class RoutesController(
     {
         var result = await commandService.Handle(new CreateRouteCommand(OrganizationId, resource.Name,
             resource.Direction, resource.DepartureTime, resource.EstimatedArrivalTime, TimeZoneOrDefault(resource.TimeZoneId),
-            resource.OperatingDays), cancellationToken);
+            resource.OperatingDays, ToDestinationData(resource.Destination)), cancellationToken);
         return AdministrationActionResultAssembler.ToActionResult(this, result, ProblemDetails,
             route => CreatedAtAction(nameof(GetRouteById), new { routeId = route.Id.Identifier },
                 Assembler.ToResourceFromEntity(route)));
@@ -94,6 +94,13 @@ public class RoutesController(
         var result = await commandService.Handle(new DeleteRouteCommand(OrganizationId, routeId), cancellationToken);
         return AdministrationActionResultAssembler.ToActionResult(this, result, ProblemDetails, _ => NoContent());
     }
+
+    [HttpPut("{routeId:guid}/destination")]
+    [SwaggerOperation(Summary = "Set or change the destination of the route", OperationId = "SetRouteDestination")]
+    public async Task<IActionResult> SetDestination(Guid routeId, RouteDestinationResource resource,
+        CancellationToken cancellationToken) =>
+        Respond(await commandService.Handle(new SetRouteDestinationCommand(OrganizationId, routeId,
+            ToDestinationData(resource)!), cancellationToken));
 
     // ── Stops ────────────────────────────────────────────────────────────────
 
@@ -195,6 +202,11 @@ public class RoutesController(
     private IActionResult Respond(Result<RouteAggregate> result) =>
         AdministrationActionResultAssembler.ToActionResult(this, result, ProblemDetails,
             route => Ok(Assembler.ToResourceFromEntity(route)));
+
+    private static RouteDestinationData? ToDestinationData(RouteDestinationResource? resource) =>
+        resource is null
+            ? null
+            : new RouteDestinationData(resource.Name, resource.Address, resource.Latitude, resource.Longitude);
 
     private static string TimeZoneOrDefault(string? timeZoneId) =>
         string.IsNullOrWhiteSpace(timeZoneId) ? RouteSchedule.DefaultTimeZoneId : timeZoneId;

@@ -43,7 +43,9 @@ public class RouteStop
 
     public GeoLocation Location { get; private set; }
 
-    /// <summary>MANUAL (planned by the administrator) or ENROLLMENT (created at a child's pickup address).</summary>
+    /// <summary>
+    ///     MANUAL (planned by the administrator), ENROLLMENT (created at a child's pickup address) or DESTINATION.
+    /// </summary>
     public StopOrigin Origin { get; private set; }
 
     /// <summary>An automatic stop without students has no reason to exist.</summary>
@@ -57,7 +59,7 @@ public class RouteStop
     internal void Update(string name, string? address, GeoLocation location)
     {
         // Once the administrator edits an automatic stop it becomes part of the manual plan.
-        Origin = StopOrigin.CreateManual();
+        if (!Origin.IsDestination()) Origin = StopOrigin.CreateManual();
         Name = ValidName(name);
         Address = ValidAddress(address);
         Location = location ?? throw new ArgumentNullException(nameof(location));

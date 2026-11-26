@@ -150,6 +150,9 @@ internal sealed class FakeRoutePlanning : IRoutePlanningService
     public Task<RouteInfo?> FindRouteByEnrollmentCodeAsync(string enrollmentCode, CancellationToken cancellationToken) =>
         Task.FromResult(RoutesByCode.GetValueOrDefault(enrollmentCode.Replace("-", "")));
 
+    public Task<IReadOnlyList<RouteInfo>> FindRoutesOpenForEnrollmentAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<RouteInfo>>(RoutesByCode.Values.ToList());
+
     public Task<IReadOnlyList<RouteInfo>> FindRoutesAsync(IReadOnlyCollection<Guid> routeIds,
         CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<RouteInfo>>(RoutesByCode.Values.Where(r => routeIds.Contains(r.RouteId)).ToList());

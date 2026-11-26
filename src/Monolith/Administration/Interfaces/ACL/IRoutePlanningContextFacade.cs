@@ -14,6 +14,9 @@ public interface IRoutePlanningContextFacade
     /// <summary>The route that uses <paramref name="enrollmentCode" />, or null.</summary>
     Task<RouteSummary?> FindRouteByEnrollmentCodeAsync(string enrollmentCode, CancellationToken cancellationToken);
 
+    /// <summary>Routes a family can enroll a child in: open, with driver, vehicle and destination.</summary>
+    Task<IReadOnlyList<RouteSummary>> FindRoutesOpenForEnrollmentAsync(CancellationToken cancellationToken);
+
     /// <summary>Routes with the given ids (deleted routes are simply missing).</summary>
     Task<IReadOnlyList<RouteSummary>> FindRoutesAsync(IReadOnlyCollection<Guid> routeIds,
         CancellationToken cancellationToken);
@@ -51,7 +54,10 @@ public sealed record RouteSummary(
     IReadOnlyList<string> OperatingDays,
     int StudentCount,
     int? SeatingCapacity,
-    bool AcceptsEnrollments);
+    bool AcceptsEnrollments,
+    string? EnrollmentCode = null,
+    string? DestinationName = null,
+    string? DestinationAddress = null);
 
 /// <summary>Stop of a student on a route.</summary>
 public sealed record PlannedStudentStop(

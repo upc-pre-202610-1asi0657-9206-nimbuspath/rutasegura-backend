@@ -372,8 +372,10 @@ public partial class Route : IHasDomainEvents
                 $"The location is less than {MinimumDistanceBetweenStopsMeters} m away from stop '{tooClose.Name}'.");
     }
 
-    private static void Resequence(IReadOnlyList<RouteStop> ordered)
+    /// <summary>Numbers the stops 1..n keeping the destination at its end of the route.</summary>
+    private void Resequence(IReadOnlyList<RouteStop> requested)
     {
+        var ordered = PinDestination(requested);
         for (var i = 0; i < ordered.Count; i++)
             ordered[i].ChangeSequence(i + 1);
     }

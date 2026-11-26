@@ -21,6 +21,15 @@ public class RoutePlanningContextFacade(
         return route is null ? null : await ToSummaryAsync(route, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<RouteSummary>> FindRoutesOpenForEnrollmentAsync(
+        CancellationToken cancellationToken)
+    {
+        var routes = await queryService.Handle(new GetRoutesOpenForEnrollmentQuery(), cancellationToken);
+        var result = new List<RouteSummary>();
+        foreach (var route in routes) result.Add(await ToSummaryAsync(route, cancellationToken));
+        return result;
+    }
+
     public async Task<IReadOnlyList<RouteSummary>> FindRoutesAsync(IReadOnlyCollection<Guid> routeIds,
         CancellationToken cancellationToken)
     {
@@ -86,6 +95,7 @@ public class RoutePlanningContextFacade(
             route.Direction.Value, route.Status.Value, route.Schedule.DepartureTime,
             route.Schedule.EstimatedArrivalTime, route.Schedule.TimeZoneId,
             route.Schedule.OperatingDays.Select(day => day.ToString()).ToList(), route.StudentCount, seats,
-            route.AcceptsEnrollments());
+            route.AcceptsEnrollments(), route.EnrollmentCode.Value, route.DestinationStop()?.Name,
+            route.DestinationStop()?.Address);
     }
 }

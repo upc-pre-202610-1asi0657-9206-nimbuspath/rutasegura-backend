@@ -11,6 +11,8 @@ public interface IStakeholderQueryService
 
     Task<GuardianProfileDetails> Handle(GetGuardianProfileQuery query, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<RouteOffer>> Handle(GetOpenRouteOffersQuery query, CancellationToken cancellationToken);
+
     Task<RouteOffer?> Handle(GetRouteOfferQuery query, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<RouteStudentDetails>> Handle(GetOrganizationEnrollmentsQuery query,

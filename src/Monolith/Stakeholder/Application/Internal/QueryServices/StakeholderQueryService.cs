@@ -48,6 +48,22 @@ public class StakeholderQueryService(
         return new GuardianProfileDetails(query.GuardianUserId, account, profile);
     }
 
+    public async Task<IReadOnlyList<RouteOffer>> Handle(GetOpenRouteOffersQuery query,
+        CancellationToken cancellationToken)
+    {
+        var routes = await routePlanning.FindRoutesOpenForEnrollmentAsync(cancellationToken);
+        var offers = new List<RouteOffer>();
+        foreach (var organization in routes.GroupBy(route => route.OrganizationId))
+        {
+            // Same rule as enrolling: the transport company must be active.
+            if (!await directory.IsOrganizationActiveAsync(organization.Key, cancellationToken)) continue;
+            var name = await directory.FindOrganizationNameAsync(organization.Key, cancellationToken);
+            offers.AddRange(organization.Select(route => new RouteOffer(route, name)));
+        }
+
+        return offers.OrderBy(offer => offer.Route.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     public async Task<RouteOffer?> Handle(GetRouteOfferQuery query, CancellationToken cancellationToken)
     {
         var route = await routePlanning.FindRouteByEnrollmentCodeAsync(query.EnrollmentCode ?? "", cancellationToken);
