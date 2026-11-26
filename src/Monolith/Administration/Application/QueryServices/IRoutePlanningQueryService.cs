@@ -14,6 +14,8 @@ public interface IRoutePlanningQueryService
 
     Task<ActiveRouteQuota> Handle(GetActiveRouteQuotaQuery query, CancellationToken cancellationToken);
 
+    Task<IEnumerable<Route>> Handle(GetRoutesOpenForEnrollmentQuery query, CancellationToken cancellationToken);
+
     Task<Route?> Handle(GetRouteByEnrollmentCodeQuery query, CancellationToken cancellationToken);
 
     Task<IEnumerable<Route>> Handle(GetRoutesByIdsQuery query, CancellationToken cancellationToken);

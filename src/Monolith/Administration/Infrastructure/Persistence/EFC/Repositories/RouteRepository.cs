@@ -51,6 +51,12 @@ public class RouteRepository(AppDbContext context) : BaseRepository<Route>(conte
         return await Context.Set<Route>().WhereIn(route => route.Id, routeIds).ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<Route>> FindAllNotInactiveAsync(CancellationToken cancellationToken)
+    {
+        var inactive = RouteStatus.CreateInactive();
+        return await Context.Set<Route>().Where(route => route.Status != inactive).ToListAsync(cancellationToken);
+    }
+
     public Task<bool> ExistsByNameAsync(OrganizationId organizationId, RouteName name,
         CancellationToken cancellationToken) =>
         Context.Set<Route>().AnyAsync(route => route.OrganizationId == organizationId && route.Name == name,

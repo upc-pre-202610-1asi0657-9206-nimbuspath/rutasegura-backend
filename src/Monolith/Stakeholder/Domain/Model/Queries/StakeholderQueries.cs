@@ -9,6 +9,9 @@ public record GetGuardianProfileQuery(Guid GuardianUserId);
 /// <summary>Preview of the route behind an enrollment code, before the parent enrolls.</summary>
 public record GetRouteOfferQuery(string EnrollmentCode);
 
+/// <summary>Every route a family can enroll a child in, with its code.</summary>
+public record GetOpenRouteOffersQuery;
+
 /// <summary>Enrollments in the routes of an organization (administrator).</summary>
 public record GetOrganizationEnrollmentsQuery(Guid OrganizationId, Guid? RouteId, bool OnlyActive);
 

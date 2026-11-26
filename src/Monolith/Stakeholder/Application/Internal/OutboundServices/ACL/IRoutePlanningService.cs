@@ -10,6 +10,8 @@ public interface IRoutePlanningService
 {
     Task<RouteInfo?> FindRouteByEnrollmentCodeAsync(string enrollmentCode, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<RouteInfo>> FindRoutesOpenForEnrollmentAsync(CancellationToken cancellationToken);
+
     Task<IReadOnlyList<RouteInfo>> FindRoutesAsync(IReadOnlyCollection<Guid> routeIds,
         CancellationToken cancellationToken);
 
@@ -42,7 +44,10 @@ public sealed record RouteInfo(
     IReadOnlyList<string> OperatingDays,
     int StudentCount,
     int? SeatingCapacity,
-    bool AcceptsEnrollments)
+    bool AcceptsEnrollments,
+    string? EnrollmentCode = null,
+    string? DestinationName = null,
+    string? DestinationAddress = null)
 {
     /// <summary>Free seats when the route has a vehicle; null when there is none yet.</summary>
     public int? AvailableSeats => SeatingCapacity is { } seats ? Math.Max(0, seats - StudentCount) : null;

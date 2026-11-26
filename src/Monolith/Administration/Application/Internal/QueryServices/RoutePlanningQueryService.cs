@@ -36,6 +36,13 @@ public class RoutePlanningQueryService(IRouteRepository routeRepository, IPlanLi
         return new ActiveRouteQuota(limits.PlanCode, active, limits.MaxActiveRoutes);
     }
 
+    public async Task<IEnumerable<Route>> Handle(GetRoutesOpenForEnrollmentQuery query,
+        CancellationToken cancellationToken) =>
+        (await routeRepository.FindAllNotInactiveAsync(cancellationToken))
+        .Where(route => route.IsAssigned() && route.DestinationStop() is not null)
+        .OrderBy(route => route.Name.Value, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     public async Task<Route?> Handle(GetRouteByEnrollmentCodeQuery query, CancellationToken cancellationToken)
     {
         var normalized = RouteEnrollmentCode.Normalize(query.EnrollmentCode);

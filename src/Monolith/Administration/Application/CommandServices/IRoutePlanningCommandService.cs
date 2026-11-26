@@ -10,6 +10,8 @@ public interface IRoutePlanningCommandService
 {
     Task<Result<Route>> Handle(CreateRouteCommand command, CancellationToken cancellationToken);
 
+    Task<Result<Route>> Handle(SetRouteDestinationCommand command, CancellationToken cancellationToken);
+
     Task<Result<Route>> Handle(RenameRouteCommand command, CancellationToken cancellationToken);
 
     Task<Result<Route>> Handle(RescheduleRouteCommand command, CancellationToken cancellationToken);

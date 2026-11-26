@@ -10,13 +10,24 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Monolith.Stakeholder.Interfaces.Rest;
 
-/// <summary>Before enrolling, the parent sees which route (company, schedule, free seats) a code belongs to.</summary>
+/// <summary>
+///     Before enrolling, the parent browses the open routes (code, company, destination, schedule, free seats) or
+///     looks up the route a code belongs to.
+/// </summary>
 [Route("api/v1/stakeholders/route-offers")]
 [Authorize(Policy = IamPolicies.Guardian)]
 [SwaggerTag("Stakeholder · Route behind an enrollment code.")]
 public class RouteOffersController(IStakeholderQueryService queryService, ProblemDetailsFactory problemDetailsFactory)
     : StakeholderControllerBase(problemDetailsFactory)
 {
+    [HttpGet]
+    [SwaggerOperation(Summary = "Routes open to enrollments, with their codes", OperationId = "GetOpenRouteOffers")]
+    public async Task<IActionResult> GetOpenRouteOffers(CancellationToken cancellationToken)
+    {
+        var offers = await queryService.Handle(new GetOpenRouteOffersQuery(), cancellationToken);
+        return Ok(offers.Select(StakeholderResourceAssembler.ToResource));
+    }
+
     [HttpGet("{enrollmentCode}")]
     [SwaggerOperation(Summary = "Route of an enrollment code", OperationId = "GetRouteOffer")]
     public async Task<IActionResult> GetRouteOffer(string enrollmentCode, CancellationToken cancellationToken)

@@ -12,7 +12,11 @@ public record CreateRouteResource(
     TimeOnly DepartureTime,
     TimeOnly EstimatedArrivalTime,
     string? TimeZoneId,
-    IReadOnlyCollection<DayOfWeek> OperatingDays);
+    IReadOnlyCollection<DayOfWeek> OperatingDays,
+    RouteDestinationResource? Destination = null);
+
+/// <summary>The school of the route: where a PICKUP route ends and a RETURN route starts.</summary>
+public record RouteDestinationResource(string Name, string? Address, double Latitude, double Longitude);
 
 public record RenameRouteResource(string Name);
 

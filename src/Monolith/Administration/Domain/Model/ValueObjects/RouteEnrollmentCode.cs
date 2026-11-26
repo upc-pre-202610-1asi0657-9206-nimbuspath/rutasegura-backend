@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 namespace Monolith.Administration.Domain.Model.ValueObjects;
 
 /// <summary>
-///     Code the transport company shares with the families of a route. A parent (Stakeholder bounded context) uses it
-///     to enroll a child: routes are never listed publicly, so only who received the code can find the route.
+///     Code a parent (Stakeholder bounded context) uses to enroll a child in a route. Signed-in parents can list the
+///     routes that are open to enrollments together with their codes; the transport company may also share it.
 /// </summary>
 /// <remarks>8 characters without look-alike symbols (no 0/O, 1/I/L), e.g. <c>K7QM4P2X</c>.</remarks>
 public record RouteEnrollmentCode

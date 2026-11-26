@@ -10,7 +10,13 @@ public record CreateRouteCommand(
     TimeOnly DepartureTime,
     TimeOnly EstimatedArrivalTime,
     string TimeZoneId,
-    IReadOnlyCollection<DayOfWeek> OperatingDays);
+    IReadOnlyCollection<DayOfWeek> OperatingDays,
+    RouteDestinationData? Destination = null);
+
+/// <summary>The school of the route: where a PICKUP route ends and a RETURN route starts.</summary>
+public record RouteDestinationData(string Name, string? Address, double Latitude, double Longitude);
+
+public record SetRouteDestinationCommand(Guid OrganizationId, Guid RouteId, RouteDestinationData Destination);
 
 public record RenameRouteCommand(Guid OrganizationId, Guid RouteId, string Name);
 

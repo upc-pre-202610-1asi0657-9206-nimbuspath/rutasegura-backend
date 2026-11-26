@@ -75,6 +75,9 @@ internal sealed class InMemoryVehicleRepository : InMemoryRepository<Vehicle>, I
 
 internal sealed class InMemoryRouteRepository : InMemoryRepository<Route>, IRouteRepository
 {
+    public Task<IEnumerable<Route>> FindAllNotInactiveAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IEnumerable<Route>>(Items.Where(route => !route.Status.IsInactive()).ToList());
+
     public Task<Route?> FindByRouteIdAsync(RouteId routeId, CancellationToken cancellationToken) =>
         Single(r => r.Id == routeId);
 

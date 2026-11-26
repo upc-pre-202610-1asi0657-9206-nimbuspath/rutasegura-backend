@@ -34,3 +34,6 @@ public record GetActiveRouteQuotaQuery(Guid OrganizationId);
 public record GetOperationalAlertsQuery(Guid OrganizationId, bool OnlyOpen);
 
 public record GetTripRecordsByRouteQuery(Guid OrganizationId, Guid RouteId);
+
+/// <summary>Routes a family can pick: open to enrollments, with driver, vehicle and destination.</summary>
+public record GetRoutesOpenForEnrollmentQuery;
