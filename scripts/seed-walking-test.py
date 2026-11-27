@@ -93,15 +93,22 @@ def main():
     existing = parent.call('GET', '/stakeholders/me/students')
     links = admin.call('GET', '/stakeholders/administration/guardian-links')
     students = []
-    for index, name in enumerate(('Alumno Uno', 'Alumna Dos', 'Alumno Tres', 'Alumna Cuatro'), start=1):
-        student = next((s for s in existing if s['firstName'] == name and s['lastName'] == 'Caminata Prueba'), None)
+    legacy_names = ('Alumno Uno', 'Alumna Dos', 'Alumno Tres', 'Alumna Cuatro')
+    for index, name in enumerate(('Mateo', 'Valentina', 'Lucas', 'Sofia'), start=1):
+        student = next((s for s in existing if
+            (s['firstName'] == name and s['lastName'] == 'Ramirez Torres') or
+            (s['firstName'] == legacy_names[index - 1] and s['lastName'] == 'Caminata Prueba')), None)
+        if student is not None and (student['firstName'] != name or student['lastName'] != 'Ramirez Torres'):
+            student = parent.call('PUT', f'/stakeholders/me/students/{student["id"]}',
+                dict(firstName=name, lastName='Ramirez Torres', birthDate=student.get('birthDate'),
+                    schoolGrade=student.get('schoolGrade'), schoolName=student.get('schoolName')))
         pickup = dict(address=f'Punto ficticio {index} - cambiar antes de crear la ruta',
             reference='Datos sinteticos; seleccionar un punto real de la caminata antes de inscribir.',
             latitude=-12.0464 - (index - 1) * 0.0015, longitude=-77.0428)
         if student is None:
             created = admin.call('POST', '/stakeholders/administration/students', dict(guardianUserId=parent_user['id'],
-                student=dict(firstName=name, lastName='Caminata Prueba', birthDate=f'201{index+5}-03-10',
-                    schoolGrade=f'{index} primaria', schoolName='Colegio Ficticio Caminata', pickupLocation=pickup)))
+                student=dict(firstName=name, lastName='Ramirez Torres', birthDate=f'201{index+5}-03-10',
+                    schoolGrade=f'{index} primaria', schoolName='Colegio Los Alamos', pickupLocation=pickup)))
             student = parent.call('GET', f'/stakeholders/me/students/{created["studentId"]}')
         link = next((g for g in links if g['studentId'] == student['id'] and g['guardianUserId'] == parent_user['id']), None)
         if link is None or link['status'] != 'VERIFIED':
