@@ -13,10 +13,16 @@ on:
 jobs:
 
   build-and-push:
+    outputs:
+      image_tag: ${{ steps.release.outputs.image_tag }}
 
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set release tag
+        id: release
+        run: echo "image_tag=$GITHUB_SHA-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
 
       - uses: actions/checkout@v4
 
@@ -32,27 +38,22 @@ jobs:
         run: |
           docker build \
             -f src/Services/Trip-Tracking/Dockerfile \
-            -t trip-tracking:latest .
+            -t trip-tracking:${{ steps.release.outputs.image_tag }} .
 
       - name: Tag Image
         run: |
-          docker tag trip-tracking:latest \
-          ${{ secrets.ECR_TRIP_TRACKING_REPOSITORY }}:latest
+          docker tag trip-tracking:${{ steps.release.outputs.image_tag }} \
+          ${{ secrets.ECR_TRIP_TRACKING_REPOSITORY }}:${{ steps.release.outputs.image_tag }}
 
       - name: Push Image
         run: |
           docker push \
-          ${{ secrets.ECR_TRIP_TRACKING_REPOSITORY }}:latest
+          ${{ secrets.ECR_TRIP_TRACKING_REPOSITORY }}:${{ steps.release.outputs.image_tag }}
 
-      - name: Deploy EC2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /opt/rutasegura
-
-            docker compose -f docker-compose.prod.yml pull trip-tracking
-
-            docker compose -f docker-compose.prod.yml up -d trip-tracking
+  deploy:
+    needs: build-and-push
+    uses: ./.github/workflows/deploy-ec2.yml
+    with:
+      service: trip-tracking
+      image_tag: ${{ needs.build-and-push.outputs.image_tag }}
+    secrets: inherit

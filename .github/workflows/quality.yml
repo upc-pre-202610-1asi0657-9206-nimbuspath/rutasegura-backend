@@ -1,0 +1,37 @@
+name: Backend quality gate
+on:
+  workflow_call:
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Restore and run all backend tests (includes architecture)
+        run: dotnet test RutaSegura.slnx -c Release --logger trx --results-directory artifacts/test-results/ci
+      - name: Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: artifacts/test-results/ci
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real MySQL RabbitMQ Redis Gateway integration (isolated)
+        shell: pwsh
+        run: ./scripts/Test-Sprint3Integration.ps1
+      - name: Integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint3-integration
+          path: artifacts/test-results/sprint3/integration

@@ -87,7 +87,7 @@ La prueba de humo (`scripts/smoke/e2e.sh`) corre en un contenedor y no necesita 
 
 ### Cargar datos de demostración para la web y la app
 
-Para configurar el cálculo vial en producción, sigue la [guía de OpenRouteService en EC2](docs/DEPLOY-ORS-EC2.md).
+Para desplegar cambios de configuración y habilitar Firebase, sigue la [guía de EC2](docs/DEPLOY-EC2.md). La [guía de OpenRouteService](docs/DEPLOY-ORS-EC2.md) describe la configuración del cálculo vial.
 
 Con el Compose principal iniciado, ejecuta desde la raíz del repositorio en PowerShell 7:
 

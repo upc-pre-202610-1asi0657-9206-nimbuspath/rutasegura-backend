@@ -1,0 +1,86 @@
+  # Environment override. Always combine with docker-compose.yml; never use standalone.
+# docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --wait
+services:
+  mysql:
+    ports: !reset []
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set production DB credentials}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?Set production DB credentials}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysqladmin ping -h 127.0.0.1 -u rutasegura --silent']
+  rabbitmq:
+    ports: !reset []
+    restart: unless-stopped
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+  monolith:
+    image: ${MONOLITH_IMAGE:?Set immutable registry image}
+    build: !reset null
+    ports: !override ["127.0.0.1:5000:8080"]
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Swagger__Enabled: "false"
+      Seed__Demo: "false"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=rutasegura_monolith;Uid=rutasegura;Pwd=${MYSQL_APP_PASSWORD:?Set production DB credentials};"
+      Iam__Provisioning__ApiKey: ${PROVISIONING_API_KEY:?Set private provisioning key}
+  trip-tracking:
+    image: ${TRIP_TRACKING_IMAGE:?Set immutable registry image}
+    build: !reset null
+    ports: !override ["127.0.0.1:5180:8080"]
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__TripTracking: "server=mysql;port=3306;database=rutasegura_trip_tracking;user=rutasegura;password=${MYSQL_APP_PASSWORD:?Set production DB credentials}"
+      Scheduling__Interval: "00:00:30"
+      Swagger__Enabled: "false"
+  notification-mysql:
+    restart: unless-stopped
+  notification-migrate:
+    image: ${NOTIFICATION_IMAGE:?Set immutable registry image}
+    build: !reset null
+  notification:
+    image: ${NOTIFICATION_IMAGE:?Set immutable registry image}
+    build: !reset null
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Cors__AllowedOrigins__0: ${WEB_ORIGIN:?Set HTTPS web origin}
+  gateway:
+    image: ${GATEWAY_IMAGE:?Set immutable registry image}
+    build: !reset null
+    ports: !override ["127.0.0.1:8000:8080"]
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Cors__AllowedOrigins__0: ${WEB_ORIGIN:?Set HTTPS web origin}
+      Gateway__TrustForwardedHeaders: "true"
+      Gateway__TrustedProxyNetworks__0: ${APP_NETWORK_CIDR:-172.30.40.0/24}
+  web:
+    image: ${WEB_IMAGE:?Set built web image}
+    restart: unless-stopped
+    depends_on:
+      gateway: { condition: service_healthy }
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    depends_on: [web]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set public DNS domain}
+      TLS_EMAIL: ${TLS_EMAIL:?Set TLS contact}
+    volumes:
+      - ./docker/web/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${APP_NETWORK_CIDR:-172.30.40.0/24}

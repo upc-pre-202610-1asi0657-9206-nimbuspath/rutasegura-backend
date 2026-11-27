@@ -1,0 +1,72 @@
+name: Deploy backend to EC2
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'docker/ec2/compose.override.yml'
+      - 'docker-compose.notification.fcm.yml'
+      - 'scripts/deploy/ec2.sh'
+      - '.github/workflows/deploy-ec2.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      service:
+        type: string
+        required: true
+      image_tag:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare versioned Compose configuration
+        shell: bash
+        env:
+          SERVICE: ${{ inputs.service || 'configuration' }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          GATEWAY_REPOSITORY: ${{ secrets.ECR_GATEWAY_REPOSITORY }}
+          MONOLITH_REPOSITORY: ${{ secrets.ECR_MONOLITH_REPOSITORY }}
+          TRIP_TRACKING_REPOSITORY: ${{ secrets.ECR_TRIP_TRACKING_REPOSITORY }}
+          NOTIFICATION_REPOSITORY: ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}
+        run: |
+          case "$SERVICE" in
+            gateway) repository=$GATEWAY_REPOSITORY ;;
+            monolith) repository=$MONOLITH_REPOSITORY ;;
+            trip-tracking) repository=$TRIP_TRACKING_REPOSITORY ;;
+            notification) repository=$NOTIFICATION_REPOSITORY ;;
+            configuration) repository= ;;
+            *) exit 1 ;;
+          esac
+          {
+            echo "EC2_COMPOSE_OVERRIDE=$(base64 -w0 docker/ec2/compose.override.yml)"
+            echo "EC2_FCM_OVERRIDE=$(base64 -w0 docker-compose.notification.fcm.yml)"
+            if [ "$SERVICE" != configuration ]; then
+              echo "EC2_ECR_REGISTRY=${repository%%/*}"
+              echo "EC2_IMAGE=$repository:$IMAGE_TAG"
+            fi
+          } >> "$GITHUB_ENV"
+      - name: Apply configuration on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          EC2_SERVICE: ${{ inputs.service || 'configuration' }}
+          EC2_AWS_REGION: ${{ secrets.AWS_REGION }}
+          EC2_DEPLOY_DIR: ${{ vars.EC2_DEPLOY_DIR || '/opt/rutasegura' }}
+          EC2_RELEASE_NUMBER: ${{ github.run_number }}
+          EC2_RELEASE_ATTEMPT: ${{ github.run_attempt }}
+          EC2_FCM_SECRET_ID: ${{ vars.NOTIFICATION_FCM_SECRET_ID }}
+          NOTIFICATION_FCM_PROJECT_ID: ${{ vars.NOTIFICATION_FCM_PROJECT_ID }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: EC2_SERVICE,EC2_AWS_REGION,EC2_DEPLOY_DIR,EC2_RELEASE_NUMBER,EC2_RELEASE_ATTEMPT,EC2_ECR_REGISTRY,EC2_IMAGE,EC2_COMPOSE_OVERRIDE,EC2_FCM_OVERRIDE,EC2_FCM_SECRET_ID,NOTIFICATION_FCM_PROJECT_ID
+          script_path: scripts/deploy/ec2.sh

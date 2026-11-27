@@ -13,10 +13,16 @@ on:
 jobs:
 
   build-and-push:
+    outputs:
+      image_tag: ${{ steps.release.outputs.image_tag }}
 
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set release tag
+        id: release
+        run: echo "image_tag=$GITHUB_SHA-$GITHUB_RUN_NUMBER-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
 
       - uses: actions/checkout@v4
 
@@ -32,27 +38,22 @@ jobs:
         run: |
           docker build \
             -f src/Services/Notification/Dockerfile \
-            -t notification:latest .
+            -t notification:${{ steps.release.outputs.image_tag }} .
 
       - name: Tag Notification
         run: |
-          docker tag notification:latest \
-          ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}:latest
+          docker tag notification:${{ steps.release.outputs.image_tag }} \
+          ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}:${{ steps.release.outputs.image_tag }}
 
       - name: Push Notification
         run: |
           docker push \
-          ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}:latest
+          ${{ secrets.ECR_NOTIFICATION_REPOSITORY }}:${{ steps.release.outputs.image_tag }}
 
-      - name: Deploy Notification
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /opt/rutasegura
-
-            docker compose -f docker-compose.prod.yml pull notification
-
-            docker compose -f docker-compose.prod.yml up -d notification
+  deploy:
+    needs: build-and-push
+    uses: ./.github/workflows/deploy-ec2.yml
+    with:
+      service: notification
+      image_tag: ${{ needs.build-and-push.outputs.image_tag }}
+    secrets: inherit

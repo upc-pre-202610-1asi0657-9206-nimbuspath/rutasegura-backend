@@ -1,6 +1,6 @@
 # Configurar OpenRouteService en EC2
 
-El workflow del monolito usa `/opt/rutasegura/docker-compose.prod.yml` de la instancia. El build de ECR no necesita la API key. La instancia la lee antes de recrear el monolito, usando su rol de IAM.
+El workflow del monolito usa el [despliegue compartido](DEPLOY-EC2.md) y combina su configuración con `/opt/rutasegura/docker-compose.prod.yml` de la instancia. El build de ECR no necesita la API key. La instancia la lee antes de recrear el monolito, usando su rol de IAM.
 
 El adaptador usa `https://api.heigit.org/openrouteservice/`. Si la instancia tenía un `Administration__Maps__BaseUrl` con el dominio anterior, retira ese ajuste para usar el valor actual. Véase el [anuncio de migración de HeiGIT](https://ask.openrouteservice.org/t/deprecating-api-openrouteservice-org-in-favour-of-api-heigit-org/7912).
 
