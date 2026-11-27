@@ -24,6 +24,6 @@ public sealed class NotificationContextController(IConfiguration configuration, 
         if (organizationId == Guid.Empty) return BadRequest();
         var result = await dispatcher.QueryAsync(new GetTripNotificationContextQuery(tripId, organizationId), ct);
         if (result.IsFailure) return NotFound();
-        return Ok(new { organizationId, tripId, isActive = result.Value.IsActive });
+        return Ok(new { organizationId, tripId, isActive = result.Value.IsActive, driverUserId = result.Value.DriverUserId });
     }
 }

@@ -39,12 +39,14 @@ internal sealed class CreateAnnouncementHandler(IAnnouncementRepository announce
         }
         var resolved = await directory.ForAnnouncementAsync(user.OrganizationId, command.RouteId, cancellationToken);
         if (resolved.IsFailure) return resolved.FirstError;
-        if (resolved.Value.Any(r => r.OrganizationId != user.OrganizationId || r.UserId == Guid.Empty || r.StudentId is not null))
+        var drivers = await directory.ForDriversAsync(user.OrganizationId, null, command.RouteId, cancellationToken);
+        var combined = resolved.Value.Concat(drivers).Distinct().ToArray();
+        if (combined.Any(r => r.OrganizationId != user.OrganizationId || r.UserId == Guid.Empty || r.StudentId is not null))
             return Error.Forbidden("NOTIFICATION_INVALID_AUDIENCE", "Los destinatarios estan fuera del alcance del comunicado.");
 
         var now = clock.GetUtcNow();
         var announcement = Announcement.Create(user.OrganizationId, user.UserId, command.RequestId, command.RouteId, content, now);
-        var audience = resolved.Value.Distinct().ToArray();
+        var audience = combined;
         var pending = audience.Select(recipient => NotificationEntity.Create(user.OrganizationId, recipient.UserId,
             command.RequestId, "administration.announcement-published.v1", command.RequestId.ToString(),
             NotificationCategory.Announcement, content, now, now, announcementId: announcement.Id)).ToArray();

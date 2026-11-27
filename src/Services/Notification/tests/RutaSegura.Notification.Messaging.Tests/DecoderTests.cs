@@ -10,6 +10,10 @@ public sealed class DecoderTests
     private readonly TripTrackingMessageDecoder _decoder = new(new());
 
     [Theory]
+    [InlineData("trip-tracking.trip-scheduled", typeof(DriverTripScheduledV1))]
+    [InlineData("trip-tracking.trip-cancelled", typeof(DriverTripCancelledV1))]
+    [InlineData("trip-tracking.sos-resolved", typeof(DriverSosResolvedV1))]
+    [InlineData("trip-tracking.student-marked-absent", typeof(DriverStudentAbsentV1))]
     [InlineData("trip-tracking.student-boarded", typeof(StudentBoardedV1))]
     [InlineData("trip-tracking.student-alighted", typeof(StudentAlightedV1))]
     [InlineData("trip-tracking.vehicle-approaching-stop", typeof(VehicleApproachingStopV1))]

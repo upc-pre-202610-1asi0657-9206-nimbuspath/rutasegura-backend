@@ -9,6 +9,8 @@ namespace RutaSegura.Notification.Infrastructure.Integration;
 /// <summary>Contrato interno a implementar por Administration/Roster; no consulta sus tablas ni inventa destinatarios.</summary>
 public sealed class AdministrationRecipientDirectory(HttpClient client) : INotificationRecipientDirectory
 {
+    public Task<IReadOnlyList<NotificationRecipient>> ForDriversAsync(Guid organizationId, Guid? driverUserId, Guid? routeId, CancellationToken ct) =>
+        Recipients("drivers", new { organizationId, driverUserId, routeId }, organizationId, ct);
     public async Task<IReadOnlyCollection<Guid>> CurrentOrganizationIdsAsync(Guid userId, CancellationToken ct)
     {
         using var response = await client.PostAsJsonAsync("internal/v1/notifications/user-contexts", new { userId }, ct);

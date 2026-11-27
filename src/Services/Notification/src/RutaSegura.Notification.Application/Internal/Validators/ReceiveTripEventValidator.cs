@@ -20,13 +20,15 @@ internal sealed class ReceiveTripEventValidator : IValidator<ReceiveTripEventCom
         if (m.MessageId == Guid.Empty || m.OccurredAt == default || string.IsNullOrWhiteSpace(m.CorrelationId) || m.CorrelationId.Length > 200)
             yield return Error.Validation("NOTIFICATION_INVALID_EVENT_METADATA", "El evento requiere identidad, fecha y correlacion.");
         var supported = e is StudentBoardedV1 or StudentAlightedV1 or VehicleApproachingStopV1 or
-            IncidentReportedV1 or SosRaisedV1 or TripCompletedV1;
+            IncidentReportedV1 or SosRaisedV1 or TripCompletedV1 or DriverTripScheduledV1 or DriverTripCancelledV1 or DriverSosResolvedV1 or DriverStudentAbsentV1;
         if (!supported || m.SchemaVersion != 1 || (supported && m.MessageType != TripNotificationContracts.MessageType(e)))
             yield return Error.Validation("NOTIFICATION_UNSUPPORTED_CONTRACT", "El tipo y la version deben coincidir con el contrato.");
         if (e.OrganizationId == Guid.Empty || e.TripId == Guid.Empty)
             yield return Error.Validation("NOTIFICATION_INVALID_EVENT_SCOPE", "Se requiere organizacion y viaje.");
         var valid = e switch
         {
+            DriverTripScheduledV1 or DriverTripCancelledV1 or DriverSosResolvedV1 => true,
+            DriverStudentAbsentV1 a => a.StudentId != Guid.Empty && a.Source is "Guardian" or "Driver",
             StudentBoardedV1 b => b.StudentId != Guid.Empty && b.StopId != Guid.Empty,
             StudentAlightedV1 a => a.StudentId != Guid.Empty && a.StopId != Guid.Empty,
             VehicleApproachingStopV1 p => p.StopId != Guid.Empty && ValidIds(p.StudentIds, true) && p.EtaMinutes >= 0,

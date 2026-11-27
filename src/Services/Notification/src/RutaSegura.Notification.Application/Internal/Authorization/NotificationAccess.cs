@@ -30,8 +30,13 @@ internal static class NotificationAccess
             var announcement = await announcements.FindByRequestAsync(user.OrganizationId, notification.SourceMessageId, cancellationToken);
             if (announcement is null || announcement.Id != notification.AnnouncementId) return false;
             var audience = await directory.ForAnnouncementAsync(user.OrganizationId, announcement.RouteId, cancellationToken);
-            return audience.IsSuccess && audience.Value.Any(r => r.OrganizationId == user.OrganizationId && r.UserId == user.UserId && r.StudentId is null);
+            if (audience.IsFailure) return false;
+            var drivers = await directory.ForDriversAsync(user.OrganizationId, user.UserId, announcement.RouteId, cancellationToken);
+            return audience.Value.Concat(drivers).Any(r => r.OrganizationId == user.OrganizationId && r.UserId == user.UserId && r.StudentId is null);
         }
+        if (notification.Category is NotificationCategory.TripAssigned or NotificationCategory.TripCancelled or NotificationCategory.SosResolved or NotificationCategory.StudentAbsent)
+            return (await directory.ForDriversAsync(user.OrganizationId, user.UserId, null, cancellationToken))
+                .Any(r => r.OrganizationId == user.OrganizationId && r.UserId == user.UserId && r.StudentId is null);
         if (notification.Category == NotificationCategory.Sos)
             return (await directory.OperatorsAsync(user.OrganizationId, cancellationToken))
                 .Any(r => r.OrganizationId == user.OrganizationId && r.UserId == user.UserId && r.StudentId is null);

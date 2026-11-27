@@ -2,6 +2,8 @@
 
 # Notification Service — fases 1 a 5
 
+> 26/11/2026: incorporados cinco avisos para el conductor, directorio DRIVER protegido y receptor Android. Contratos, despliegue, pruebas y límites: [notificaciones del conductor](../../../docs/NOTIFICACIONES-CONDUCTOR.md). Las notas de fases anteriores describen su alcance original.
+
 Core de notificaciones de RutaSegura en .NET 10: Domain y Application con dependencias hacia el nucleo. Se reutilizan AggregateRoot, Result, Dispatcher, validadores y los decoradores Logging → Validation → Transaction de BuildingBlocks.
 
 ## Organizacion DDD + Clean Architecture

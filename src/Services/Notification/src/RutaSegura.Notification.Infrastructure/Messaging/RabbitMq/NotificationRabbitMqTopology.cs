@@ -6,6 +6,7 @@ public static class NotificationRabbitMqTopology
 {
     public static readonly string[] RoutingKeys =
     [
+        "trip-tracking.trip-scheduled", "trip-tracking.trip-cancelled", "trip-tracking.sos-resolved", "trip-tracking.student-marked-absent",
         "trip-tracking.student-boarded", "trip-tracking.student-alighted", "trip-tracking.vehicle-approaching-stop",
         "trip-tracking.incident-reported", "trip-tracking.sos-raised", "trip-tracking.trip-completed"
     ];

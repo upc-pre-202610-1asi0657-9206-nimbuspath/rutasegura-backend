@@ -41,6 +41,11 @@ public sealed class TripTrackingMessageDecoder(NotificationRabbitMqOptions optio
             var trip = Id(payload, "tripId");
             TripNotificationEventV1 translated = type switch
             {
+                "trip-tracking.trip-scheduled" => new DriverTripScheduledV1(org, trip),
+                "trip-tracking.trip-cancelled" => new DriverTripCancelledV1(org, trip),
+                "trip-tracking.sos-resolved" => new DriverSosResolvedV1(org, trip),
+                "trip-tracking.student-marked-absent" => new DriverStudentAbsentV1(org, trip, Id(payload, "studentId"),
+                    payload.GetProperty("source").GetString() ?? string.Empty),
                 "trip-tracking.student-boarded" => new StudentBoardedV1(org, trip, Id(payload, "studentId"), Id(payload, "stopId")),
                 "trip-tracking.student-alighted" => new StudentAlightedV1(org, trip, Id(payload, "studentId"), Id(payload, "stopId")),
                 "trip-tracking.vehicle-approaching-stop" => new VehicleApproachingStopV1(org, trip, Id(payload, "stopId"),

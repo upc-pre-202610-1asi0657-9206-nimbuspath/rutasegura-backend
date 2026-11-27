@@ -7,6 +7,23 @@ namespace RutaSegura.Notification.Messaging.Tests;
 
 public sealed class FcmAdapterTests
 {
+    [Theory]
+    [InlineData("TripAssigned")]
+    [InlineData("TripCancelled")]
+    [InlineData("SosResolved")]
+    [InlineData("StudentAbsent")]
+    [InlineData("Announcement")]
+    public void DriverVisiblePushUsesAndroidChannelStableTagAndOnlyOpaqueIdentifier(string category)
+    {
+        var notice = Notice() with { Category = category };
+        var message = FcmPushNotificationSender.CreateMessage(notice, "opaque-token");
+        message.Android.Notification.ChannelId.ShouldBe("rutasegura_updates");
+        message.Android.Notification.Tag.ShouldBe(notice.Id.ToString("N"));
+        message.Android.TimeToLive.ShouldBe(TimeSpan.FromHours(24));
+        message.Android.Priority.ShouldBe(Priority.High);
+        message.Data.Keys.ShouldBe(["notificationId"]);
+        message.Notification.Body.ShouldNotContain("CONTENIDO PRIVADO");
+    }
     [Fact]
     public async Task BuildsGenericHintAndDoesNotSendPersonalContentOrGps()
     {

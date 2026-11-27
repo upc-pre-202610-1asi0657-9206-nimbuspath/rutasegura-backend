@@ -161,6 +161,15 @@ internal sealed class MemoryStore : INotificationRepository, IAnnouncementReposi
 
 internal sealed class DirectoryFake : INotificationRecipientDirectory, ITripNotificationContext
 {
+    public Guid? TripDriver { get; set; }
+    public List<NotificationRecipient> Drivers { get; } = [];
+    public Task<Guid?> DriverUserIdAsync(Guid organizationId, Guid tripId, CancellationToken ct) => Task.FromResult(TripDriver);
+    public Task<IReadOnlyList<NotificationRecipient>> ForDriversAsync(Guid organizationId, Guid? driverUserId, Guid? routeId, CancellationToken ct)
+    {
+        if (Unavailable) throw new TimeoutException("Directorio no disponible");
+        return Task.FromResult<IReadOnlyList<NotificationRecipient>>(ReturnUnfilteredRecipients ? Drivers.ToArray() :
+            Drivers.Where(d => d.OrganizationId == organizationId && (driverUserId is null || d.UserId == driverUserId)).ToArray());
+    }
     public Task<IReadOnlyCollection<Guid>> CurrentOrganizationIdsAsync(Guid userId, CancellationToken ct)
     {
         if (Unavailable) throw new TimeoutException("Directory unavailable");

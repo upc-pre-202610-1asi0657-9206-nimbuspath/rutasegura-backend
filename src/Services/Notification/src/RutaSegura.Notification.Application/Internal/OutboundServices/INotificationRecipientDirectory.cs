@@ -7,6 +7,9 @@ namespace RutaSegura.Notification.Application.Internal.OutboundServices;
 /// Deben fallar ante indisponibilidad: una lista vacia solo significa que no hay destinatarios autorizados.</summary>
 public interface INotificationRecipientDirectory
 {
+    /// <summary>Verified DRIVER accounts, optionally scoped to a route or the IAM user on a trip.</summary>
+    Task<IReadOnlyList<NotificationRecipient>> ForDriversAsync(Guid organizationId, Guid? driverUserId, Guid? routeId,
+        CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<NotificationRecipient>>([]);
     Task<IReadOnlyCollection<Guid>> CurrentOrganizationIdsAsync(Guid userId, CancellationToken ct) => Task.FromResult<IReadOnlyCollection<Guid>>([]);
 
     Task<IReadOnlyList<NotificationRecipient>> ForStudentsAsync(Guid organizationId,

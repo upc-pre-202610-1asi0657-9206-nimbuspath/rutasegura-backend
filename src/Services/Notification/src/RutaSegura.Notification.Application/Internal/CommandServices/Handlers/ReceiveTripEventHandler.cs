@@ -50,6 +50,8 @@ internal sealed class ReceiveTripEventHandler(INotificationRepository notificati
             return Error.Validation("NOTIFICATION_EVENT_IN_FUTURE", "El instante del hecho no puede estar en el futuro.");
         if (e is IncidentReportedV1 { NotifyGuardians: false })
             return Complete(new ReceiveTripEventResult(0, 0, "GUARDIAN_NOTICE_NOT_REQUESTED"));
+        if (e is DriverStudentAbsentV1 { Source: "Driver" })
+            return Complete(new ReceiveTripEventResult(0, 0, "DRIVER_ALREADY_RECORDED_ABSENCE"));
         if (e is TripCompletedV1 { Direction: TripDirectionV1.Return })
             return Complete(new ReceiveTripEventResult(0, 0, "RETURN_DELIVERY_REPORTED_BY_ALIGHTING"));
         if (e is VehicleApproachingStopV1)
@@ -79,6 +81,16 @@ internal sealed class ReceiveTripEventHandler(INotificationRepository notificati
             if (operators.Any(r => r.OrganizationId != e.OrganizationId || r.UserId == Guid.Empty || r.StudentId is not null))
                 return InvalidAudience;
             audience.AddRange(operators);
+        }
+        if (e is DriverTripScheduledV1 or DriverTripCancelledV1 or DriverSosResolvedV1 or DriverStudentAbsentV1)
+        {
+            // Trip & Tracking owns the immutable driver assignment, not the mobile caller or a guessed route mapping.
+            var driver = await tripContext.DriverUserIdAsync(e.OrganizationId, e.TripId, cancellationToken)
+                ?? throw new InvalidOperationException("NOTIFICATION_TRIP_DRIVER_REQUIRED");
+            var drivers = await recipients.ForDriversAsync(e.OrganizationId, driver, null, cancellationToken);
+            if (drivers.Any(r => r.OrganizationId != e.OrganizationId || r.UserId != driver || r.StudentId is not null))
+                return InvalidAudience;
+            audience.AddRange(drivers);
         }
 
         var (category, title, body) = Describe(e);
@@ -115,6 +127,10 @@ internal sealed class ReceiveTripEventHandler(INotificationRepository notificati
 
     private static (NotificationCategory, string, string) Describe(TripNotificationEventV1 e) => e switch
     {
+        DriverTripScheduledV1 => (NotificationCategory.TripAssigned, "Viaje asignado", "Tienes un nuevo viaje programado. Revisa tu agenda y sus horarios."),
+        DriverTripCancelledV1 => (NotificationCategory.TripCancelled, "Viaje cancelado", "La empresa cancelo un viaje de tu agenda. Revisa su estado antes de salir."),
+        DriverSosResolvedV1 => (NotificationCategory.SosResolved, "SOS atendido por la empresa", "La empresa cerro la alerta SOS. Revisa el estado del viaje cuando estes detenido."),
+        DriverStudentAbsentV1 => (NotificationCategory.StudentAbsent, "Inasistencia avisada por la familia", "Un apoderado aviso una inasistencia. Actualiza la lista de pasajeros cuando estes detenido."),
         StudentBoardedV1 => (NotificationCategory.Boarding, "Abordaje confirmado", "Se confirmo el abordaje de tu alumno."),
         StudentAlightedV1 => (NotificationCategory.Alighting, "Desembarque confirmado", "Se confirmo el desembarque de tu alumno."),
         VehicleApproachingStopV1 p => (NotificationCategory.Proximity, "El vehiculo se acerca", $"Llegada estimada a la parada: {p.EtaMinutes} min."),

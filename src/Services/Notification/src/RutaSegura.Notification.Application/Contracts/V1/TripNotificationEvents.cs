@@ -7,6 +7,11 @@ public sealed record NotificationEventMetadata(Guid MessageId, string MessageTyp
 // Contratos de entrada de Notification: no referencian agregados/assemblies de TripTracking.
 // OrganizationId lo agrega el productor a partir del propietario real del viaje.
 public abstract record TripNotificationEventV1(Guid OrganizationId, Guid TripId);
+public sealed record DriverTripScheduledV1(Guid OrganizationId, Guid TripId) : TripNotificationEventV1(OrganizationId, TripId);
+public sealed record DriverTripCancelledV1(Guid OrganizationId, Guid TripId) : TripNotificationEventV1(OrganizationId, TripId);
+public sealed record DriverSosResolvedV1(Guid OrganizationId, Guid TripId) : TripNotificationEventV1(OrganizationId, TripId);
+public sealed record DriverStudentAbsentV1(Guid OrganizationId, Guid TripId, Guid StudentId, string Source)
+    : TripNotificationEventV1(OrganizationId, TripId);
 public sealed record StudentBoardedV1(Guid OrganizationId, Guid TripId, Guid StudentId, Guid StopId)
     : TripNotificationEventV1(OrganizationId, TripId);
 public sealed record StudentAlightedV1(Guid OrganizationId, Guid TripId, Guid StudentId, Guid StopId)
@@ -31,6 +36,10 @@ public static class TripNotificationContracts
     // MessageType/routing keys propuestos: deben publicarse iguales desde el Outbox del productor.
     public static string MessageType(TripNotificationEventV1 message) => message switch
     {
+        DriverTripScheduledV1 => "trip.driver-scheduled.v1",
+        DriverTripCancelledV1 => "trip.driver-cancelled.v1",
+        DriverSosResolvedV1 => "trip.driver-sos-resolved.v1",
+        DriverStudentAbsentV1 => "trip.driver-student-absent.v1",
         StudentBoardedV1 => "trip.student-boarded.v1",
         StudentAlightedV1 => "trip.student-alighted.v1",
         VehicleApproachingStopV1 => "trip.vehicle-approaching-stop.v1",

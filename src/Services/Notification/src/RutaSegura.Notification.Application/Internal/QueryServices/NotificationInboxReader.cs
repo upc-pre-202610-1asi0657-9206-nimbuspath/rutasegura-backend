@@ -35,7 +35,9 @@ internal sealed class NotificationInboxReader(INotificationRepository notificati
                     (item.StudentId is { } student && !links.Contains(student))) continue;
                 if (item.StudentId is null)
                 {
-                    var key = (item.Category, item.Category == NotificationCategory.Sos ? Guid.Empty : item.SourceMessageId);
+                    var key = (item.Category, item.Category is NotificationCategory.Sos or NotificationCategory.TripAssigned or
+                        NotificationCategory.TripCancelled or NotificationCategory.SosResolved or NotificationCategory.StudentAbsent
+                        ? Guid.Empty : item.SourceMessageId);
                     if (!audience.TryGetValue(key, out var allowed))
                         audience[key] = allowed = await NotificationAccess.CanReadAsync(user, item, directory, announcements, token);
                     if (!allowed) continue;

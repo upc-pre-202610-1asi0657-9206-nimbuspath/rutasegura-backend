@@ -59,7 +59,14 @@ public sealed class FcmPushNotificationSender(IFcmTransport transport, Notificat
             Headers = new Dictionary<string, string> { ["TTL"] = "60", ["Urgency"] = notification.Priority == "Critical" ? "high" : "normal" },
             Notification = new WebpushNotification { Tag = notification.Id.ToString("N") }
         },
-        Android = new AndroidConfig { TimeToLive = TimeSpan.FromMinutes(1), Priority = notification.Priority == "Critical" ? Priority.High : Priority.Normal },
+        Android = new AndroidConfig
+        {
+            TimeToLive = notification.Category is "TripAssigned" or "TripCancelled" or "SosResolved" or "StudentAbsent" or "Announcement"
+                ? TimeSpan.FromHours(24) : TimeSpan.FromMinutes(1),
+            Priority = notification.Priority == "Critical" || notification.Category is "TripAssigned" or "TripCancelled" or "SosResolved" or "StudentAbsent" or "Announcement"
+                ? Priority.High : Priority.Normal,
+            Notification = new AndroidNotification { ChannelId = "rutasegura_updates", Tag = notification.Id.ToString("N") }
+        },
         Apns = new ApnsConfig { Headers = new Dictionary<string, string> { ["apns-expiration"] = "0" } }
     };
 }
