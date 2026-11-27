@@ -17,6 +17,38 @@ public sealed class VerifiedGuardianContractTests
     private static async Task<JsonElement> Links(HttpClient service, Guid organization, Guid guardian) =>
         await service.PostJson("/internal/v1/notifications/student-links", new { organizationId = organization, userId = guardian }).ExpectAsync(HttpStatusCode.OK);
     [Fact]
+    public async Task AnnouncementRecipientsContainOneGuardianWithoutStudentScopeForTwoEnrolledChildren()
+    {
+        await using var app = App();
+        using var admin = await app.AdminAsync();
+        using var service = Directory(app);
+        using var parent = await app.SignInAsync(SeedAccounts.ParentEmail, SeedAccounts.ParentPassword);
+        var driver = await admin.RegisterVerifiedDriverAsync(SeedAccounts.Driver);
+        var vehicle = await admin.RegisterVehicleAsync();
+        var route = await admin.ReadyRouteAsync(driver, vehicle, students: 0);
+        var active = await admin.PostJson($"/api/v1/routes/{route}/activate").ExpectAsync(HttpStatusCode.OK);
+
+        foreach (var student in new[] { await admin.RegisterStudentAsync(), await admin.RegisterStudentAsync() })
+        {
+            await parent.PostJson($"/api/v1/stakeholders/me/students/{student}/enrollments",
+                new { enrollmentCode = active.GetProperty("enrollmentCode").GetString() }).ExpectAsync(HttpStatusCode.Created);
+            await admin.PostJson($"/api/v1/stakeholders/administration/guardian-links/{SeedAccounts.Parent}/{student}/verify",
+                new { reference = "Verified for announcement test" }).ExpectAsync(HttpStatusCode.OK);
+        }
+
+        foreach (var routeId in new Guid?[] { null, route })
+        {
+            var response = await service.PostJson("/internal/v1/notifications/recipients/announcement",
+                new { organizationId = SeedAccounts.Organization, routeId }).ExpectAsync(HttpStatusCode.OK);
+            var recipients = response.GetProperty("recipients");
+            recipients.GetArrayLength().ShouldBe(1);
+            recipients[0].GetProperty("organizationId").GetGuid().ShouldBe(SeedAccounts.Organization);
+            recipients[0].GetProperty("userId").GetGuid().ShouldBe(SeedAccounts.Parent);
+            recipients[0].GetProperty("studentId").ValueKind.ShouldBe(JsonValueKind.Null);
+        }
+    }
+
+    [Fact]
     public async Task EndingEnrollmentStopsNewTripRecipientsButDoesNotRevokeTheVerifiedGuardianLink()
     {
         await using var app = App(); using var admin = await app.AdminAsync(); using var service = Directory(app);
@@ -36,6 +68,9 @@ public sealed class VerifiedGuardianContractTests
         (await Links(service, SeedAccounts.Organization, SeedAccounts.Parent)).GetProperty("studentIds").GetArrayLength().ShouldBe(1);
         recipients = await service.PostJson("/internal/v1/notifications/recipients/students", new { organizationId = SeedAccounts.Organization, studentIds = new[] { student } }).ExpectAsync(HttpStatusCode.OK);
         recipients.GetProperty("recipients").GetArrayLength().ShouldBe(0);
+        var announcement = await service.PostJson("/internal/v1/notifications/recipients/announcement",
+            new { organizationId = SeedAccounts.Organization }).ExpectAsync(HttpStatusCode.OK);
+        announcement.GetProperty("recipients").GetArrayLength().ShouldBe(0);
     }
 
     [Fact]

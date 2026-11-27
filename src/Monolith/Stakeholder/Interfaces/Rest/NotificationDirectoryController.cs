@@ -21,7 +21,10 @@ public sealed class NotificationDirectoryController(IGuardianAccessQueryService 
     {
         if (request.OrganizationId == Guid.Empty) return BadRequest();
         if (request.RouteId is { } route && !await queries.OwnsRouteAsync(request.OrganizationId, route, ct)) return NotFound();
-        return Ok(new { request.OrganizationId, recipients = await queries.CurrentAsync(request.OrganizationId, null, null, request.RouteId, ct) });
+        var eligible = await queries.CurrentAsync(request.OrganizationId, null, null, request.RouteId, ct);
+        var recipients = eligible.Select(recipient => recipient.UserId).Distinct()
+            .Select(userId => new { request.OrganizationId, userId, studentId = (Guid?)null });
+        return Ok(new { request.OrganizationId, recipients });
     }
     [HttpPost("student-links")]
     public async Task<IActionResult> Links(DirectoryUserRequest request, CancellationToken ct) =>
